@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+command="$1"
+case "${command}" in
+    build)
+        rm -rf bin/dojo
+        (set -x; CGO_ENABLED=0 go install ./; )
+        ;;
+    *)
+        echo "Invalid command: '${command}'"
+        exit 1
+        ;;
+esac
+set +e
