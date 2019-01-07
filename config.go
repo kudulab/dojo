@@ -190,7 +190,7 @@ func getFileConfig(filePath string) Config {
 			}
 		}
 	} else {
-		// TODO: log debug that file does not exist
+		Log("debug", fmt.Sprintf("Config file does not exist: %s", filePath))
 	}
 	return config
 }
