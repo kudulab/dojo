@@ -3,9 +3,15 @@ set -e
 
 command="$1"
 case "${command}" in
+    deps)
+        glide install
+        ;;
     build)
         rm -rf bin/dojo
         (set -x; CGO_ENABLED=0 go install ./; )
+        ;;
+    unit)
+        (set -x; go test -v ./...; )
         ;;
     *)
         echo "Invalid command: '${command}'"

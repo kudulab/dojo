@@ -1,0 +1,30 @@
+pipelines:
+  dojo:
+    group: dojo
+    label_template: "${COUNT}-${git[:8]}"
+    materials:
+      git:
+        git: "git@git.ai-traders.com:dojo/dojo"
+        branch: master
+        blacklist:
+        - "doc/**/*"
+        - "**/*.md"
+    stages:
+    - test:
+        clean_workspace: true
+        jobs:
+          test:
+            elastic_profile_id: w.c1.m1024.e5
+            tasks:
+            - exec:
+                command: ide
+                arguments:
+                    - ./tasks deps
+            - exec:
+                command: ide
+                arguments:
+                    - ./tasks build
+            - exec:
+                command: ide
+                arguments:
+                    - ./tasks unit
