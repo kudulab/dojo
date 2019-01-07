@@ -198,7 +198,7 @@ func Test_verifyConfig_invalidAction(t *testing.T) {
 	}
 	err := verifyConfig(config)
 	assert.NotNil(t, err)
-	assert.Equal(t, "Invalid configuration, unsupported Action: dummy. Supported: run, pull, help, version", err.Error())
+	assert.Equal(t, "Invalid configuration, unsupported Action: dummy. Supported: run, pull", err.Error())
 }
 
 func Test_verifyConfig_invalidDriver(t *testing.T) {

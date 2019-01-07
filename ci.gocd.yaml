@@ -28,3 +28,8 @@ pipelines:
                 command: ide
                 arguments:
                     - ./tasks unit
+            - exec:
+                command: bash
+                arguments:
+                    - -c
+                    - ./tasks itest

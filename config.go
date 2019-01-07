@@ -32,8 +32,18 @@ func getCLIConfig() Config {
 	// let's use use a custom flagSet, so that we don't mutate global state
 	flagSet := flag.NewFlagSet("flagSet", flag.PanicOnError)
 
+	var help bool
+	const usageHelp      = "Print help and exit 0"
+	flagSet.BoolVar(&help, "help", false, usageHelp)
+	flagSet.BoolVar(&help, "h", false, usageHelp+" (shorthand)")
+
+	var version bool
+	const usageVersion      = "Print version and exit 0"
+	flagSet.BoolVar(&version, "version", false, usageVersion)
+	flagSet.BoolVar(&version, "v", false, usageVersion+" (shorthand)")
+
 	var action string
-	const usageAction      = "Action: run, pull, version, help. Default: run"
+	const usageAction      = "Action: run, pull. Default: run"
 	flagSet.StringVar(&action, "action", "", usageAction)
 	flagSet.StringVar(&action, "a", "", usageAction+" (shorthand)")
 
@@ -88,6 +98,19 @@ func getCLIConfig() Config {
 
 	flagSet.Parse(os.Args[1:])
 	dockerRunCommand := flagSet.Args()
+
+	flagSet.Usage = func () {
+		fmt.Fprint(os.Stderr, "Usage of dojo <flags> [--] <CMD>:\n")
+		flagSet.PrintDefaults()
+	}
+	if help {
+		flagSet.Usage()
+		os.Exit(0)
+	}
+	if version {
+		// version is returned as the first log message
+		os.Exit(0)
+	}
 
 	return Config{
 		Action:             action,
@@ -241,7 +264,7 @@ func getMergedConfig(moreImportantConfig Config, lessImportantConfig Config, lea
 
 func verifyConfig(config Config) error {
 	if config.Action != "run" && config.Action != "pull" && config.Action != "help" && config.Action != "version" {
-		return fmt.Errorf("Invalid configuration, unsupported Action: %s. Supported: run, pull, help, version", config.Action)
+		return fmt.Errorf("Invalid configuration, unsupported Action: %s. Supported: run, pull", config.Action)
 	}
 	if config.Driver != "docker" && config.Driver != "docker-compose" {
 		return fmt.Errorf("Invalid configuration, unsupported Driver: %s. Supported: docker, docker-compose", config.Driver)
