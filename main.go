@@ -2,29 +2,14 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
-	"os/exec"
+	"os/user"
 )
 
 var LogLevel string = "debug"
 
-func RunShellInteractive(cmdString string) {
-	cmd := exec.Command("bash", "-c", cmdString)
-	cmd.Stdout = os.Stdout
-	cmd.Stdin = os.Stdin
-	cmd.Stderr = os.Stderr
-
-	err := cmd.Run()
-	println(err)
-
-	exitStatus := 0
-	println(exitStatus)
-}
-
-
-func main() {
-	Log("info", fmt.Sprintf("Dojo version %s", DojoVersion))
-
+func handleConfig() Config {
 	configFromCLI:= getCLIConfig()
 	configFile := configFromCLI.ConfigFile
 	if configFile == "" {
@@ -59,7 +44,72 @@ func main() {
 	Log("debug", fmt.Sprintf("DockerImage set to: %s", mergedConfig.DockerImage))
 	Log("debug", fmt.Sprintf("DockerOptions set to: %s", mergedConfig.DockerOptions))
 	Log("debug", fmt.Sprintf("DockerComposeFile set to: %s", mergedConfig.DockerComposeFile))
+	return mergedConfig
+}
 
-	//cmdString := "docker run -ti alpine:3.8"
-	//RunShellInteractive(cmdString)
+func handleRun(mergedConfig Config) int {
+	exitStatus := 0
+	currentUser, err := user.Current()
+	if err != nil {
+		panic(err)
+	}
+	if currentUser.Username == "root" {
+		Log("warn", "Current user is root, which is not recommended")
+	}
+
+	if mergedConfig.Driver == "docker"{
+		runID := getRunID()
+		envFile := fmt.Sprintf("/tmp/dojo-environment-%s", runID)
+		saveEnvToFile(envFile, mergedConfig.BlacklistVariables, mergedConfig.Dryrun)
+		Log("debug", fmt.Sprintf("Saved environment variables to file: %v", envFile))
+		interactiveShell := checkIfInteractive()
+		Log("debug", fmt.Sprintf("Current shell is interactive: %v", interactiveShell))
+		cmd := constructDockerCommand(mergedConfig, envFile, runID, interactiveShell)
+		Log("info", fmt.Sprintf("docker command will be:\n %v", cmd))
+		if mergedConfig.RemoveContainers != "true" && mergedConfig.Dryrun != "true" {
+			// Removing docker container is impractical without additional steps here. We'd have to
+			// parse output of dojo in order to get container name. Thus, save the container name to a file.
+			currentDirectory, err := os.Getwd()
+			if err != nil {
+				panic(err)
+			}
+			rcFile := fmt.Sprintf("%s/dojorc.txt", currentDirectory)
+			removeFile(rcFile, true)
+			err1 := ioutil.WriteFile(rcFile, []byte(runID), 0644)
+			if err1 != nil {
+				panic(err1)
+			}
+			Log("info", fmt.Sprintf("Written docker container name to file %s", rcFile))
+
+			rcFile2 := fmt.Sprintf("%s/dojorc", currentDirectory)
+			removeFile(rcFile2, true)
+			err2 := ioutil.WriteFile(rcFile2, []byte(fmt.Sprintf("DOJO_RUN_ID=%s",runID)), 0644)
+			if err2 != nil {
+				panic(err2)
+			}
+			Log("info", fmt.Sprintf("Written docker container name to file %s", rcFile2))
+		}
+		if mergedConfig.Dryrun != "true" {
+			exitStatus = RunShell(cmd)
+			Log("debug", fmt.Sprintf("Exit status: %v", exitStatus))
+		} else {
+			Log("info", "Dryrun set, not running docker container")
+		}
+		if mergedConfig.Dryrun != "true" {
+			os.Remove(envFile)
+		}
+	} else {
+		// driver: docker-compose
+	}
+	return exitStatus
+}
+
+func main() {
+	Log("info", fmt.Sprintf("Dojo version %s", DojoVersion))
+	mergedConfig := handleConfig()
+
+	if mergedConfig.Action == "run" {
+		exitstatus := handleRun(mergedConfig)
+		os.Exit(exitstatus)
+	}
 }

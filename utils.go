@@ -27,7 +27,7 @@ func SetLogLevel(level string) {
 }
 
 func Log(level, msg string) {
-	if level != "info" && level != "debug" {
+	if level != "info" && level != "debug" && level != "warn" {
 		panic(fmt.Sprintf("Unsupported log level: %v", level))
 	}
 	if level == "debug" && GetLogLevel() != "debug" {
@@ -38,14 +38,19 @@ func Log(level, msg string) {
 	n := runtime.Callers(2, pc)
 	frames := runtime.CallersFrames(pc[:n])
 	frame, _ := frames.Next()
+	coloredMsg := msg
 
 	// info has 1 letter less than debug, so let's add a space in the beginning of a line
 	prettyLogLevel := strings.ToUpper(level)
 	if prettyLogLevel == "INFO" {
 		prettyLogLevel = " INFO"
 	}
+	if prettyLogLevel == "WARN" {
+		prettyLogLevel = " WARN"
+		coloredMsg = orange(msg)
+	}
 
-	log.Printf("[%2d] %s: (%s) %s", getGoroutineID(), prettyLogLevel, frame.Function, msg)
+	log.Printf("[%2d] %s: (%s) %s", getGoroutineID(), prettyLogLevel, frame.Function, coloredMsg)
 }
 
 func PrintError(msg string) {
@@ -55,4 +60,17 @@ func PrintError(msg string) {
 
 func red(text string) string {
 	return "\033[31m" + text + "\033[0m"
+}
+func orange(text string) string {
+	return "\033[33m" + text + "\033[0m"
+}
+
+func removeFile(filePath string, ignoreNoSuchFileError bool) {
+	err := os.Remove(filePath)
+	if err != nil {
+		if strings.Contains(err.Error(),"no such file or directory") && ignoreNoSuchFileError {
+			return
+		}
+		panic(err)
+	}
 }
