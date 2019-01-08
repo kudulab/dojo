@@ -91,6 +91,19 @@ func handleRun(mergedConfig Config) int {
 	}
 	return exitStatus
 }
+func handlePull(mergedConfig Config) int {
+	exitStatus := 0
+	if mergedConfig.Driver == "docker" {
+		cmd := fmt.Sprintf("docker pull %s", mergedConfig.DockerImage)
+		if mergedConfig.Dryrun != "true" {
+			exitStatus = RunShell(cmd)
+			Log("debug", fmt.Sprintf("Exit status: %v", exitStatus))
+		} else {
+			Log("info", "Dryrun set, not pulling docker image")
+		}
+	}
+	return exitStatus
+}
 
 func main() {
 	Log("info", fmt.Sprintf("Dojo version %s", DojoVersion))
@@ -98,6 +111,9 @@ func main() {
 
 	if mergedConfig.Action == "run" {
 		exitstatus := handleRun(mergedConfig)
+		os.Exit(exitstatus)
+	} else if mergedConfig.Action == "pull" {
+		exitstatus := handlePull(mergedConfig)
 		os.Exit(exitstatus)
 	}
 }
