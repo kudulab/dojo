@@ -28,6 +28,26 @@ type Config struct {
 	DockerComposeFile string
 }
 
+func (c Config) String() string {
+	str := ""
+	str += fmt.Sprintf("{ Action: %s }", c.Action)
+	str += fmt.Sprintf("{ ConfigFile: %s }", c.ConfigFile)
+	str += fmt.Sprintf("{ Driver: %s }", c.Driver)
+	str += fmt.Sprintf("{ Debug: %s }", c.Debug)
+	str += fmt.Sprintf("{ Dryrun: %s }", c.Dryrun)
+	str += fmt.Sprintf("{ Interactive: %s }", c.Interactive)
+	str += fmt.Sprintf("{ RemoveContainers: %s }", c.RemoveContainers)
+	str += fmt.Sprintf("{ WorkDirInner: %s }", c.WorkDirInner)
+	str += fmt.Sprintf("{ WorkDirOuter: %s }", c.WorkDirOuter)
+	str += fmt.Sprintf("{ IdentityDirOuter: %s }", c.IdentityDirOuter)
+	str += fmt.Sprintf("{ BlacklistVariables: %s }", c.BlacklistVariables)
+	str += fmt.Sprintf("{ DockerRunCommand: %s }", c.DockerRunCommand)
+	str += fmt.Sprintf("{ DockerImage: %s }", c.DockerImage)
+	str += fmt.Sprintf("{ DockerOptions: %s }", c.DockerOptions)
+	str += fmt.Sprintf("{ DockerComposeFile: %s }", c.DockerComposeFile)
+	return str
+}
+
 func getCLIConfig() Config {
 	// let's use use a custom flagSet, so that we don't mutate global state
 	flagSet := flag.NewFlagSet("flagSet", flag.PanicOnError)
