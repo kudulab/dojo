@@ -4,7 +4,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/signal"
 	"os/user"
+	"strings"
+	"syscall"
+	"time"
 )
 
 var LogLevel string = "debug"
@@ -36,7 +40,11 @@ func handleConfig() Config {
 	return mergedConfig
 }
 
-func handleRun(mergedConfig Config) int {
+func getEnvFilePath(runID string) string {
+	return fmt.Sprintf("/tmp/dojo-environment-%s", runID)
+}
+
+func handleRun(mergedConfig Config, runID string) int {
 	exitStatus := 0
 	currentUser, err := user.Current()
 	if err != nil {
@@ -47,8 +55,7 @@ func handleRun(mergedConfig Config) int {
 	}
 
 	if mergedConfig.Driver == "docker"{
-		runID := getRunID()
-		envFile := fmt.Sprintf("/tmp/dojo-environment-%s", runID)
+		envFile := getEnvFilePath(runID)
 		saveEnvToFile(envFile, mergedConfig.BlacklistVariables, mergedConfig.Dryrun)
 		Log("debug", fmt.Sprintf("Saved environment variables to file: %v", envFile))
 		interactiveShell := checkIfInteractive()
@@ -84,14 +91,31 @@ func handleRun(mergedConfig Config) int {
 		} else {
 			Log("info", "Dryrun set, not running docker container")
 		}
-		if mergedConfig.Dryrun != "true" {
-			os.Remove(envFile)
-		}
+		removeGeneratedFile(mergedConfig, envFile)
 	} else {
 		// driver: docker-compose
 	}
 	return exitStatus
 }
+
+func removeGeneratedFile(mergedConfig Config, filePath string) {
+	if mergedConfig.Dryrun != "false" {
+		Log("debug", fmt.Sprintf("Not removed generated file: %s, because dryrun is set", filePath))
+		return
+	}
+	if mergedConfig.RemoveContainers != "false" {
+		err := os.Remove(filePath)
+		if err != nil {
+			panic(err)
+		}
+		Log("debug", fmt.Sprintf("Removed generated file: %s", filePath))
+		return
+	} else {
+		Log("debug", fmt.Sprintf("Not removed generated file: %s, because RemoveContainers is set", filePath))
+		return
+	}
+}
+
 func handlePull(mergedConfig Config) int {
 	exitStatus := 0
 	if mergedConfig.Driver == "docker" {
@@ -106,15 +130,91 @@ func handlePull(mergedConfig Config) int {
 	return exitStatus
 }
 
+func handleCleanupOnSignal(mergedConfig Config, runID string) {
+	if mergedConfig.Action == "run" {
+		if runID == "" {
+			Log("debug", "No cleaning needed")
+			return
+		}
+		if mergedConfig.RemoveContainers != "false" && mergedConfig.Dryrun != "true" {
+			// add this sleep to let docker handle potential command we already sent to it
+			time.Sleep(time.Second)
+
+			stdout, _, _ := RunShellGetOutput(fmt.Sprintf("timeout 2 docker inspect -f '{{.State.Running}}' %s 2>&1", runID))
+			if strings.Contains(stdout,"No such object"){
+				Log("info", fmt.Sprintf("Not removing the container, it was not created: %s", runID))
+			} else if strings.Contains(stdout,"false") {
+				// Signal caught fast enough, docker container is not running, but
+				// it is created. Let's remove it.
+				Log("info", fmt.Sprintf("Removing created (but not started) container: %s", runID))
+				stdout, _, exitStatus := RunShellGetOutput(fmt.Sprintf("docker rm %s 2>&1", runID))
+				if exitStatus != 0 {
+					PrintError(fmt.Sprintf("Exit status: %v, output: %s", exitStatus, stdout))
+					os.Exit(exitStatus)
+				}
+			} else if strings.Contains(stdout,"true") {
+				Log("info", fmt.Sprintf("Stopping running container: %s", runID))
+				stdout, _, exitStatus := RunShellGetOutput(fmt.Sprintf("docker stop %s 2>&1", runID))
+				if exitStatus != 0 {
+					PrintError(fmt.Sprintf("Exit status: %v, output: %s", exitStatus, stdout))
+					os.Exit(exitStatus)
+				}
+				// no need to remove the container, if it was started with "docker run --rm", it will be removed
+			} else {
+				// this is the case when docker is not installed
+				Log("info", fmt.Sprintf("Not cleaning. Got output: %s", stdout))
+			}
+			envFile := getEnvFilePath(runID)
+			removeGeneratedFile(mergedConfig, envFile)
+		}
+		Log("debug", "Cleanup finished")
+	}
+}
+
 func main() {
 	Log("info", fmt.Sprintf("Dojo version %s", DojoVersion))
 	mergedConfig := handleConfig()
 
+	// This variable is needed to perform cleanup on any signal.
+	// In order to avoid race conditions, let's write to this variable before
+	// using multiple goroutines. And let's never write to it again.
+	runID := ""
 	if mergedConfig.Action == "run" {
-		exitstatus := handleRun(mergedConfig)
-		os.Exit(exitstatus)
-	} else if mergedConfig.Action == "pull" {
-		exitstatus := handlePull(mergedConfig)
-		os.Exit(exitstatus)
+		runID = getRunID()
+	}
+
+	signalChannel := make(chan os.Signal, 1)
+	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
+	doneChannel := make(chan int, 1)
+
+	go func(){
+		if mergedConfig.Action == "run" {
+			exitstatus := handleRun(mergedConfig, runID)
+			doneChannel <- exitstatus
+		} else if mergedConfig.Action == "pull" {
+			exitstatus := handlePull(mergedConfig)
+			doneChannel <- exitstatus
+		}
+	}()
+
+	for {
+		select {
+		case signalCaught := <-signalChannel:
+			PrintError(fmt.Sprintf("Caught signal: %s", signalCaught.String()))
+			exitStatus := 1
+			switch signalCaught {
+			// kill -SIGINT XXXX or Ctrl+c
+			case syscall.SIGINT:
+				exitStatus = 130
+				// kill -SIGTERM XXXX, GoCD uses it to cancel tasks
+			case syscall.SIGTERM:
+				exitStatus = 2
+			}
+			handleCleanupOnSignal(mergedConfig, runID)
+			os.Exit(exitStatus)
+		case done := <-doneChannel:
+			Log("debug", "Done, normal way")
+			os.Exit(done)
+		}
 	}
 }

@@ -9,7 +9,8 @@ func Test_Docker_Run(t *testing.T) {
 	config := getTestConfig()
 	config.Dryrun = "true"
 	config.Driver = "docker"
-	exitstatus := handleRun(config)
+	runID := "1234"
+	exitstatus := handleRun(config, runID)
 	assert.Equal(t, 0, exitstatus)
 }
 

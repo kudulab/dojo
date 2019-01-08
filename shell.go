@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 	"syscall"
@@ -9,9 +11,44 @@ import (
 
 func RunShell(cmdString string) int {
 	cmd := exec.Command("bash", "-c", cmdString)
+	// we may want to experiment more with:
+	// cmd.SysProcAttr = &syscall.SysProcAttr{
+	//	Setpgid: true,
+	//	//  Process Group ID; The unique positive integer identifier representing a process group during its lifetime.
+	//	//  The child processes started here (in golang) are starting in the same process group as the creator-process (parent) by default.
+	// //  (Bash starts each child process in their own process group).
+	// //  When a signal is directed to a process group, the signal is delivered to each process that is a member of the group.
+	//	Pgid:    0,
+	//}
+	// because running "docker run -ti" and then ctrl+c sometimes results in a frozen terminal.
+	// This has nothing to do with golang, but we may want to try to fix it somehow. However,
+	// we cannot just kill the "docker run" command in the last select block, because when should we do it?
+	// Signal is not caught then.
 	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
+
+	err := cmd.Run()
+
+	status := cmd.ProcessState.Sys().(syscall.WaitStatus)
+	exitStatus := status.ExitStatus()
+	signaled := status.Signaled()
+	signal := status.Signal()
+	if err != nil {
+		Log("debug", fmt.Sprintf("err: %v", err))
+	}
+	if signaled {
+		Log("debug", fmt.Sprintf("Signal: %v", signal))
+	}
+
+	return exitStatus
+}
+func RunShellGetOutput(cmdString string) (string, string, int) {
+	cmd := exec.Command("bash", "-c", cmdString)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 
 	err := cmd.Run()
 
@@ -20,12 +57,12 @@ func RunShell(cmdString string) int {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
 				exitStatus = status.ExitStatus()
-				return exitStatus
+				return stdout.String(), stderr.String(), exitStatus
 			}
 		}
-		return 1
+		return stdout.String(), stderr.String(), 1
 	}
-	return exitStatus
+	return stdout.String(), stderr.String(), exitStatus
 }
 
 func checkIfInteractive() bool {

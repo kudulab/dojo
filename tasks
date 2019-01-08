@@ -11,7 +11,7 @@ case "${command}" in
         (set -x; CGO_ENABLED=0 go install ./; )
         ;;
     unit)
-        (set -x; go test -v ./...; )
+        (set -x; go test -v -race ./...; )
         ;;
     itest)
         (set -x; bats ./test; )
