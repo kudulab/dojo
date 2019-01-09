@@ -11,6 +11,12 @@ var LogLevel string = "debug"
 
 func handleConfig() Config {
 	configFromCLI:= getCLIConfig()
+	// debug option can be set on CLI only
+	if configFromCLI.Debug == "true" {
+		SetLogLevel("debug")
+	} else {
+		SetLogLevel("info")
+	}
 	configFile := configFromCLI.ConfigFile
 	if configFile == "" {
 		configFile = "Dojofile"
@@ -22,11 +28,6 @@ func handleConfig() Config {
 	if err != nil {
 		PrintError(err.Error())
 		os.Exit(1)
-	}
-	if mergedConfig.Debug == "true" {
-		SetLogLevel("debug")
-	} else {
-		SetLogLevel("info")
 	}
 	Log("debug", fmt.Sprintf("configFromCLI: %s", configFromCLI))
 	Log("debug", fmt.Sprintf("configFromFile: %s", configFromFile))
