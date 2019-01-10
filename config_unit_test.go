@@ -216,7 +216,7 @@ func Test_getMergedConfig(t *testing.T){
 }
 
 func Test_verifyConfig_invalidAction(t *testing.T) {
-	config := Config{
+	config := &Config{
 		Action: "dummy",
 		Driver: "docker",
 		Debug: "true",
@@ -228,7 +228,7 @@ func Test_verifyConfig_invalidAction(t *testing.T) {
 }
 
 func Test_verifyConfig_invalidDriver(t *testing.T) {
-	config := Config{
+	config := &Config{
 		Action: "run",
 		Driver: "mydriver",
 		Debug: "true",
@@ -237,6 +237,24 @@ func Test_verifyConfig_invalidDriver(t *testing.T) {
 	err := verifyConfig(config)
 	assert.NotNil(t, err)
 	assert.Equal(t, "Invalid configuration, unsupported Driver: mydriver. Supported: docker, docker-compose", err.Error())
+}
+
+func Test_verifyConfig_driverShorthandDC(t *testing.T) {
+	dcFile := "/tmp/dojo-Test_verifyConfig_driverShorthandDC.yml"
+	config := &Config{
+		Action: "run",
+		Driver: "dc",
+		Debug: "true",
+		Dryrun: "false",
+		RemoveContainers: "true",
+		DockerImage: "bla",
+		DockerComposeFile: dcFile,
+	}
+	os.Create(dcFile)
+	err := verifyConfig(config)
+	assert.Nil(t, err)
+	assert.Equal(t, "docker-compose", config.Driver)
+	os.Remove(dcFile)
 }
 
 func Test_mapToConfig(t *testing.T) {
@@ -256,6 +274,7 @@ func Test_mapToConfig(t *testing.T) {
 	mymap["dockerImage"] = "alpine"
 	mymap["dockerOptions"] = "-v sth:sth"
 	mymap["dockerComposeFile"] = "aaa"
+	mymap["dockerComposeOptions"] = "--some-option"
 	mymap["test"] = "false"
 	config := MapToConfig(mymap)
 	assert.Equal(t, "mydriver", config.Driver)

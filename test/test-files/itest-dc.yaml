@@ -1,0 +1,22 @@
+version: '2.2'
+services:
+  default:
+    # this option is needed to make default docker container preserve signals,
+    # sh shell does not preserve them
+    # init: true
+    # this option is ignored by "docker-compose run", which is used by Dojo
+    # container_name: whatever
+    links:
+    - abc:abc
+    volumes:
+    - /tmp/dojo-itest-dc:/tmp/dojo-itest-dc
+    environment:
+      ABC_DEF: "1234"
+  abc:
+    image: alpine:3.8
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["true"]
+    # Uncomment this if you want to test with a long running command.
+    # I chose short running command because it is faster to stop this container.
+    # (sh does not preserve signals and thus it takes 10s to stop this container).
+    # command: ["while true; do sleep 1d; done;"]

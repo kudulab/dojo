@@ -28,7 +28,7 @@ func handleConfig() Config {
 	configFromFile := getFileConfig(configFile)
 	defaultConfig := getDefaultConfig(configFile)
 	mergedConfig := getMergedConfig(configFromCLI, configFromFile, defaultConfig)
-	err := verifyConfig(mergedConfig)
+	err := verifyConfig(&mergedConfig)
 	if err != nil {
 		PrintError(err.Error())
 		os.Exit(1)
@@ -57,13 +57,13 @@ func handleRun(mergedConfig Config, runID string) int {
 	if currentUser.Username == "root" {
 		Log("warn", "Current user is root, which is not recommended")
 	}
+	envFile := getEnvFilePath(runID, mergedConfig.Test)
+	saveEnvToFile(envFile, mergedConfig.BlacklistVariables, mergedConfig.Dryrun)
+	defer removeGeneratedFile(mergedConfig, envFile)
+	interactiveShell := checkIfInteractive()
+	Log("debug", fmt.Sprintf("Current shell is interactive: %v", interactiveShell))
 
 	if mergedConfig.Driver == "docker"{
-		envFile := getEnvFilePath(runID, mergedConfig.Test)
-		saveEnvToFile(envFile, mergedConfig.BlacklistVariables, mergedConfig.Dryrun)
-		Log("debug", fmt.Sprintf("Saved environment variables to file: %v", envFile))
-		interactiveShell := checkIfInteractive()
-		Log("debug", fmt.Sprintf("Current shell is interactive: %v", interactiveShell))
 		cmd := constructDockerCommand(mergedConfig, envFile, runID, interactiveShell)
 		Log("info", fmt.Sprintf("docker command will be:\n %v", cmd))
 		if mergedConfig.RemoveContainers != "true" && mergedConfig.Dryrun != "true" {
@@ -95,9 +95,35 @@ func handleRun(mergedConfig Config, runID string) int {
 		} else {
 			Log("info", "Dryrun set, not running docker container")
 		}
-		removeGeneratedFile(mergedConfig, envFile)
 	} else {
 		// driver: docker-compose
+		dojoDCGeneratedFile := handleDCFiles(mergedConfig, envFile)
+		defer removeGeneratedFile(mergedConfig, dojoDCGeneratedFile)
+		cmd := constructDockerComposeCommandRun(mergedConfig, runID, dojoDCGeneratedFile, interactiveShell)
+		cmdStop := constructDockerComposeCommandStop(mergedConfig, runID, dojoDCGeneratedFile)
+		cmdRm := constructDockerComposeCommandRm(mergedConfig, runID, dojoDCGeneratedFile)
+		Log("info", fmt.Sprintf("docker-compose run command will be:\n %v", cmd))
+		Log("debug", fmt.Sprintf("docker-compose stop command will be:\n %v", cmdStop))
+		Log("debug", fmt.Sprintf("docker-compose rm command will be:\n %v", cmdRm))
+		expectedDockerNetwork := getExpDockerNetwork(runID)
+		Log("debug", fmt.Sprintf("expected docker-compose network will be:\n %v", expectedDockerNetwork))
+		if mergedConfig.Dryrun != "true" {
+			exitStatus = RunShell(cmd)
+			Log("debug", fmt.Sprintf("Exit status from run command: %v", exitStatus))
+			Log("debug", "Stopping containers")
+			RunShell(cmdStop)
+			Log("debug", "Removing containers")
+			RunShell(cmdRm)
+			_, _, networkExists := RunShellGetOutput(fmt.Sprintf("docker network inspect %s", expectedDockerNetwork))
+			if networkExists == 0 {
+				Log("debug", fmt.Sprintf("Removing docker network: %s", expectedDockerNetwork))
+				RunShell(fmt.Sprintf("docker network rm %s", expectedDockerNetwork))
+			} else {
+				Log("debug", fmt.Sprintf("Not removing docker network: %s, it does not exist", expectedDockerNetwork))
+			}
+		} else {
+			Log("info", "Dryrun set, not running docker-compose")
+		}
 	}
 	return exitStatus
 }

@@ -26,6 +26,7 @@ type Config struct {
 	DockerImage string
 	DockerOptions string
 	DockerComposeFile string
+	DockerComposeOptions string
 	Test string
 }
 
@@ -46,6 +47,7 @@ func (c Config) String() string {
 	str += fmt.Sprintf("{ DockerImage: %s }", c.DockerImage)
 	str += fmt.Sprintf("{ DockerOptions: %s }", c.DockerOptions)
 	str += fmt.Sprintf("{ DockerComposeFile: %s }", c.DockerComposeFile)
+	str += fmt.Sprintf("{ DockerComposeOptions: %s }", c.DockerComposeOptions)
 	str += fmt.Sprintf("{ Test: %s }", c.Test)
 	return str
 }
@@ -75,7 +77,7 @@ func getCLIConfig() Config {
 	flagSet.StringVar(&config, "c", "", usageConfig+" (shorthand)")
 
 	var driver string
-	const usageDriver         = "Driver: docker or docker-compose. Default: docker"
+	const usageDriver         = "Driver: docker or docker-compose (dc for short). Default: docker"
 	flagSet.StringVar(&driver, "driver", "", usageDriver)
 	flagSet.StringVar(&driver, "d", "", usageDriver+" (shorthand)")
 
@@ -122,6 +124,11 @@ func getCLIConfig() Config {
 	const usageBlackilstVariables    = "List of variables, split by commas, to be blacklisted in a docker container"
 	flagSet.StringVar(&blacklistVariables, "blacklist", "", usageBlackilstVariables)
 
+	var dockerComposeFile string
+	const usageDCFile         = "Docker-compose file. Default: ./docker-compose.yml. Only for driver: docker-compose"
+	flagSet.StringVar(&dockerComposeFile, "docker-compose-file", "", usageDCFile)
+	flagSet.StringVar(&dockerComposeFile, "dcf", "", usageDCFile+" (shorthand)")
+
 	var test string
 	const usageTest         = "Set this to true when integration testing. This turns writing env files to a test directory"
 	flagSet.StringVar(&test, "test", "", usageTest)
@@ -157,6 +164,7 @@ func getCLIConfig() Config {
 		BlacklistVariables: blacklistVariables,
 		RunCommand:         runCommand,
 		DockerImage:        image,
+		DockerComposeFile:  dockerComposeFile,
 		Test: 				test,
 	}
 }
@@ -206,6 +214,7 @@ func MapToConfig(configMap map[string]string) Config {
 	config.DockerImage = configMap["dockerImage"]
 	config.DockerOptions = configMap["dockerOptions"]
 	config.DockerComposeFile = configMap["dockerComposeFile"]
+	config.DockerComposeOptions = configMap["dockerComposeOptions"]
 	config.Test = configMap["test"]
 	return config
 }
@@ -226,6 +235,7 @@ func ConfigToMap(config Config) map[string]string {
 	configMap["dockerImage"] = config.DockerImage
 	configMap["dockerOptions"] = config.DockerOptions
 	configMap["dockerComposeFile"] = config.DockerComposeFile
+	configMap["dockerComposeOptions"] = config.DockerComposeOptions
 	configMap["test"] = config.Test
 	return configMap
 }
@@ -259,6 +269,8 @@ func getFileConfig(filePath string) Config {
 					config.DockerOptions = value
 				case "DOJO_DOCKER_COMPOSE_FILE":
 					config.DockerComposeFile = value
+				case "DOJO_DOCKER_COMPOSE_OPTIONS":
+					config.DockerComposeOptions = value
 				case "DOJO_WORK_OUTER":
 					config.WorkDirOuter = value
 				case "DOJO_WORK_INNER":
@@ -302,6 +314,7 @@ func getDefaultConfig(configFile string) Config {
 		WorkDirInner:       "/dojo/work",
 		IdentityDirOuter:   currentUser.HomeDir,
 		BlacklistVariables: "BASH*,HOME,USERNAME,USER,LOGNAME,PATH,TERM,SHELL,MAIL,SUDO_*,WINDOWID,SSH_*,SESSION_*,GEM_HOME,GEM_PATH,GEM_ROOT,HOSTNAME,HOSTTYPE,IFS,PPID,PWD,OLDPWD,LC*",
+		DockerComposeFile:  "docker-compose.yml",
 	}
 	return defaultConfig
 }
@@ -326,7 +339,10 @@ func getMergedConfig(moreImportantConfig Config, lessImportantConfig Config, lea
 	return config
 }
 
-func verifyConfig(config Config) error {
+func verifyConfig(config *Config) error {
+	if config.Driver == "dc" {
+		config.Driver = "docker-compose"
+	}
 	if config.Action != "run" && config.Action != "pull" && config.Action != "help" && config.Action != "version" {
 		return fmt.Errorf("Invalid configuration, unsupported Action: %s. Supported: run, pull", config.Action)
 	}
@@ -339,6 +355,15 @@ func verifyConfig(config Config) error {
 	if config.Dryrun != "true" && config.Dryrun != "false" {
 		return fmt.Errorf("Invalid configuration, unsupported Dryrun: %s. Supported: true, false", config.Dryrun)
 	}
+	if config.DockerComposeOptions != "" && config.Driver == "docker" {
+		return fmt.Errorf("DockerComposeOptions option is unsupported for driver: docker")
+	}
+	if config.DockerOptions != "" && config.Driver == "docker-compose" {
+		return fmt.Errorf("DockerOptions option is unsupported for driver: docker-compose")
+	}
+	if config.RemoveContainers == "false" && config.Driver == "docker-compose" {
+		Log("warn", "RemoveContainers=false is unsupported for driver: docker-compose")
+	}
 	if config.RemoveContainers != "true" && config.RemoveContainers != "false" {
 		return fmt.Errorf("Invalid configuration, unsupported RemoveContainers: %s. Supported: true, false", config.RemoveContainers)
 	}
@@ -347,6 +372,15 @@ func verifyConfig(config Config) error {
 	}
 	if config.DockerImage == "" {
 		return fmt.Errorf("Invalid configuration, DockerImage is unset")
+	}
+	if config.Driver == "docker-compose" {
+		if config.DockerComposeFile == "" {
+			return fmt.Errorf("Invalid configuration, DockerComposeFile is unset")
+		}
+		dcFile := config.DockerComposeFile
+		if _, err := os.Stat(dcFile); err != nil {
+			return fmt.Errorf("docker-compose config file: %s does not exist", dcFile)
+		}
 	}
 	return nil
 }
