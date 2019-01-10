@@ -30,13 +30,13 @@ func Test_getCLIConfig(t *testing.T) {
 		{[]string{"cmd", "--driver", "mydriver"}, Config{Driver:"mydriver"}},
 		{[]string{"cmd", "-d", "mydriver"}, Config{Driver:"mydriver"}},
 
-		{[]string{"cmd", "--config=Dojofile", "bash"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:"", DockerRunCommand: "bash"}},
-		{[]string{"cmd", "--config=Dojofile", "bash", "bla"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:"", DockerRunCommand: "bash bla"}},
-		{[]string{"cmd", "--config=Dojofile", "bash", "-c", "\"bla\""},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:"", DockerRunCommand: "bash -c \"bla\""}},
-		{[]string{"cmd", "--config=Dojofile", "--", "bash"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:"", DockerRunCommand: "bash"}},
-		{[]string{"cmd", "--config=Dojofile", "--", "-c", "bash"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:"", DockerRunCommand: "-c bash"}},
-		{[]string{"cmd", "bash", "--config=Dojofile"},Config{Action:"", ConfigFile:"", Driver:"", Debug:"", Dryrun:"", DockerRunCommand: "bash --config=Dojofile"}},
-		{[]string{"cmd", "--config=Dojofile11", "bash", "--config=Dojofile"},Config{Action:"", ConfigFile:"Dojofile11", Driver:"", Debug:"", Dryrun:"", DockerRunCommand: "bash --config=Dojofile"}},
+		{[]string{"cmd", "--config=Dojofile", "bash"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:"", RunCommand: "bash"}},
+		{[]string{"cmd", "--config=Dojofile", "bash", "bla"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:"", RunCommand: "bash bla"}},
+		{[]string{"cmd", "--config=Dojofile", "bash", "-c", "\"bla\""},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:"", RunCommand: "bash -c \"bla\""}},
+		{[]string{"cmd", "--config=Dojofile", "--", "bash"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:"", RunCommand: "bash"}},
+		{[]string{"cmd", "--config=Dojofile", "--", "-c", "bash"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:"", RunCommand: "-c bash"}},
+		{[]string{"cmd", "bash", "--config=Dojofile"},Config{Action:"", ConfigFile:"", Driver:"", Debug:"", Dryrun:"", RunCommand: "bash --config=Dojofile"}},
+		{[]string{"cmd", "--config=Dojofile11", "bash", "--config=Dojofile"},Config{Action:"", ConfigFile:"Dojofile11", Driver:"", Debug:"", Dryrun:"", RunCommand: "bash --config=Dojofile"}},
 
 		{[]string{"cmd", "--work-dir-outer=/tmp/bla"}, Config{WorkDirOuter:"/tmp/bla"}},
 		{[]string{"cmd", "--work-dir-inner=/tmp/bla"}, Config{WorkDirInner:"/tmp/bla"}},
@@ -64,7 +64,7 @@ func Test_getCLIConfig(t *testing.T) {
 		assert.Equal(t, currentTest.expectedConfig.Debug, config.Debug, currentTest.flags)
 		assert.Equal(t, currentTest.expectedConfig.Dryrun, config.Dryrun, currentTest.flags)
 		assert.Equal(t, currentTest.expectedConfig.Interactive, config.Interactive, currentTest.flags)
-		assert.Equal(t, currentTest.expectedConfig.DockerRunCommand, config.DockerRunCommand, currentTest.flags)
+		assert.Equal(t, currentTest.expectedConfig.RunCommand, config.RunCommand, currentTest.flags)
 		assert.Equal(t, currentTest.expectedConfig.RemoveContainers, config.RemoveContainers, currentTest.flags)
 		assert.Equal(t, currentTest.expectedConfig.WorkDirOuter, config.WorkDirOuter, currentTest.flags)
 		assert.Equal(t, currentTest.expectedConfig.WorkDirInner, config.WorkDirInner, currentTest.flags)
@@ -226,7 +226,7 @@ func Test_mapToConfig(t *testing.T) {
 	mymap["workDirOuter"] = "/tmp/bbb"
 	mymap["identityDirOuter"] = "/tmp/ccc"
 	mymap["blacklistVariables"] = "abc"
-	mymap["dockerRunCommand"] = "whoami"
+	mymap["runCommand"] = "whoami"
 	mymap["dockerImage"] = "alpine"
 	mymap["dockerOptions"] = "-v sth:sth"
 	mymap["dockerComposeFile"] = "aaa"

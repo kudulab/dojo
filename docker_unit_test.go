@@ -67,7 +67,7 @@ func Test_ConstructDockerCommand_Command(t *testing.T){
 	setTestEnv()
 	for _,v := range mytests {
 		config := getTestConfig()
-		config.DockerRunCommand = v.userCommandConfig
+		config.RunCommand = v.userCommandConfig
 		cmd := constructDockerCommand(config, "/tmp/some-env-file", "name1", false)
 		assert.Equal(t, v.expOutput, cmd, fmt.Sprintf("userCommandConfig: %v", v.userCommandConfig))
 	}

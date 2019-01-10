@@ -54,13 +54,13 @@ func constructDockerCommand(config Config, envFilePath string, containerName str
 	}
 	cmd += fmt.Sprintf(" --name=%s", containerName)
 	cmd += fmt.Sprintf(" %s", config.DockerImage)
-	if config.DockerRunCommand != "" {
-		if strings.Contains(config.DockerRunCommand, "\"") {
+	if config.RunCommand != "" {
+		if strings.Contains(config.RunCommand, "\"") {
 			// command contains quotes or is wrapped with quotes, do not wrap it again
-			cmd += fmt.Sprintf(" %s", config.DockerRunCommand)
+			cmd += fmt.Sprintf(" %s", config.RunCommand)
 		} else {
 			// wrap command with quotes
-			cmd += fmt.Sprintf(" \"%s\"", config.DockerRunCommand)
+			cmd += fmt.Sprintf(" \"%s\"", config.RunCommand)
 		}
 	}
 	return cmd

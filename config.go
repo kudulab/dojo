@@ -21,7 +21,7 @@ type Config struct {
 	WorkDirOuter       string
 	IdentityDirOuter   string
 	BlacklistVariables string
-	DockerRunCommand   string
+	RunCommand         string
 
 	DockerImage string
 	DockerOptions string
@@ -41,7 +41,7 @@ func (c Config) String() string {
 	str += fmt.Sprintf("{ WorkDirOuter: %s }", c.WorkDirOuter)
 	str += fmt.Sprintf("{ IdentityDirOuter: %s }", c.IdentityDirOuter)
 	str += fmt.Sprintf("{ BlacklistVariables: %s }", c.BlacklistVariables)
-	str += fmt.Sprintf("{ DockerRunCommand: %s }", c.DockerRunCommand)
+	str += fmt.Sprintf("{ RunCommand: %s }", c.RunCommand)
 	str += fmt.Sprintf("{ DockerImage: %s }", c.DockerImage)
 	str += fmt.Sprintf("{ DockerOptions: %s }", c.DockerOptions)
 	str += fmt.Sprintf("{ DockerComposeFile: %s }", c.DockerComposeFile)
@@ -121,7 +121,7 @@ func getCLIConfig() Config {
 	flagSet.StringVar(&blacklistVariables, "blacklist", "", usageBlackilstVariables)
 
 	flagSet.Parse(os.Args[1:])
-	dockerRunCommand := flagSet.Args()
+	runCommand := flagSet.Args()
 
 	flagSet.Usage = func () {
 		fmt.Fprint(os.Stderr, "Usage of dojo <flags> [--] <CMD>:\n")
@@ -148,8 +148,8 @@ func getCLIConfig() Config {
 		WorkDirOuter:       workDirOuter,
 		IdentityDirOuter:   identityDirOuter,
 		BlacklistVariables: blacklistVariables,
-		DockerRunCommand:   strings.Join(dockerRunCommand, " "),
-		DockerImage: 		image,
+		RunCommand:         strings.Join(runCommand, " "),
+		DockerImage:        image,
 	}
 }
 func MapToConfig(configMap map[string]string) Config {
@@ -165,7 +165,7 @@ func MapToConfig(configMap map[string]string) Config {
 	config.WorkDirOuter = configMap["workDirOuter"]
 	config.IdentityDirOuter = configMap["identityDirOuter"]
 	config.BlacklistVariables = configMap["blacklistVariables"]
-	config.DockerRunCommand = configMap["dockerRunCommand"]
+	config.RunCommand = configMap["runCommand"]
 	config.DockerImage = configMap["dockerImage"]
 	config.DockerOptions = configMap["dockerOptions"]
 	config.DockerComposeFile = configMap["dockerComposeFile"]
@@ -184,7 +184,7 @@ func ConfigToMap(config Config) map[string]string {
 	configMap["workDirOuter"] = config.WorkDirOuter
 	configMap["identityDirOuter"] = config.IdentityDirOuter
 	configMap["blacklistVariables"] = config.BlacklistVariables
-	configMap["dockerRunCommand"] = config.DockerRunCommand
+	configMap["runCommand"] = config.RunCommand
 	configMap["dockerImage"] = config.DockerImage
 	configMap["dockerOptions"] = config.DockerOptions
 	configMap["dockerComposeFile"] = config.DockerComposeFile
