@@ -26,6 +26,7 @@ type Config struct {
 	DockerImage string
 	DockerOptions string
 	DockerComposeFile string
+	Test string
 }
 
 func (c Config) String() string {
@@ -45,6 +46,7 @@ func (c Config) String() string {
 	str += fmt.Sprintf("{ DockerImage: %s }", c.DockerImage)
 	str += fmt.Sprintf("{ DockerOptions: %s }", c.DockerOptions)
 	str += fmt.Sprintf("{ DockerComposeFile: %s }", c.DockerComposeFile)
+	str += fmt.Sprintf("{ Test: %s }", c.Test)
 	return str
 }
 
@@ -120,6 +122,10 @@ func getCLIConfig() Config {
 	const usageBlackilstVariables    = "List of variables, split by commas, to be blacklisted in a docker container"
 	flagSet.StringVar(&blacklistVariables, "blacklist", "", usageBlackilstVariables)
 
+	var test string
+	const usageTest         = "Set this to true when integration testing. This turns writing env files to a test directory"
+	flagSet.StringVar(&test, "test", "", usageTest)
+
 	flagSet.Parse(os.Args[1:])
 	runCommandArr := flagSet.Args()
 	runCommand := smartJoinCommandArgs(runCommandArr)
@@ -151,6 +157,7 @@ func getCLIConfig() Config {
 		BlacklistVariables: blacklistVariables,
 		RunCommand:         runCommand,
 		DockerImage:        image,
+		Test: 				test,
 	}
 }
 
@@ -199,6 +206,7 @@ func MapToConfig(configMap map[string]string) Config {
 	config.DockerImage = configMap["dockerImage"]
 	config.DockerOptions = configMap["dockerOptions"]
 	config.DockerComposeFile = configMap["dockerComposeFile"]
+	config.Test = configMap["test"]
 	return config
 }
 func ConfigToMap(config Config) map[string]string {
@@ -218,6 +226,7 @@ func ConfigToMap(config Config) map[string]string {
 	configMap["dockerImage"] = config.DockerImage
 	configMap["dockerOptions"] = config.DockerOptions
 	configMap["dockerComposeFile"] = config.DockerComposeFile
+	configMap["test"] = config.Test
 	return configMap
 }
 

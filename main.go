@@ -40,8 +40,12 @@ func handleConfig() Config {
 	return mergedConfig
 }
 
-func getEnvFilePath(runID string) string {
-	return fmt.Sprintf("/tmp/dojo-environment-%s", runID)
+func getEnvFilePath(runID string, test string) string {
+	if test == "true" {
+		return fmt.Sprintf("/tmp/test-dojo-environment-%s", runID)
+	} else {
+		return fmt.Sprintf("/tmp/dojo-environment-%s", runID)
+	}
 }
 
 func handleRun(mergedConfig Config, runID string) int {
@@ -55,7 +59,7 @@ func handleRun(mergedConfig Config, runID string) int {
 	}
 
 	if mergedConfig.Driver == "docker"{
-		envFile := getEnvFilePath(runID)
+		envFile := getEnvFilePath(runID, mergedConfig.Test)
 		saveEnvToFile(envFile, mergedConfig.BlacklistVariables, mergedConfig.Dryrun)
 		Log("debug", fmt.Sprintf("Saved environment variables to file: %v", envFile))
 		interactiveShell := checkIfInteractive()
@@ -164,7 +168,7 @@ func handleCleanupOnSignal(mergedConfig Config, runID string) {
 				// this is the case when docker is not installed
 				Log("info", fmt.Sprintf("Not cleaning. Got output: %s", stdout))
 			}
-			envFile := getEnvFilePath(runID)
+			envFile := getEnvFilePath(runID, mergedConfig.Test)
 			removeGeneratedFile(mergedConfig, envFile)
 		}
 		Log("debug", "Cleanup finished")

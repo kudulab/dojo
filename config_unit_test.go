@@ -256,6 +256,7 @@ func Test_mapToConfig(t *testing.T) {
 	mymap["dockerImage"] = "alpine"
 	mymap["dockerOptions"] = "-v sth:sth"
 	mymap["dockerComposeFile"] = "aaa"
+	mymap["test"] = "false"
 	config := MapToConfig(mymap)
 	assert.Equal(t, "mydriver", config.Driver)
 	assert.Equal(t, "run", config.Action)
