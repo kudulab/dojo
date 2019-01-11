@@ -9,6 +9,30 @@ import (
 	"testing"
 )
 
+func Test_smartJoinCommandArgs(t *testing.T){
+	var mytests = []struct {
+		args    []string
+		expectedOutput string
+	}{
+		{[]string{"cmd"}, "cmd"},
+		{[]string{"env | grep MYVAR"}, "\"env | grep MYVAR\""},
+		{[]string{"cmd", "cmd and spaces"}, "cmd \"cmd and spaces\""},
+		{[]string{"sh", "-c", "echo hello"}, "sh -c \"echo hello\""},
+		{[]string{"sh", "-c", "whoami"}, "sh -c whoami"},
+		{[]string{"sh", "-c", "env | grep MYVAR"}, "sh -c \"env | grep MYVAR\""},
+		// user command: sh -c "env | grep ABC_DEF"
+		// or: sh -c 'env | grep ABC_DEF'
+		{[]string{"sh", "-c", "env | grep MYVAR"}, "sh -c \"env | grep MYVAR\""},
+		// user command: sh -c "docker run -ti \"echo hello\""
+		// or: sh -c 'docker run -ti "echo hello"'
+		{[]string{"sh", "-c", "docker run -ti \"echo hello\""}, "sh -c \"docker run -ti \\\"echo hello\\\"\""},
+	}
+	for _,v := range mytests {
+		outputCmd := smartJoinCommandArgs(v.args)
+		assert.Equal(t, outputCmd, v.expectedOutput)
+	}
+}
+
 func Test_getCLIConfig(t *testing.T) {
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
@@ -32,7 +56,9 @@ func Test_getCLIConfig(t *testing.T) {
 
 		{[]string{"cmd", "--config=Dojofile", "bash"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:"", RunCommand: "bash"}},
 		{[]string{"cmd", "--config=Dojofile", "bash", "bla"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:"", RunCommand: "bash bla"}},
-		{[]string{"cmd", "--config=Dojofile", "bash", "-c", "\"bla\""},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:"", RunCommand: "bash -c \"bla\""}},
+		{[]string{"cmd", "--config=Dojofile", "bash", "-c", "bla"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:"", RunCommand: "bash -c bla"}},
+		{[]string{"cmd", "--config=Dojofile", "bash", "-c", "bla1 bla2"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:"", RunCommand: "bash -c \"bla1 bla2\""}},
+		{[]string{"cmd", "--config=Dojofile", "bash -c \"bla\""},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:"", RunCommand: "\"bash -c \\\"bla\\\"\""}},
 		{[]string{"cmd", "--config=Dojofile", "--", "bash"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:"", RunCommand: "bash"}},
 		{[]string{"cmd", "--config=Dojofile", "--", "-c", "bash"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:"", RunCommand: "-c bash"}},
 		{[]string{"cmd", "bash", "--config=Dojofile"},Config{Action:"", ConfigFile:"", Driver:"", Debug:"", Dryrun:"", RunCommand: "bash --config=Dojofile"}},

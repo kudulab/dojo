@@ -121,7 +121,8 @@ func getCLIConfig() Config {
 	flagSet.StringVar(&blacklistVariables, "blacklist", "", usageBlackilstVariables)
 
 	flagSet.Parse(os.Args[1:])
-	runCommand := flagSet.Args()
+	runCommandArr := flagSet.Args()
+	runCommand := smartJoinCommandArgs(runCommandArr)
 
 	flagSet.Usage = func () {
 		fmt.Fprint(os.Stderr, "Usage of dojo <flags> [--] <CMD>:\n")
@@ -148,10 +149,39 @@ func getCLIConfig() Config {
 		WorkDirOuter:       workDirOuter,
 		IdentityDirOuter:   identityDirOuter,
 		BlacklistVariables: blacklistVariables,
-		RunCommand:         strings.Join(runCommand, " "),
+		RunCommand:         runCommand,
 		DockerImage:        image,
 	}
 }
+
+// While parsing CLI arguments, after all the flags are handled, we want to treat the rest of the arguments
+// as 1 element, as docker or docker-compose run command.
+// We cannot just use strings.Join(runCommandArr, " ") because this would result in missing quotes.
+func smartJoinCommandArgs(commandArgs []string) string {
+	quotedArgs := make([]string,0)
+	for _,v := range commandArgs {
+		//  It is safe to assume that an argument that contains white space(s) must have been (and should be) quoted
+		//  http://stackoverflow.com/a/1669493/4457564
+		//  Otherwise, this input command: -c "echo aaa"
+		//  would result in an output command: -c echo aaa.
+		updatedStr := v
+		if strings.Contains(v, " ") {
+			// If quotes were used 2 times, we have to escape the inner quotes. E.g. input command was:
+			// "/bin/bash -c \"echo aaa\" && echo bbb".
+			// Notice that, the shell strips outer quotes of an argument, so that argument (here: v) will
+			// never have outer quotes. Thus, by checking if v contains quotes, we check for the quotes
+			// which are not at the first or last string char (we check for the inner quotes).
+			if strings.Contains(v, "\"") {
+				updatedStr = strings.Replace(updatedStr, "\"", "\\\"", -1)
+			}
+			// and now let's quote it
+			updatedStr = fmt.Sprintf("\"%s\"", updatedStr)
+		}
+		quotedArgs = append(quotedArgs, updatedStr)
+	}
+	return strings.Join(quotedArgs,  " ")
+}
+
 func MapToConfig(configMap map[string]string) Config {
 	config := Config{}
 	config.Action = configMap["action"]
