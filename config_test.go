@@ -41,28 +41,28 @@ func Test_getCLIConfig(t *testing.T) {
 		flags    []string
 		expectedConfig Config
 	}{
-		{[]string{"cmd"}, Config{Action:"", ConfigFile:"", Driver:"", Debug:"", Dryrun:""}},
+		{[]string{"cmd"}, Config{Action:"", ConfigFile:"", Driver:"", Debug:""}},
 
-		{[]string{"cmd", "--config=Dojofile"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:""}},
-		{[]string{"cmd", "--config", "Dojofile"}, Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:""}},
-		{[]string{"cmd", "-c", "Dojofile"}, Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:""}},
-		{[]string{"cmd", "-c=Dojofile"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:""}},
+		{[]string{"cmd", "--config=Dojofile"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:""}},
+		{[]string{"cmd", "--config", "Dojofile"}, Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:""}},
+		{[]string{"cmd", "-c", "Dojofile"}, Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:""}},
+		{[]string{"cmd", "-c=Dojofile"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:""}},
 
-		{[]string{"cmd", "--action", "run"}, Config{Action:"run", ConfigFile:"", Driver:"", Debug:"", Dryrun:""}},
-		{[]string{"cmd", "-a", "run"}, Config{Action:"run", ConfigFile:"", Driver:"", Debug:"", Dryrun:""}},
+		{[]string{"cmd", "--action", "run"}, Config{Action:"run", ConfigFile:"", Driver:"", Debug:""}},
+		{[]string{"cmd", "-a", "run"}, Config{Action:"run", ConfigFile:"", Driver:"", Debug:""}},
 
 		{[]string{"cmd", "--driver", "mydriver"}, Config{Driver:"mydriver"}},
 		{[]string{"cmd", "-d", "mydriver"}, Config{Driver:"mydriver"}},
 
-		{[]string{"cmd", "--config=Dojofile", "bash"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:"", RunCommand: "bash"}},
-		{[]string{"cmd", "--config=Dojofile", "bash", "bla"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:"", RunCommand: "bash bla"}},
-		{[]string{"cmd", "--config=Dojofile", "bash", "-c", "bla"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:"", RunCommand: "bash -c bla"}},
-		{[]string{"cmd", "--config=Dojofile", "bash", "-c", "bla1 bla2"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:"", RunCommand: "bash -c \"bla1 bla2\""}},
-		{[]string{"cmd", "--config=Dojofile", "bash -c \"bla\""},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:"", RunCommand: "\"bash -c \\\"bla\\\"\""}},
-		{[]string{"cmd", "--config=Dojofile", "--", "bash"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:"", RunCommand: "bash"}},
-		{[]string{"cmd", "--config=Dojofile", "--", "-c", "bash"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:"", RunCommand: "-c bash"}},
-		{[]string{"cmd", "bash", "--config=Dojofile"},Config{Action:"", ConfigFile:"", Driver:"", Debug:"", Dryrun:"", RunCommand: "bash --config=Dojofile"}},
-		{[]string{"cmd", "--config=Dojofile11", "bash", "--config=Dojofile"},Config{Action:"", ConfigFile:"Dojofile11", Driver:"", Debug:"", Dryrun:"", RunCommand: "bash --config=Dojofile"}},
+		{[]string{"cmd", "--config=Dojofile", "bash"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", RunCommand: "bash"}},
+		{[]string{"cmd", "--config=Dojofile", "bash", "bla"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", RunCommand: "bash bla"}},
+		{[]string{"cmd", "--config=Dojofile", "bash", "-c", "bla"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", RunCommand: "bash -c bla"}},
+		{[]string{"cmd", "--config=Dojofile", "bash", "-c", "bla1 bla2"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", RunCommand: "bash -c \"bla1 bla2\""}},
+		{[]string{"cmd", "--config=Dojofile", "bash -c \"bla\""},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", RunCommand: "\"bash -c \\\"bla\\\"\""}},
+		{[]string{"cmd", "--config=Dojofile", "--", "bash"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", RunCommand: "bash"}},
+		{[]string{"cmd", "--config=Dojofile", "--", "-c", "bash"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", RunCommand: "-c bash"}},
+		{[]string{"cmd", "bash", "--config=Dojofile"},Config{Action:"", ConfigFile:"", Driver:"", Debug:"", RunCommand: "bash --config=Dojofile"}},
+		{[]string{"cmd", "--config=Dojofile11", "bash", "--config=Dojofile"},Config{Action:"", ConfigFile:"Dojofile11", Driver:"", Debug:"", RunCommand: "bash --config=Dojofile"}},
 
 		{[]string{"cmd", "--work-dir-outer=/tmp/bla"}, Config{WorkDirOuter:"/tmp/bla"}},
 		{[]string{"cmd", "--work-dir-inner=/tmp/bla"}, Config{WorkDirInner:"/tmp/bla"}},
@@ -70,13 +70,12 @@ func Test_getCLIConfig(t *testing.T) {
 		{[]string{"cmd", "--identity-dir-outer=/tmp/bla"}, Config{IdentityDirOuter: "/tmp/bla"}},
 		{[]string{"cmd", "--blacklist=abc,123,ABC_4"}, Config{BlacklistVariables:"abc,123,ABC_4"}},
 
-		{[]string{"cmd", "--action", "run", "-c", "Dojofile"}, Config{Action:"run", ConfigFile:"Dojofile", Driver:"", Debug:"", Dryrun:""}},
-		{[]string{"cmd", "--action", "run", "-c", "Dojofile", "--driver", "mydriver"}, Config{Action:"run", ConfigFile:"Dojofile", Driver:"mydriver", Debug:"", Dryrun:""}},
-		{[]string{"cmd", "--debug=true"}, Config{Action:"", ConfigFile:"", Driver:"", Debug:"true", Dryrun:""}},
-		{[]string{"cmd", "--debug=false"}, Config{Action:"", ConfigFile:"", Driver:"", Debug:"false", Dryrun:""}},
-		{[]string{"cmd", "--dryrun=false"}, Config{Action:"", ConfigFile:"", Driver:"", Debug:"", Dryrun:"false"}},
-		{[]string{"cmd", "--interactive=false"}, Config{Action:"", ConfigFile:"", Driver:"", Debug:"", Dryrun:"", Interactive:"false"}},
-		{[]string{"cmd", "-i=false"}, Config{Action:"", ConfigFile:"", Driver:"", Debug:"", Dryrun:"", Interactive:"false"}},
+		{[]string{"cmd", "--action", "run", "-c", "Dojofile"}, Config{Action:"run", ConfigFile:"Dojofile", Driver:"", Debug:""}},
+		{[]string{"cmd", "--action", "run", "-c", "Dojofile", "--driver", "mydriver"}, Config{Action:"run", ConfigFile:"Dojofile", Driver:"mydriver", Debug:""}},
+		{[]string{"cmd", "--debug=true"}, Config{Action:"", ConfigFile:"", Driver:"", Debug:"true"}},
+		{[]string{"cmd", "--debug=false"}, Config{Action:"", ConfigFile:"", Driver:"", Debug:"false"}},
+		{[]string{"cmd", "--interactive=false"}, Config{Action:"", ConfigFile:"", Driver:"", Debug:"", Interactive:"false"}},
+		{[]string{"cmd", "-i=false"}, Config{Action:"", ConfigFile:"", Driver:"", Debug:"", Interactive:"false"}},
 		{[]string{"cmd", "--remove-containers=false"}, Config{RemoveContainers: "false"}},
 		{[]string{"cmd", "--rm=false"}, Config{RemoveContainers: "false"}},
 	}
@@ -88,7 +87,6 @@ func Test_getCLIConfig(t *testing.T) {
 		assert.Equal(t, currentTest.expectedConfig.ConfigFile, config.ConfigFile, currentTest.flags)
 		assert.Equal(t, currentTest.expectedConfig.Driver, config.Driver, currentTest.flags)
 		assert.Equal(t, currentTest.expectedConfig.Debug, config.Debug, currentTest.flags)
-		assert.Equal(t, currentTest.expectedConfig.Dryrun, config.Dryrun, currentTest.flags)
 		assert.Equal(t, currentTest.expectedConfig.Interactive, config.Interactive, currentTest.flags)
 		assert.Equal(t, currentTest.expectedConfig.RunCommand, config.RunCommand, currentTest.flags)
 		assert.Equal(t, currentTest.expectedConfig.RemoveContainers, config.RemoveContainers, currentTest.flags)
@@ -204,7 +202,6 @@ func Test_getMergedConfig(t *testing.T){
 	assert.Equal(t, "somefile", mergedConfig.ConfigFile)
 	assert.Equal(t, "false", mergedConfig.Debug)
 	assert.Equal(t, "mydriver", mergedConfig.Driver)
-	assert.Equal(t, "false", mergedConfig.Dryrun)
 	assert.Equal(t, "true", mergedConfig.RemoveContainers)
 	assert.Contains(t, mergedConfig.WorkDirOuter, "/src/dojo")
 	assert.Equal(t, "/dojo/work", mergedConfig.WorkDirInner)
@@ -220,7 +217,6 @@ func Test_verifyConfig_invalidAction(t *testing.T) {
 		Action: "dummy",
 		Driver: "docker",
 		Debug: "true",
-		Dryrun: "false",
 	}
 	err := verifyConfig(config)
 	assert.NotNil(t, err)
@@ -232,7 +228,6 @@ func Test_verifyConfig_invalidDriver(t *testing.T) {
 		Action: "run",
 		Driver: "mydriver",
 		Debug: "true",
-		Dryrun: "false",
 	}
 	err := verifyConfig(config)
 	assert.NotNil(t, err)
@@ -245,7 +240,6 @@ func Test_verifyConfig_driverShorthandDC(t *testing.T) {
 		Action: "run",
 		Driver: "dc",
 		Debug: "true",
-		Dryrun: "false",
 		RemoveContainers: "true",
 		DockerImage: "bla",
 		DockerComposeFile: dcFile,
@@ -263,7 +257,6 @@ func Test_mapToConfig(t *testing.T) {
 	mymap["config"] = "somefile"
 	mymap["driver"] = "mydriver"
 	mymap["debug"] = "maybe"
-	mymap["dryrun"] = "maybe"
 	mymap["interactive"] = "meh"
 	mymap["removeContainers"] = "true"
 	mymap["workDirInner"] = "/tmp/aaa"

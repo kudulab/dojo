@@ -18,8 +18,9 @@ func Test_parseDCFileVersion(t *testing.T){
 		mytests{"version: \"4.55\"", 4.55, ""},
 		mytests{"", 0, "First line of docker-compose file did not start with: version"},
 	}
+	dc := NewDockerComposeDriver(MockedShellServiceNotInteractive{}, MockedFileService{})
 	for _,v := range mytestsObj {
-		actualVersion, err := parseDCFileVersion(v.content)
+		actualVersion, err := dc.ParseDCFileVersion(v.content)
 		assert.Equal(t, v.expectedOutput, actualVersion, v.content)
 		if v.expectedErrMsg == "" {
 			assert.Nil(t, err)
@@ -60,9 +61,10 @@ services:
 		mytests{contentsNoDefault, "does not contain: default:"},
 		mytests{contentsInvalidVersion, "should contain version number >=2 and <3, current version: 3"},
 	}
+	dc := NewDockerComposeDriver(MockedShellServiceNotInteractive{}, MockedFileService{})
 	for _,v := range mytestsObj {
 		// do not test version, it is tested in other test
-		_, err := verifyDCFile(v.content, "filePath.yml")
+		_, err := dc.VerifyDCFile(v.content, "filePath.yml")
 		if v.expectedErrMsg == "" {
 			assert.Equal(t, err, nil)
 		} else {
@@ -80,6 +82,7 @@ func Test_generateDCFileContents(t *testing.T) {
 		mytests{true},
 		mytests{false},
 	}
+	dc := NewDockerComposeDriver(MockedShellServiceNotInteractive{}, MockedFileService{})
 	for _,v := range mytestsObj {
 		config := getTestConfig()
 		setTestEnv()
@@ -88,7 +91,7 @@ func Test_generateDCFileContents(t *testing.T) {
 		} else {
 			setTestEnv()
 		}
-		contents := generateDCFileContents(config, 2.1, "/tmp/env-file.txt")
+		contents := dc.GenerateDCFileContents(config, 2.1, "/tmp/env-file.txt")
 		assert.Contains(t, contents, "version: '2.1'")
 		assert.Contains(t, contents, "  default:")
 		assert.Contains(t, contents, "    image: img:1.2.3")
@@ -132,11 +135,18 @@ func Test_ConstructDockerComposeCommandRun_Interactive(t *testing.T){
 		config.Interactive = v.userInteractiveConfig
 		config.RunCommand = "bla"
 		config.DockerComposeOptions = "--some-opt"
-		cmd := constructDockerComposeCommandRun(config, "1234", "/tmp/dummy", v.shellInteractive)
+		var ss ShellServiceInterface
+		if v.shellInteractive {
+			ss = MockedShellServiceInteractive{}
+		} else {
+			ss = MockedShellServiceNotInteractive{}
+		}
+		dc := NewDockerComposeDriver(ss, MockedFileService{})
+		cmd := dc.ConstructDockerComposeCommandRun(config, "1234", "/tmp/dummy")
 		assert.Equal(t, v.expOutput, cmd, fmt.Sprintf("shellInteractive: %v, userConfig: %v", v.shellInteractive, v.userInteractiveConfig))
 	}
 }
-func Test_ConstructDockerComposeCommandRun_Interactive_NoCommand(t *testing.T){
+func Test_ConstructDockerComposeCommandRun_NotInteractive_NoCommand(t *testing.T){
 	setTestEnv()
 	config := getTestConfig()
 	config.RunCommand = ""
@@ -149,8 +159,8 @@ func Test_ConstructDockerComposeCommandRun_Interactive_NoCommand(t *testing.T){
 			t.Fatalf("Expected panic")
 		}
 	}()
-
-	constructDockerComposeCommandRun(config, "1234", "/tmp/dummy", false)
+	dc := NewDockerComposeDriver(MockedShellServiceNotInteractive{}, MockedFileService{})
+	dc.ConstructDockerComposeCommandRun(config, "1234", "/tmp/dummy")
 	t.Fatalf("Expected panic")
 
 }
@@ -167,14 +177,16 @@ func Test_ConstructDockerComposeCommandRun(t *testing.T){
 			expOutput: "docker-compose -f docker-compose.yml -f /tmp/dummy -p 1234 run --rm -T --some-opt default bash -c \"echo hello\""},
 	}
 	setTestEnv()
+	dc := NewDockerComposeDriver(MockedShellServiceNotInteractive{}, MockedFileService{})
 	for _,v := range mytests {
 		config := getTestConfig()
 		config.RunCommand = v.userCommandConfig
 		config.DockerComposeOptions = "--some-opt"
-		cmd := constructDockerComposeCommandRun(config, "1234", "/tmp/dummy", false)
+		cmd := dc.ConstructDockerComposeCommandRun(config, "1234", "/tmp/dummy")
 		assert.Equal(t, v.expOutput, cmd, fmt.Sprintf("userCommandConfig: %v", v.userCommandConfig))
 	}
 }
+
 func Test_ConstructDockerComposeCommandStop(t *testing.T){
 	type mytestStruct struct {
 		userCommandConfig string
@@ -184,14 +196,16 @@ func Test_ConstructDockerComposeCommandStop(t *testing.T){
 		mytestStruct{ userCommandConfig: "",
 			expOutput: "docker-compose -f docker-compose.yml -f /tmp/dummy -p 1234 stop"},
 	}
+	dc := NewDockerComposeDriver(MockedShellServiceNotInteractive{}, MockedFileService{})
 	for _,v := range mytests {
 		config := getTestConfig()
 		config.RunCommand = v.userCommandConfig
 		config.DockerComposeOptions = "--some-opt"
-		cmd := constructDockerComposeCommandStop(config, "1234", "/tmp/dummy")
+		cmd := dc.ConstructDockerComposeCommandStop(config, "1234", "/tmp/dummy")
 		assert.Equal(t, v.expOutput, cmd, fmt.Sprintf("userCommandConfig: %v", v.userCommandConfig))
 	}
 }
+
 func Test_ConstructDockerComposeCommandRm(t *testing.T){
 	type mytestStruct struct {
 		userCommandConfig string
@@ -201,16 +215,17 @@ func Test_ConstructDockerComposeCommandRm(t *testing.T){
 		mytestStruct{ userCommandConfig: "",
 			expOutput: "docker-compose -f docker-compose.yml -f /tmp/dummy -p 1234 rm -f"},
 	}
+	dc := NewDockerComposeDriver(MockedShellServiceNotInteractive{}, MockedFileService{})
 	for _,v := range mytests {
 		config := getTestConfig()
 		config.RunCommand = v.userCommandConfig
 		config.DockerComposeOptions = "--some-opt"
-		cmd := constructDockerComposeCommandRm(config, "1234", "/tmp/dummy")
+		cmd := dc.ConstructDockerComposeCommandRm(config, "1234", "/tmp/dummy")
 		assert.Equal(t, v.expOutput, cmd, fmt.Sprintf("userCommandConfig: %v", v.userCommandConfig))
 	}
 }
 
-func Test_getExpDockerNetwork(t *testing.T){
+func TestDockerComposeDriver_GetExpDockerNetwork(t *testing.T){
 	type mytestStruct struct {
 		runID string
 		expOutput string
@@ -219,8 +234,54 @@ func Test_getExpDockerNetwork(t *testing.T){
 		mytestStruct{ runID: "dojo-myproject-2019-01-09_10-39-06-98498093",
 			expOutput: "dojomyproject2019010910390698498093_default"},
 	}
+	dc := NewDockerComposeDriver(MockedShellServiceNotInteractive{}, MockedFileService{})
 	for _,v := range mytests {
-		expNet := getExpDockerNetwork(v.runID)
+		expNet := dc.GetExpDockerNetwork(v.runID)
 		assert.Equal(t, v.expOutput, expNet, v.runID)
 	}
+}
+
+func createDCFile(t *testing.T, dcFilePath string, fs FileServiceInterface)  {
+	fs.RemoveFile(dcFilePath, true)
+	dcContents := `version: '2'
+services:
+ default:
+   container_name: whatever
+`
+	fs.WriteToFile(dcFilePath, dcContents, "info")
+}
+func removeDCFile(dcFilePath string, fs FileServiceInterface)  {
+	fs.RemoveFile(dcFilePath, true)
+}
+
+func TestDockerComposeDriver_HandleRun_Unit(t *testing.T) {
+	fs := MockedFileService{}
+	shellS := MockedShellServiceNotInteractive{}
+	driver := NewDockerComposeDriver(shellS, fs)
+
+	config := getTestConfig()
+	config.Driver = "docker-compose"
+	config.RunCommand = "bla"
+	runID := "1234"
+	exitstatus := driver.HandleRun(config, runID, "/tmp/test-dojo-env")
+	assert.Equal(t, 0, exitstatus)
+}
+
+func TestDockerComposeDriver_HandleRun_RealFileService(t *testing.T) {
+	fs := FileService{}
+	shellS := MockedShellServiceNotInteractive{}
+	driver := NewDockerComposeDriver(shellS, fs)
+
+	dcFilePath := "test-docker-compose.yml"
+	createDCFile(t, dcFilePath, fs)
+	config := getTestConfig()
+	config.Driver = "docker-compose"
+	config.DockerComposeFile = dcFilePath
+	config.WorkDirOuter = "/tmp"
+	config.RunCommand = "bla"
+	runID := "1234"
+	exitstatus := driver.HandleRun(config, runID, "/tmp/test-dojo-env")
+	assert.Equal(t, 0, exitstatus)
+	removeDCFile(dcFilePath, fs)
+	removeDCFile(dcFilePath+".dojo", fs)
 }

@@ -4,25 +4,15 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"os"
-	"strings"
 	"testing"
 )
 
-func getTestConfig() Config {
-	config := getDefaultConfig("somefile")
-	config.DockerImage = "img:1.2.3"
-	// set these to some dummy dir, so that tests work also if not run in dojo docker image
-	config.WorkDirOuter = "/tmp/bla"
-	config.IdentityDirOuter = "/tmp/myidentity"
-	config.Dryrun = "true"
-	return config
-}
 
 func setTestEnv() {
 	os.Unsetenv("DISPLAY")
 }
 
-func Test_ConstructDockerCommand_Interactive(t *testing.T){
+func TestDockerDriver_ConstructDockerRunCmd_Interactive(t *testing.T){
 	type mytestStruct struct {
 		shellInteractive bool
 		userInteractiveConfig string
@@ -47,11 +37,18 @@ func Test_ConstructDockerCommand_Interactive(t *testing.T){
 	for _,v := range mytests {
 		config := getTestConfig()
 		config.Interactive = v.userInteractiveConfig
-		cmd := constructDockerCommand(config, "/tmp/some-env-file", "name1", v.shellInteractive)
+		var ss ShellServiceInterface
+		if v.shellInteractive {
+			ss = MockedShellServiceInteractive{}
+		} else {
+			ss = MockedShellServiceNotInteractive{}
+		}
+		d := NewDockerDriver(ss, MockedFileService{})
+		cmd := d.ConstructDockerRunCmd(config, "/tmp/some-env-file", "name1")
 		assert.Equal(t, v.expOutput, cmd, fmt.Sprintf("shellInteractive: %v, userConfig: %v", v.shellInteractive, v.userInteractiveConfig))
 	}
 }
-func Test_ConstructDockerCommand_Command(t *testing.T){
+func TestDockerDriver_ConstructDockerRunCmd_Command(t *testing.T){
 	type mytestStruct struct {
 		userCommandConfig string
 		expOutput string
@@ -68,11 +65,12 @@ func Test_ConstructDockerCommand_Command(t *testing.T){
 	for _,v := range mytests {
 		config := getTestConfig()
 		config.RunCommand = v.userCommandConfig
-		cmd := constructDockerCommand(config, "/tmp/some-env-file", "name1", false)
+		d := NewDockerDriver(MockedShellServiceNotInteractive{}, MockedFileService{})
+		cmd := d.ConstructDockerRunCmd(config, "/tmp/some-env-file", "name1")
 		assert.Equal(t, v.expOutput, cmd, fmt.Sprintf("userCommandConfig: %v", v.userCommandConfig))
 	}
 }
-func Test_ConstructDockerCommand_DisplayEnvVar(t *testing.T){
+func TestDockerDriver_ConstructDockerRunCmd_DisplayEnvVar(t *testing.T){
 	type mytestStruct struct {
 		displaySet bool
 		expOutput string
@@ -91,67 +89,23 @@ func Test_ConstructDockerCommand_DisplayEnvVar(t *testing.T){
 		} else {
 			setTestEnv()
 		}
-		cmd := constructDockerCommand(config, "/tmp/some-env-file", "name1", false)
+		d := NewDockerDriver(MockedShellServiceNotInteractive{}, MockedFileService{})
+		cmd := d.ConstructDockerRunCmd(config, "/tmp/some-env-file", "name1")
 		assert.Equal(t, v.expOutput, cmd, fmt.Sprintf("displaySet: %v", v.displaySet))
 	}
 }
-func Test_getRunID(t *testing.T) {
-	runID := getRunID("false")
-	assert.Contains(t, runID, "dojo-")
-	// runID must be lowercase
-	lowerCaseRunID := strings.ToLower(runID)
-	assert.Equal(t, lowerCaseRunID, runID)
 
-	runID = getRunID("true")
-	assert.Equal(t, "testdojorunid", runID)
-	// runID must be lowercase
-	lowerCaseRunID = strings.ToLower(runID)
-	assert.Equal(t, lowerCaseRunID, runID)
+func TestDockerDriver_HandleRun_NoCommand(t *testing.T) {
+	d := NewDockerDriver(MockedShellServiceNotInteractive{}, MockedFileService{})
+	config := getTestConfig()
+	config.RunCommand = ""
+	es := d.HandleRun(config, "testrunid", "/tmp/test-dojo")
+	assert.Equal(t, 0, es)
 }
 
-func Test_isVariableBlacklisted(t *testing.T) {
-	blacklisted := []string{"USER", "PWD", "BASH*"}
-
-	type mytests struct {
-		variableName string
-		expectedBlacklisted bool
-	}
-	mytestsObj := []mytests {
-		mytests{"PWD", true},
-		mytests{"ABC", false},
-		mytests{"BASH", true},
-		mytests{"BASH111", true},
-		mytests{"BAS", false},
-		mytests{"BASH*", true},
-	}
-	for _,v := range mytestsObj {
-		actualBlacklisted := isVariableBlacklisted(v.variableName, blacklisted)
-		assert.Equal(t, v.expectedBlacklisted, actualBlacklisted, v.variableName)
-	}
-}
-
-func Test_existsVariableWithDOJOPrefix(t *testing.T) {
-	allVariables := []string{"USER=dojo", "BASH_123=123", "DOJO_USER=555", "MYVAR=999"}
-	assert.Equal(t, true, existsVariableWithDOJOPrefix("USER", allVariables))
-}
-
-func Test_generateVariablesString(t *testing.T) {
-	blacklisted := "USER,PWD,BASH*"
-	// USER variable is set as USER and DOJO_USER and is blacklisted
-	// USER1 variable is set as USER1 and DOJO_USER1 and is not blacklisted
-	// BASH_123 variable is blacklisted because of BASH*
-	// MYVAR is not blacklisted, is not set with DOJO_ prefix
-	// DOJO_VAR1 is not blacklisted, is set with DOJO_ prefix
-	// DISPLAY is always set to the same value
-	allVariables := []string{"USER=dojo", "BASH_123=123", "DOJO_USER=555", "MYVAR=999", "DOJO_VAR1=11", "USER1=1", "DOJO_USER1=2", "DISPLAY=aaa"}
-	genStr := generateVariablesString(blacklisted, allVariables)
-	assert.Contains(t, genStr, "DOJO_USER=555")
-	assert.Contains(t, genStr, "DOJO_BASH_123=123")
-	assert.Contains(t, genStr, "MYVAR=999")
-	assert.Contains(t, genStr, "DOJO_VAR1=11")
-	assert.Contains(t, genStr, "DOJO_USER1=2")
-	assert.Contains(t, genStr, "DISPLAY=unix:0.0")
-	assert.NotContains(t, genStr, "DOJO_USER=dojo")
-	assert.NotContains(t, genStr, "USER1=1")
-	assert.NotContains(t, genStr, "DISPLAY=aaa")
+func TestDockerDriver_HandlePull(t *testing.T) {
+	d := NewDockerDriver(MockedShellServiceNotInteractive{}, MockedFileService{})
+	config := getTestConfig()
+	es := d.HandlePull(config)
+	assert.Equal(t, 0, es)
 }

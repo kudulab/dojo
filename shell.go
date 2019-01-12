@@ -9,7 +9,21 @@ import (
 	"unsafe"
 )
 
-func RunShell(cmdString string) int {
+type ShellServiceInterface interface {
+	RunInteractive(cmdString string) int
+	RunGetOutput(cmdString string) (string, string, int)
+	CheckIfInteractive() bool
+}
+
+func NewBashShellService() BashShellService {
+	return BashShellService{"bash"}
+}
+
+type BashShellService struct {
+	ShellBinary string
+}
+
+func (bs BashShellService) RunInteractive(cmdString string) int {
 	cmd := exec.Command("bash", "-c", cmdString)
 	// we may want to experiment more with:
 	// cmd.SysProcAttr = &syscall.SysProcAttr{
@@ -43,7 +57,8 @@ func RunShell(cmdString string) int {
 
 	return exitStatus
 }
-func RunShellGetOutput(cmdString string) (string, string, int) {
+
+func (bs BashShellService) RunGetOutput(cmdString string) (string, string, int) {
 	cmd := exec.Command("bash", "-c", cmdString)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -65,12 +80,14 @@ func RunShellGetOutput(cmdString string) (string, string, int) {
 	return stdout.String(), stderr.String(), exitStatus
 }
 
-func checkIfInteractive() bool {
+func (bs BashShellService) CheckIfInteractive() bool {
 	// stolen from: https://github.com/mattn/go-isatty/blob/master/isatty_linux.go
 	fd := os.Stdout.Fd()
 	const ioctlReadTermios = syscall.TCGETS
 
 	var termios syscall.Termios
 	_, _, err := syscall.Syscall6(syscall.SYS_IOCTL, fd, ioctlReadTermios, uintptr(unsafe.Pointer(&termios)), 0, 0, 0)
-	return err == 0
+	interactive := (err == 0)
+	Log("debug", fmt.Sprintf("Current shell is interactive: %v", interactive))
+	return interactive
 }

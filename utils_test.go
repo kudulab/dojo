@@ -87,3 +87,25 @@ func TestLog_MixLevel_ForHuman(t *testing.T) {
 	Log("debug", "my debug msg")
 	logSth()
 }
+func Test_getRunID(t *testing.T) {
+	runID := getRunID("false")
+	assert.Contains(t, runID, "dojo-")
+	// runID must be lowercase
+	lowerCaseRunID := strings.ToLower(runID)
+	assert.Equal(t, lowerCaseRunID, runID)
+
+	runID = getRunID("true")
+	assert.Equal(t, "testdojorunid", runID)
+	// runID must be lowercase
+	lowerCaseRunID = strings.ToLower(runID)
+	assert.Equal(t, lowerCaseRunID, runID)
+}
+
+func getTestConfig() Config {
+	config := getDefaultConfig("somefile")
+	config.DockerImage = "img:1.2.3"
+	// set these to some dummy dir, so that tests work also if not run in dojo docker image
+	config.WorkDirOuter = "/tmp/bla"
+	config.IdentityDirOuter = "/tmp/myidentity"
+	return config
+}

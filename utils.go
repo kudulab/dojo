@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func getGoroutineID() uint64 {
@@ -63,12 +65,27 @@ func orange(text string) string {
 	return "\033[33m" + text + "\033[0m"
 }
 
-func removeFile(filePath string, ignoreNoSuchFileError bool) {
-	err := os.Remove(filePath)
-	if err != nil {
-		if strings.Contains(err.Error(),"no such file or directory") && ignoreNoSuchFileError {
-			return
+// Returns an identificator that can be reused later in many places,
+// e.g. as some file name or as docker container name.
+// e.g. dojo-myproject-2019-01-09_10-39-06-98498093
+// It may not contain upper case letters or else "docker inspect" complains with the error:
+// invalid reference format: repository name must be lowercase.
+func getRunID(test string) string {
+	if test != "true" {
+		currentDirectory, err := os.Getwd()
+		if err != nil {
+			panic(err)
 		}
-		panic(err)
+		currentDirectorySplit := strings.Split(currentDirectory, "/")
+		currentDirectoryLastPart := currentDirectorySplit[len(currentDirectorySplit)-1]
+
+		currentTime := time.Now().Format("2006-01-02_15-04-05")
+		// run ID must contain a random number. Using time is insufficient, because e.g. 2 CI agents may be started
+		// in the same second for the same project.
+		rand.Seed(time.Now().UnixNano())
+		randomNumber := rand.Intn(99999999)
+		return fmt.Sprintf("dojo-%s-%v-%v", currentDirectoryLastPart, currentTime, randomNumber)
+	} else {
+		return "testdojorunid"
 	}
 }

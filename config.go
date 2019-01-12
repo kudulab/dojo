@@ -14,7 +14,6 @@ type Config struct {
 	ConfigFile         string
 	Driver             string
 	Debug              string
-	Dryrun             string
 	Interactive        string
 	RemoveContainers   string
 	WorkDirInner       string
@@ -36,7 +35,6 @@ func (c Config) String() string {
 	str += fmt.Sprintf("{ ConfigFile: %s }", c.ConfigFile)
 	str += fmt.Sprintf("{ Driver: %s }", c.Driver)
 	str += fmt.Sprintf("{ Debug: %s }", c.Debug)
-	str += fmt.Sprintf("{ Dryrun: %s }", c.Dryrun)
 	str += fmt.Sprintf("{ Interactive: %s }", c.Interactive)
 	str += fmt.Sprintf("{ RemoveContainers: %s }", c.RemoveContainers)
 	str += fmt.Sprintf("{ WorkDirInner: %s }", c.WorkDirInner)
@@ -89,11 +87,6 @@ func getCLIConfig() Config {
 	var debug string
 	const usageDebug         = "Set log level to debug (verbose). Default: false"
 	flagSet.StringVar(&debug, "debug", "", usageDebug)
-
-	// this is not bool, because we need to know if it was set or not
-	var dryrun string
-	const usageDryrun         = "Do not pull docker image, do not run docker. Default: false"
-	flagSet.StringVar(&dryrun, "dryrun", "", usageDryrun)
 
 	// this is not bool, because we need to know if it was set or not
 	var interactive string
@@ -155,7 +148,6 @@ func getCLIConfig() Config {
 		ConfigFile:         config,
 		Driver:             driver,
 		Debug:              debug,
-		Dryrun:             dryrun,
 		Interactive:        interactive,
 		RemoveContainers:   removeContainers,
 		WorkDirInner:       workDirInner,
@@ -203,7 +195,6 @@ func MapToConfig(configMap map[string]string) Config {
 	config.ConfigFile = configMap["config"]
 	config.Driver = configMap["driver"]
 	config.Debug = configMap["debug"]
-	config.Dryrun = configMap["dryrun"]
 	config.Interactive = configMap["interactive"]
 	config.RemoveContainers = configMap["removeContainers"]
 	config.WorkDirInner = configMap["workDirInner"]
@@ -224,7 +215,6 @@ func ConfigToMap(config Config) map[string]string {
 	configMap["config"] = config.ConfigFile
 	configMap["driver"] = config.Driver
 	configMap["debug"] = config.Debug
-	configMap["dryrun"] = config.Dryrun
 	configMap["interactive"] = config.Interactive
 	configMap["removeContainers"] = config.RemoveContainers
 	configMap["workDirInner"] = config.WorkDirInner
@@ -308,7 +298,6 @@ func getDefaultConfig(configFile string) Config {
 		ConfigFile:         configFile,
 		Driver:             "docker",
 		Debug:              "false",
-		Dryrun:             "false",
 		RemoveContainers:   "true",
 		WorkDirOuter:       currentDirectory,
 		WorkDirInner:       "/dojo/work",
@@ -351,9 +340,6 @@ func verifyConfig(config *Config) error {
 	}
 	if config.Debug != "true" && config.Debug != "false" {
 		return fmt.Errorf("Invalid configuration, unsupported Debug: %s. Supported: true, false", config.Debug)
-	}
-	if config.Dryrun != "true" && config.Dryrun != "false" {
-		return fmt.Errorf("Invalid configuration, unsupported Dryrun: %s. Supported: true, false", config.Dryrun)
 	}
 	if config.DockerComposeOptions != "" && config.Driver == "docker" {
 		return fmt.Errorf("DockerComposeOptions option is unsupported for driver: docker")
