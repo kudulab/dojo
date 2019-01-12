@@ -71,20 +71,24 @@ func constructDockerCommand(config Config, envFilePath string, containerName str
 // e.g. dojo-myproject-2019-01-09_10-39-06-98498093
 // It may not contain upper case letters or else "docker inspect" complains with the error:
 // invalid reference format: repository name must be lowercase.
-func getRunID() string {
-	currentDirectory, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	currentDirectorySplit := strings.Split(currentDirectory, "/")
-	currentDirectoryLastPart := currentDirectorySplit[len(currentDirectorySplit)-1]
+func getRunID(test string) string {
+	if test != "true" {
+		currentDirectory, err := os.Getwd()
+		if err != nil {
+			panic(err)
+		}
+		currentDirectorySplit := strings.Split(currentDirectory, "/")
+		currentDirectoryLastPart := currentDirectorySplit[len(currentDirectorySplit)-1]
 
-	currentTime := time.Now().Format("2006-01-02_15-04-05")
-	// run ID must contain a random number. Using time is insufficient, because e.g. 2 CI agents may be started
-	// in the same second for the same project.
-	rand.Seed(time.Now().UnixNano())
-	randomNumber := rand.Intn(99999999)
-	return fmt.Sprintf("dojo-%s-%v-%v", currentDirectoryLastPart, currentTime, randomNumber)
+		currentTime := time.Now().Format("2006-01-02_15-04-05")
+		// run ID must contain a random number. Using time is insufficient, because e.g. 2 CI agents may be started
+		// in the same second for the same project.
+		rand.Seed(time.Now().UnixNano())
+		randomNumber := rand.Intn(99999999)
+		return fmt.Sprintf("dojo-%s-%v-%v", currentDirectoryLastPart, currentTime, randomNumber)
+	} else {
+		return "testdojorunid"
+	}
 }
 
 func isVariableBlacklisted(variableName string, blacklistedVariables []string) bool {

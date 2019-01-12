@@ -210,7 +210,7 @@ func main() {
 	// using multiple goroutines. And let's never write to it again.
 	runID := ""
 	if mergedConfig.Action == "run" {
-		runID = getRunID()
+		runID = getRunID(mergedConfig.Test)
 	}
 
 	signalChannel := make(chan os.Signal, 1)

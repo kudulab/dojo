@@ -96,10 +96,16 @@ func Test_ConstructDockerCommand_DisplayEnvVar(t *testing.T){
 	}
 }
 func Test_getRunID(t *testing.T) {
-	runID := getRunID()
+	runID := getRunID("false")
 	assert.Contains(t, runID, "dojo-")
 	// runID must be lowercase
 	lowerCaseRunID := strings.ToLower(runID)
+	assert.Equal(t, lowerCaseRunID, runID)
+
+	runID = getRunID("true")
+	assert.Equal(t, "testdojorunid", runID)
+	// runID must be lowercase
+	lowerCaseRunID = strings.ToLower(runID)
 	assert.Equal(t, lowerCaseRunID, runID)
 }
 
