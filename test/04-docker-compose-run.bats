@@ -14,7 +14,30 @@ function testDCDojoFileIsRemoved(){
   assert_equal "$status" 1
 }
 
+function cleanUpDCContainers() {
+  docker rm testdojorunid_default_run_1 || true
+  docker rm testdojorunid_abc_1 || true
+}
+
+function testDCContainersAreRemoved() {
+  run docker ps -a --filter "name=testdojorunid"
+  refute_output --partial "testdojorunid"
+  assert_equal "$status" 0
+}
+
+function cleanUpDCNetwork() {
+  docker network rm testdojorunid_default || true
+}
+
+function testDCNetworkIsRemoved() {
+  run docker network ls --filter "name=testdojorunid"
+  refute_output --partial "testdojorunid"
+  assert_equal "$status" 0
+}
+
 @test "driver: docker-compose, action: run, exit status: 0" {
+  cleanUpDCContainers
+  cleanUpDCNetwork
   cleanUpEnvFiles
   cleanUpDCDojoFile
   run ${DOJO_PATH} --driver=docker-compose --dcf=./test/test-files/itest-dc.yaml --debug=true --test=true --image=alpine:3.8 whoami
@@ -28,8 +51,12 @@ function testDCDojoFileIsRemoved(){
   assert_equal "$status" 0
   testEnvFileIsRemoved
   testDCDojoFileIsRemoved
+  testDCContainersAreRemoved
+  testDCNetworkIsRemoved
 }
 @test "driver: docker-compose, action: run, exit status: not 0" {
+  cleanUpDCContainers
+  cleanUpDCNetwork
   cleanUpEnvFiles
   cleanUpDCDojoFile
   run ${DOJO_PATH} --driver=docker-compose --dcf=./test/test-files/itest-dc.yaml --debug=true --test=true --image=alpine:3.8 notexistentcommand
@@ -41,9 +68,13 @@ function testDCDojoFileIsRemoved(){
   assert_equal "$status" 1
   testEnvFileIsRemoved
   testDCDojoFileIsRemoved
+  testDCContainersAreRemoved
+  testDCNetworkIsRemoved
 }
 # # TODO: this is unsupported, #17186
 # @test "driver: docker-compose, action: run, command: unset" {
+#   cleanUpDCContainers
+#   cleanUpDCNetwork
 #   cleanUpEnvFiles
 #   cleanUpDCDojoFile
 #   run ${DOJO_PATH} --driver=docker-compose --dcf=./test/test-files/itest-dc.yaml --debug=true --test=true -i=false --image=alpine:3.8
@@ -55,8 +86,12 @@ function testDCDojoFileIsRemoved(){
 #   assert_equal "$status" 0
 #   testEnvFileIsRemoved
 #   testDCDojoFileIsRemoved
+#   testDCContainersAreRemoved
+#   testDCNetworkIsRemoved
 # }
 @test "driver: docker-compose, action: run, command: set after --" {
+  cleanUpDCContainers
+  cleanUpDCNetwork
   cleanUpEnvFiles
   cleanUpDCDojoFile
   run ${DOJO_PATH} --driver=docker-compose --dcf=./test/test-files/itest-dc.yaml --debug=true --test=true --image=alpine:3.8 -- whoami
@@ -70,8 +105,12 @@ function testDCDojoFileIsRemoved(){
   assert_equal "$status" 0
   testEnvFileIsRemoved
   testDCDojoFileIsRemoved
+  testDCContainersAreRemoved
+  testDCNetworkIsRemoved
 }
 @test "driver: docker-compose, action: run, command with quotes" {
+  cleanUpDCContainers
+  cleanUpDCNetwork
   cleanUpEnvFiles
   cleanUpDCDojoFile
   run ${DOJO_PATH} --driver=docker-compose --dcf=./test/test-files/itest-dc.yaml --debug=true --test=true --image=alpine:3.8 sh -c "echo hello"
@@ -84,4 +123,6 @@ function testDCDojoFileIsRemoved(){
   assert_equal "$status" 0
   testEnvFileIsRemoved
   testDCDojoFileIsRemoved
+  testDCContainersAreRemoved
+  testDCNetworkIsRemoved
 }
