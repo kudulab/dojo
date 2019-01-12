@@ -27,7 +27,7 @@ func SetLogLevel(level string) {
 }
 
 func Log(level, msg string) {
-	if level != "info" && level != "debug" && level != "warn" {
+	if level != "info" && level != "debug" && level != "warn" && level != "error" {
 		panic(fmt.Sprintf("Unsupported log level: %v", level))
 	}
 	if level == "debug" && GetLogLevel() != "debug" {
@@ -49,13 +49,11 @@ func Log(level, msg string) {
 		prettyLogLevel = " WARN"
 		coloredMsg = orange(msg)
 	}
+	if prettyLogLevel == "ERROR" {
+		coloredMsg = red(msg)
+	}
 
 	log.Printf("[%2d] %s: (%s) %s", getGoroutineID(), prettyLogLevel, frame.Function, coloredMsg)
-}
-
-func PrintError(msg string) {
-	fullMsg := red(fmt.Sprintf("ERROR: %v\n", msg))
-	fmt.Fprint(os.Stderr, fullMsg)
 }
 
 func red(text string) string {

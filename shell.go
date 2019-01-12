@@ -35,10 +35,10 @@ func RunShell(cmdString string) int {
 	signaled := status.Signaled()
 	signal := status.Signal()
 	if err != nil {
-		Log("debug", fmt.Sprintf("err: %v", err))
+		Log("error", fmt.Sprintf("err: %v", err))
 	}
 	if signaled {
-		Log("debug", fmt.Sprintf("Signal: %v", signal))
+		Log("error", fmt.Sprintf("Signal: %v", signal))
 	}
 
 	return exitStatus

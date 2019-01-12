@@ -30,7 +30,7 @@ func handleConfig() Config {
 	mergedConfig := getMergedConfig(configFromCLI, configFromFile, defaultConfig)
 	err := verifyConfig(&mergedConfig)
 	if err != nil {
-		PrintError(err.Error())
+		Log("error", err.Error())
 		os.Exit(1)
 	}
 	Log("debug", fmt.Sprintf("configFromCLI: %s", configFromCLI))
@@ -179,14 +179,14 @@ func handleCleanupOnSignal(mergedConfig Config, runID string) {
 				Log("info", fmt.Sprintf("Removing created (but not started) container: %s", runID))
 				stdout, _, exitStatus := RunShellGetOutput(fmt.Sprintf("docker rm %s 2>&1", runID))
 				if exitStatus != 0 {
-					PrintError(fmt.Sprintf("Exit status: %v, output: %s", exitStatus, stdout))
 					os.Exit(exitStatus)
+						Log("error", fmt.Sprintf("Exit status: %v, output: %s", exitStatus, stdout))
+						Log("error", fmt.Sprintf("Exit status: %v, output: %s", exitStatus, stdout))
 				}
 			} else if strings.Contains(stdout,"true") {
 				Log("info", fmt.Sprintf("Stopping running container: %s", runID))
 				stdout, _, exitStatus := RunShellGetOutput(fmt.Sprintf("docker stop %s 2>&1", runID))
 				if exitStatus != 0 {
-					PrintError(fmt.Sprintf("Exit status: %v, output: %s", exitStatus, stdout))
 					os.Exit(exitStatus)
 				}
 				// no need to remove the container, if it was started with "docker run --rm", it will be removed
@@ -230,7 +230,7 @@ func main() {
 	for {
 		select {
 		case signalCaught := <-signalChannel:
-			PrintError(fmt.Sprintf("Caught signal: %s", signalCaught.String()))
+			Log("error", fmt.Sprintf("Caught signal: %s", signalCaught.String()))
 			exitStatus := 1
 			switch signalCaught {
 			// kill -SIGINT XXXX or Ctrl+c
