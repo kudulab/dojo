@@ -149,7 +149,14 @@ func (dc DockerComposeDriver) GetExpDockerNetwork(runID string) string {
 	network := fmt.Sprintf("%s_default", runIDPrim)
 	return network
 }
-func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envFile string) int {
+func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envService EnvServiceInterface) int {
+	if envService.IsCurrentUserRoot() {
+		Log("warn", "Current user is root, which is not recommended")
+	}
+	envFile := getEnvFilePath(runID, mergedConfig.Test)
+	saveEnvToFile(dc.FileService, envFile, mergedConfig.BlacklistVariables, envService.Variables())
+	defer dc.FileService.RemoveGeneratedFile(mergedConfig.RemoveContainers, envFile)
+
 	dojoDCGeneratedFile, err := dc.HandleDCFiles(mergedConfig, envFile)
 	if err != nil {
 		return 1
@@ -184,6 +191,10 @@ func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envFi
 		Log("debug", fmt.Sprintf("Not removing docker network: %s, it does not exist", expectedDockerNetwork))
 	}
 	return exitStatus
+}
+
+func (d DockerComposeDriver) HandlePull(mergedConfig Config) int {
+	panic("not implemented")
 }
 
 func (d DockerComposeDriver) HandleSignal(mergedConfig Config, runID string) int {

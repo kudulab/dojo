@@ -95,15 +95,46 @@ func TestDockerDriver_ConstructDockerRunCmd_DisplayEnvVar(t *testing.T){
 	}
 }
 
-func TestDockerDriver_HandleRun_NoCommand(t *testing.T) {
+func TestDockerDriver_HandleRun_Unit(t *testing.T) {
 	d := NewDockerDriver(MockedShellServiceNotInteractive{}, MockedFileService{})
 	config := getTestConfig()
 	config.RunCommand = ""
-	es := d.HandleRun(config, "testrunid", "/tmp/test-dojo")
+	es := d.HandleRun(config, "testrunid", MockedEnvService{})
 	assert.Equal(t, 0, es)
+	assert.False(t, fileExists("/tmp/dojo-environment-testrunid"))
 }
 
-func TestDockerDriver_HandlePull(t *testing.T) {
+func fileExists(filePath string) bool {
+	_, err := os.Lstat(filePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+		panic(fmt.Sprintf("error when running os.Lstat(%q): %s", filePath, err))
+	}
+	return true
+}
+
+func TestDockerDriver_HandleRun_RealFileService(t *testing.T) {
+	d := NewDockerDriver(MockedShellServiceNotInteractive{}, FileService{})
+	config := getTestConfig()
+	config.WorkDirOuter = "/tmp"
+	config.RunCommand = ""
+	es := d.HandleRun(config, "testrunid", MockedEnvService{})
+	assert.Equal(t, 0, es)
+	assert.False(t, fileExists("/tmp/dojo-environment-testrunid"))
+}
+
+func TestDockerDriver_HandleRun_RealEnvService(t *testing.T) {
+	d := NewDockerDriver(MockedShellServiceNotInteractive{}, MockedFileService{})
+	config := getTestConfig()
+	config.RunCommand = ""
+	es := d.HandleRun(config, "testrunid", EnvService{})
+	assert.Equal(t, 0, es)
+	assert.False(t, fileExists("/tmp/dojo-environment-testrunid"))
+}
+
+func TestDockerDriver_HandlePull_Unit(t *testing.T) {
 	d := NewDockerDriver(MockedShellServiceNotInteractive{}, MockedFileService{})
 	config := getTestConfig()
 	es := d.HandlePull(config)

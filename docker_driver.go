@@ -71,7 +71,14 @@ func (d DockerDriver) ConstructDockerRunCmd(config Config, envFilePath string, c
 	return cmd
 }
 
-func (d DockerDriver) HandleRun(mergedConfig Config, runID string, envFile string) int {
+func (d DockerDriver) HandleRun(mergedConfig Config, runID string, envService EnvServiceInterface) int {
+	if envService.IsCurrentUserRoot() {
+		Log("warn", "Current user is root, which is not recommended")
+	}
+	envFile := getEnvFilePath(runID, mergedConfig.Test)
+	saveEnvToFile(d.FileService, envFile, mergedConfig.BlacklistVariables, envService.Variables())
+	defer d.FileService.RemoveGeneratedFile(mergedConfig.RemoveContainers, envFile)
+
 	cmd := d.ConstructDockerRunCmd(mergedConfig, envFile, runID)
 	Log("info", fmt.Sprintf("docker command will be:\n %v", cmd))
 
