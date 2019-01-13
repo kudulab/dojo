@@ -43,7 +43,7 @@ func TestDockerDriver_ConstructDockerRunCmd_Interactive(t *testing.T){
 		} else {
 			ss = MockedShellServiceNotInteractive{}
 		}
-		d := NewDockerDriver(ss, MockedFileService{})
+		d := NewDockerDriver(ss, NewMockedFileService())
 		cmd := d.ConstructDockerRunCmd(config, "/tmp/some-env-file", "name1")
 		assert.Equal(t, v.expOutput, cmd, fmt.Sprintf("shellInteractive: %v, userConfig: %v", v.shellInteractive, v.userInteractiveConfig))
 	}
@@ -65,7 +65,7 @@ func TestDockerDriver_ConstructDockerRunCmd_Command(t *testing.T){
 	for _,v := range mytests {
 		config := getTestConfig()
 		config.RunCommand = v.userCommandConfig
-		d := NewDockerDriver(MockedShellServiceNotInteractive{}, MockedFileService{})
+		d := NewDockerDriver(MockedShellServiceNotInteractive{}, NewMockedFileService())
 		cmd := d.ConstructDockerRunCmd(config, "/tmp/some-env-file", "name1")
 		assert.Equal(t, v.expOutput, cmd, fmt.Sprintf("userCommandConfig: %v", v.userCommandConfig))
 	}
@@ -89,19 +89,25 @@ func TestDockerDriver_ConstructDockerRunCmd_DisplayEnvVar(t *testing.T){
 		} else {
 			setTestEnv()
 		}
-		d := NewDockerDriver(MockedShellServiceNotInteractive{}, MockedFileService{})
+		d := NewDockerDriver(MockedShellServiceNotInteractive{}, NewMockedFileService())
 		cmd := d.ConstructDockerRunCmd(config, "/tmp/some-env-file", "name1")
 		assert.Equal(t, v.expOutput, cmd, fmt.Sprintf("displaySet: %v", v.displaySet))
 	}
 }
 
 func TestDockerDriver_HandleRun_Unit(t *testing.T) {
-	d := NewDockerDriver(MockedShellServiceNotInteractive{}, MockedFileService{})
+	fs := NewMockedFileService()
+	d := NewDockerDriver(MockedShellServiceNotInteractive{}, fs)
 	config := getTestConfig()
 	config.RunCommand = ""
 	es := d.HandleRun(config, "testrunid", MockedEnvService{})
 	assert.Equal(t, 0, es)
 	assert.False(t, fileExists("/tmp/dojo-environment-testrunid"))
+	assert.Equal(t, 1, len(fs.FilesWrittenTo))
+	assert.Equal(t, "ABC=123\n", fs.FilesWrittenTo["/tmp/dojo-environment-testrunid"])
+	assert.Equal(t, 2, len(fs.FilesRemovals))
+	assert.Equal(t, "/tmp/dojo-environment-testrunid", fs.FilesRemovals[0])
+	assert.Equal(t, "/tmp/dojo-environment-testrunid", fs.FilesRemovals[1])
 }
 
 func fileExists(filePath string) bool {
@@ -126,7 +132,7 @@ func TestDockerDriver_HandleRun_RealFileService(t *testing.T) {
 }
 
 func TestDockerDriver_HandleRun_RealEnvService(t *testing.T) {
-	d := NewDockerDriver(MockedShellServiceNotInteractive{}, MockedFileService{})
+	d := NewDockerDriver(MockedShellServiceNotInteractive{}, NewMockedFileService())
 	config := getTestConfig()
 	config.RunCommand = ""
 	es := d.HandleRun(config, "testrunid", EnvService{})
@@ -135,7 +141,7 @@ func TestDockerDriver_HandleRun_RealEnvService(t *testing.T) {
 }
 
 func TestDockerDriver_HandlePull_Unit(t *testing.T) {
-	d := NewDockerDriver(MockedShellServiceNotInteractive{}, MockedFileService{})
+	d := NewDockerDriver(MockedShellServiceNotInteractive{}, NewMockedFileService())
 	config := getTestConfig()
 	es := d.HandlePull(config)
 	assert.Equal(t, 0, es)
