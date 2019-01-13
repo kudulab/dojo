@@ -174,7 +174,7 @@ func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envSe
 	defer dc.FileService.RemoveGeneratedFile(mergedConfig.RemoveContainers, dojoDCGeneratedFile)
 
 	cmd := dc.ConstructDockerComposeCommandRun(mergedConfig, runID, dojoDCGeneratedFile)
-	Log("info", fmt.Sprintf("docker-compose run command will be:\n %v", cmd))
+	Log("info", green(fmt.Sprintf("docker-compose run command will be:\n %v", cmd)))
 	cmdStop := dc.ConstructDockerComposeCommandStop(mergedConfig, runID, dojoDCGeneratedFile)
 	Log("debug", fmt.Sprintf("docker-compose stop command will be:\n %v", cmdStop))
 	cmdRm := dc.ConstructDockerComposeCommandRm(mergedConfig, runID, dojoDCGeneratedFile)
@@ -231,7 +231,7 @@ func (dc DockerComposeDriver) HandlePull(mergedConfig Config) int {
 	defer dc.FileService.RemoveGeneratedFile(mergedConfig.RemoveContainers, dojoDCGeneratedFile)
 
 	cmd := dc.ConstructDockerComposeCommandPull(mergedConfig, dojoDCGeneratedFile)
-	Log("info", fmt.Sprintf("docker-compose pull command will be:\n %v", cmd))
+	Log("info", green(fmt.Sprintf("docker-compose pull command will be:\n %v", cmd)))
 	exitStatus := dc.ShellService.RunInteractive(cmd)
 	Log("debug", fmt.Sprintf("Exit status from pull command: %v", exitStatus))
 	return exitStatus

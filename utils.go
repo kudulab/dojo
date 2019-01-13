@@ -61,6 +61,9 @@ func Log(level, msg string) {
 func red(text string) string {
 	return "\033[31m" + text + "\033[0m"
 }
+func green(text string) string {
+	return "\033[32m" + text + "\033[0m"
+}
 func orange(text string) string {
 	return "\033[33m" + text + "\033[0m"
 }

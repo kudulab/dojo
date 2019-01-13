@@ -80,7 +80,7 @@ func (d DockerDriver) HandleRun(mergedConfig Config, runID string, envService En
 	defer d.FileService.RemoveGeneratedFile(mergedConfig.RemoveContainers, envFile)
 
 	cmd := d.ConstructDockerRunCmd(mergedConfig, envFile, runID)
-	Log("info", fmt.Sprintf("docker command will be:\n %v", cmd))
+	Log("info", green(fmt.Sprintf("docker command will be:\n %v", cmd)))
 
 	if mergedConfig.RemoveContainers != "true" {
 		// Removing docker container is impractical without additional steps here. We'd have to
@@ -101,7 +101,7 @@ func (d DockerDriver) HandleRun(mergedConfig Config, runID string, envService En
 
 func (d DockerDriver) HandlePull(mergedConfig Config) int {
 	cmd := fmt.Sprintf("docker pull %s", mergedConfig.DockerImage)
-	Log("info", fmt.Sprintf("docker pull command will be:\n %v", cmd))
+	Log("info", green(fmt.Sprintf("docker pull command will be:\n %v", cmd)))
 	exitStatus := d.ShellService.RunInteractive(cmd)
 	Log("debug", fmt.Sprintf("Exit status from pull command: %v", exitStatus))
 	return exitStatus
