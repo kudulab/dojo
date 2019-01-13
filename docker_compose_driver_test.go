@@ -20,7 +20,7 @@ func Test_parseDCFileVersion(t *testing.T){
 	}
 	dc := NewDockerComposeDriver(MockedShellServiceNotInteractive{}, NewMockedFileService())
 	for _,v := range mytestsObj {
-		actualVersion, err := dc.ParseDCFileVersion(v.content)
+		actualVersion, err := dc.parseDCFileVersion(v.content)
 		assert.Equal(t, v.expectedOutput, actualVersion, v.content)
 		if v.expectedErrMsg == "" {
 			assert.Nil(t, err)
@@ -64,7 +64,7 @@ services:
 	dc := NewDockerComposeDriver(MockedShellServiceNotInteractive{}, NewMockedFileService())
 	for _,v := range mytestsObj {
 		// do not test version, it is tested in other test
-		_, err := dc.VerifyDCFile(v.content, "filePath.yml")
+		_, err := dc.verifyDCFile(v.content, "filePath.yml")
 		if v.expectedErrMsg == "" {
 			assert.Equal(t, err, nil)
 		} else {
@@ -91,7 +91,7 @@ func Test_generateDCFileContents(t *testing.T) {
 		} else {
 			setTestEnv()
 		}
-		contents := dc.GenerateDCFileContents(config, 2.1, "/tmp/env-file.txt")
+		contents := dc.generateDCFileContentsForRun(config, 2.1, "/tmp/env-file.txt")
 		assert.Contains(t, contents, "version: '2.1'")
 		assert.Contains(t, contents, "  default:")
 		assert.Contains(t, contents, "    image: img:1.2.3")

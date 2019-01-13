@@ -101,8 +101,9 @@ func (d DockerDriver) HandleRun(mergedConfig Config, runID string, envService En
 
 func (d DockerDriver) HandlePull(mergedConfig Config) int {
 	cmd := fmt.Sprintf("docker pull %s", mergedConfig.DockerImage)
+	Log("info", fmt.Sprintf("docker pull command will be:\n %v", cmd))
 	exitStatus := d.ShellService.RunInteractive(cmd)
-	Log("debug", fmt.Sprintf("Exit status: %v", exitStatus))
+	Log("debug", fmt.Sprintf("Exit status from pull command: %v", exitStatus))
 	return exitStatus
 }
 

@@ -26,7 +26,7 @@ func NewDockerComposeDriver(shellService ShellServiceInterface, fs FileServiceIn
 	}
 }
 
-func (dc DockerComposeDriver) ParseDCFileVersion(contents string) (float64, error) {
+func (dc DockerComposeDriver) parseDCFileVersion(contents string) (float64, error) {
 	firstLine := strings.Split(contents, "\n")[0]
 	if !strings.HasPrefix(firstLine,"version") {
 		return 0, fmt.Errorf("First line of docker-compose file did not start with: version")
@@ -42,8 +42,8 @@ func (dc DockerComposeDriver) ParseDCFileVersion(contents string) (float64, erro
 	}
 	return version,nil
 }
-func (dc DockerComposeDriver) VerifyDCFile(fileContents string, filePath string) (float64, error) {
-	version, err := dc.ParseDCFileVersion(fileContents)
+func (dc DockerComposeDriver) verifyDCFile(fileContents string, filePath string) (float64, error) {
+	version, err := dc.parseDCFileVersion(fileContents)
 	if err != nil {
 		return 0,err
 	}
@@ -57,20 +57,20 @@ func (dc DockerComposeDriver) VerifyDCFile(fileContents string, filePath string)
 	return version, nil
 }
 
-func (dc DockerComposeDriver) HandleDCFiles(mergedConfig Config, envFile string) (string, error) {
+func (dc DockerComposeDriver) handleDCFilesForRun(mergedConfig Config, envFile string) (string, error) {
 	fileContents := dc.FileService.ReadDockerComposeFile(mergedConfig.DockerComposeFile)
-	version, err := dc.VerifyDCFile(fileContents, mergedConfig.DockerComposeFile)
+	version, err := dc.verifyDCFile(fileContents, mergedConfig.DockerComposeFile)
 	if err != nil {
 		Log("error", fmt.Sprintf("Docker-compose file %s is not correct: %s", mergedConfig.DockerComposeFile, err.Error()))
 		return "", err
 	}
-	dojoDCFileContents := dc.GenerateDCFileContents(mergedConfig, version, envFile)
+	dojoDCFileContents := dc.generateDCFileContentsForRun(mergedConfig, version, envFile)
 	dojoDCFileName := mergedConfig.DockerComposeFile + ".dojo"
 	dc.FileService.WriteToFile(dojoDCFileName, dojoDCFileContents, "info")
 	return dojoDCFileName, nil
 }
 
-func (dc DockerComposeDriver) GenerateDCFileContents(config Config, version float64, envFile string) string {
+func (dc DockerComposeDriver) generateDCFileContentsForRun(config Config, version float64, envFile string) string {
 	if dc.FileService.GetFileUid(config.WorkDirOuter) == 0 {
 		Log("warn", fmt.Sprintf("WorkDirOuter: %s is owned by root, which is not recommended", config.WorkDirOuter))
 	}
@@ -90,6 +90,16 @@ services:
 	contents += fmt.Sprintf(`    env_file:
       - %s
 `, envFile)
+	return contents
+}
+
+func (dc DockerComposeDriver) generateDCFileContentsForPull(config Config, version float64) string {
+	contents := fmt.Sprintf(
+		`version: '%v'
+services:
+  default:
+    image: %s
+`, version, config.DockerImage)
 	return contents
 }
 
@@ -157,7 +167,7 @@ func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envSe
 	saveEnvToFile(dc.FileService, envFile, mergedConfig.BlacklistVariables, envService.Variables())
 	defer dc.FileService.RemoveGeneratedFile(mergedConfig.RemoveContainers, envFile)
 
-	dojoDCGeneratedFile, err := dc.HandleDCFiles(mergedConfig, envFile)
+	dojoDCGeneratedFile, err := dc.handleDCFilesForRun(mergedConfig, envFile)
 	if err != nil {
 		return 1
 	}
@@ -193,8 +203,38 @@ func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envSe
 	return exitStatus
 }
 
-func (d DockerComposeDriver) HandlePull(mergedConfig Config) int {
-	panic("not implemented")
+func (dc DockerComposeDriver) handleDCFilesForPull(mergedConfig Config) (string, error) {
+	fileContents := dc.FileService.ReadDockerComposeFile(mergedConfig.DockerComposeFile)
+	version, err := dc.verifyDCFile(fileContents, mergedConfig.DockerComposeFile)
+	if err != nil {
+		Log("error", fmt.Sprintf("Docker-compose file %s is not correct: %s", mergedConfig.DockerComposeFile, err.Error()))
+		return "", err
+	}
+	dojoDCFileContents := dc.generateDCFileContentsForPull(mergedConfig, version)
+	dojoDCFileName := mergedConfig.DockerComposeFile + ".dojo"
+	dc.FileService.WriteToFile(dojoDCFileName, dojoDCFileContents, "info")
+	return dojoDCFileName, nil
+}
+
+func (dc DockerComposeDriver) ConstructDockerComposeCommandPull(config Config, dojoGeneratedDCFile string) string {
+	// projectName does not matter for docker-compose pull command
+	cmd := dc.ConstructDockerComposeCommandPart1(config, "dojo", dojoGeneratedDCFile)
+	cmd += " pull"
+	return cmd
+}
+
+func (dc DockerComposeDriver) HandlePull(mergedConfig Config) int {
+	dojoDCGeneratedFile, err := dc.handleDCFilesForPull(mergedConfig)
+	if err != nil {
+		return 1
+	}
+	defer dc.FileService.RemoveGeneratedFile(mergedConfig.RemoveContainers, dojoDCGeneratedFile)
+
+	cmd := dc.ConstructDockerComposeCommandPull(mergedConfig, dojoDCGeneratedFile)
+	Log("info", fmt.Sprintf("docker-compose pull command will be:\n %v", cmd))
+	exitStatus := dc.ShellService.RunInteractive(cmd)
+	Log("debug", fmt.Sprintf("Exit status from pull command: %v", exitStatus))
+	return exitStatus
 }
 
 func (d DockerComposeDriver) HandleSignal(mergedConfig Config, runID string) int {
