@@ -241,3 +241,8 @@ func (d DockerComposeDriver) HandleSignal(mergedConfig Config, runID string) int
 	Log("debug", "Additional cleanup not needed")
 	return 0
 }
+
+func (d DockerComposeDriver) HandleMultipleSignal(mergedConfig Config, runID string) int {
+	Log("debug", "Additional cleanup not needed")
+	return 0
+}

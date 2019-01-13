@@ -117,6 +117,10 @@ func getCLIConfig() Config {
 	const usageBlackilstVariables    = "List of variables, split by commas, to be blacklisted in a docker container"
 	flagSet.StringVar(&blacklistVariables, "blacklist", "", usageBlackilstVariables)
 
+	var dockerOptions string
+	const usageDockerOptions         = "Options to the docker run command. E.g. \"--init\""
+	flagSet.StringVar(&dockerOptions, "docker-options", "", usageDockerOptions)
+
 	var dockerComposeFile string
 	const usageDCFile         = "Docker-compose file. Default: ./docker-compose.yml. Only for driver: docker-compose"
 	flagSet.StringVar(&dockerComposeFile, "docker-compose-file", "", usageDCFile)
@@ -156,6 +160,7 @@ func getCLIConfig() Config {
 		BlacklistVariables: blacklistVariables,
 		RunCommand:         runCommand,
 		DockerImage:        image,
+		DockerOptions:      dockerOptions,
 		DockerComposeFile:  dockerComposeFile,
 		Test: 				test,
 	}

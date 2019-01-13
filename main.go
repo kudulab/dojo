@@ -36,14 +36,22 @@ func handleConfig() Config {
 	return mergedConfig
 }
 
-func handleCleanupOnSignal(mergedConfig Config, runID string, driver DojoDriverInterface) int {
+func handleSignal(mergedConfig Config, runID string, driver DojoDriverInterface, multipleSignal bool) int {
 	var exitStatus int
+	if mergedConfig.Action == "pull" {
+		Log("debug", "No cleaning needed (pull action)")
+		return 0
+	}
 	if mergedConfig.Action == "run" {
 		if runID == "" {
-			Log("debug", "No cleaning needed")
+			Log("debug", "No cleaning needed (runID not yet generated)")
 			return 0
 		}
-		exitStatus = driver.HandleSignal(mergedConfig, runID)
+		if multipleSignal {
+			exitStatus = driver.HandleMultipleSignal(mergedConfig, runID)
+		} else {
+			exitStatus = driver.HandleSignal(mergedConfig, runID)
+		}
 	}
 	return exitStatus
 }
@@ -96,14 +104,34 @@ func main() {
 		case syscall.SIGTERM:
 			exitStatus = 2
 		}
-		fmt.Println(exitStatus)
-		exitStatusFromCleanup := handleCleanupOnSignal(mergedConfig, runID, driver)
-		if exitStatusFromCleanup != 0 {
-			os.Exit(exitStatusFromCleanup)
+
+		multipleSignalChannel := make(chan os.Signal, 1)
+		signal.Notify(multipleSignalChannel, os.Interrupt, syscall.SIGTERM)
+		doneAfterOneSignalChannel := make(chan int, 1)
+		go func() {
+			exitStatusFromCleanup := handleSignal(mergedConfig, runID, driver, false)
+			if exitStatusFromCleanup != 0 {
+				exitStatus = exitStatusFromCleanup
+			}
+			doneAfterOneSignalChannel <- exitStatus
+		}()
+		select {
+		case multipleSignalCaught := <-multipleSignalChannel:
+			Log("error", fmt.Sprintf("Caught another signal: %s", multipleSignalCaught.String()))
+			exitStatus = 3
+			exitStatusFromCleanup := handleSignal(mergedConfig, runID, driver, true)
+			if exitStatusFromCleanup != 0 {
+				exitStatus = exitStatusFromCleanup
+			}
+			Log("debug", "Finished after multiple signals")
+			os.Exit(exitStatus)
+
+		case doneAfter1Signal := <- doneAfterOneSignalChannel:
+			Log("debug", "Finished after 1 signal")
+			os.Exit(doneAfter1Signal)
 		}
-		os.Exit(exitStatus)
 	case done := <-doneChannel:
-		Log("debug", "Done, normal way")
+		Log("debug", "Finished, normal way")
 		os.Exit(done)
 	}
 }

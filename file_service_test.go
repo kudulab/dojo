@@ -32,6 +32,11 @@ func (f *MockedFileService) ReadFile(filePath string) string {
 	return ""
 }
 
+func (f *MockedFileService) FileExists(filePath string) bool {
+	Log("debug", fmt.Sprintf("Pretending that file exists %s", filePath))
+	return true
+}
+
 func (f *MockedFileService) ReadDockerComposeFile(filePath string) string {
 	Log("debug", fmt.Sprintf("Pretending to read file %s, returning a constant string", filePath))
 	fileContents := `version: '2.2'
@@ -52,6 +57,13 @@ func (f *MockedFileService) GetCurrentDir() string {
 	return "/tmp/"
 }
 func (f *MockedFileService) RemoveGeneratedFile(removeContainers string, filePath string) {
+	if removeContainers != "false" {
+		f.FilesRemovals = append(f.FilesRemovals, filePath)
+		Log("debug", fmt.Sprintf("Pretending to remove generated file: %s", filePath))
+	}
+	return
+}
+func (f *MockedFileService) RemoveGeneratedFileIgnoreError(removeContainers string, filePath string, ignoreError bool) {
 	if removeContainers != "false" {
 		f.FilesRemovals = append(f.FilesRemovals, filePath)
 		Log("debug", fmt.Sprintf("Pretending to remove generated file: %s", filePath))

@@ -107,39 +107,86 @@ func (d DockerDriver) HandlePull(mergedConfig Config) int {
 	return exitStatus
 }
 
+// If a container's process preserves signals, the container should be stopped relatively fast
+// (usually after several seconds)
+func (d DockerDriver) waitForContainerRemoval(cmd string) bool {
+	timeout := 12
+	Log("info", fmt.Sprintf("Waiting max %vs for container removal", timeout))
+	for i:=0; i<timeout; i++ {
+		stdout, _, _ := d.ShellService.RunGetOutput(cmd)
+		if strings.Contains(stdout, "No such object") {
+			Log("info", "Container removed by docker")
+			return true
+		}
+		Log("info", fmt.Sprintf("Trial: %v", i))
+		time.Sleep(time.Second)
+	}
+	Log("info", fmt.Sprintf("Container not removed after %vs", timeout))
+	return false
+}
+
+// HandleSignal follows such a procedure:
+// * if container does not exist, just exit
+// * otherwise, let's wait for a container to be removed by docker (if it preserves signals, it will be removed)
+//   * if container was removed - ensure env file is removed and exit
+//   * if container was not removed - let's stop it (if it was run with docker run --rm, then docker will remove it)
+//
+// Any default timeout is here slightly bigger than 10s, because it takes 10s to docker stop containers which
+// do not preserve signals.
 func (d DockerDriver) HandleSignal(mergedConfig Config, runID string) int {
 	if mergedConfig.RemoveContainers != "false" {
-		// add this sleep to let docker handle potential command we already sent to it
-		time.Sleep(time.Second)
+		Log("debug", "Cleaning on signal")
 
-		stdout, _, _ := d.ShellService.RunGetOutput(fmt.Sprintf("timeout 2 docker inspect -f '{{.State.Running}}' %s 2>&1", runID))
+		cmd := fmt.Sprintf("timeout 2 docker inspect -f '{{.State.Running}}' %s 2>&1", runID)
+
+		stdout, stderr, exitStatus := d.ShellService.RunGetOutput(cmd)
 		if strings.Contains(stdout, "No such object") {
-			Log("info", fmt.Sprintf("Not removing the container, it was not created: %s", runID))
-		} else if strings.Contains(stdout, "false") {
-			// Signal caught fast enough, docker container is not running, but
-			// it is created. Let's remove it.
-			Log("info", fmt.Sprintf("Removing created (but not started) container: %s", runID))
-			stdout, _, exitStatus := d.ShellService.RunGetOutput(fmt.Sprintf("docker rm %s 2>&1", runID))
-			if exitStatus != 0 {
-				Log("error", fmt.Sprintf("Exit status: %v, output: %s", exitStatus, stdout))
-				return exitStatus
-			}
-		} else if strings.Contains(stdout, "true") {
-			Log("info", fmt.Sprintf("Stopping running container: %s", runID))
-			stdout, _, exitStatus := d.ShellService.RunGetOutput(fmt.Sprintf("docker stop %s 2>&1", runID))
-			if exitStatus != 0 {
-				Log("error", fmt.Sprintf("Exit status: %v, output: %s", exitStatus, stdout))
-				return exitStatus
-			}
-			// no need to remove the container, if it was started with "docker run --rm", it will be removed
+			Log("info", fmt.Sprintf("Cleaning not needed, the container was not created: %s", runID))
+		} else if exitStatus != 0 {
+			// unexpected error case
+			Log("info", fmt.Sprintf("Not cleaning. stdout: %s, stderr: %s, exitStatus: %v", stdout, stderr, exitStatus))
 		} else {
-			// this is the case when docker is not installed
-			Log("info", fmt.Sprintf("Not cleaning. Got output: %s", stdout))
+			// Container is either:
+			// * created and not running
+			// * or running
+			// It still may be removed by docker.
+			containerRemoved := d.waitForContainerRemoval(cmd)
+			if !containerRemoved {
+				Log("info", fmt.Sprintf("Stopping container: %s", runID))
+				stdout, stderr, exitStatus := d.ShellService.RunGetOutput(fmt.Sprintf("docker stop %s 2>&1", runID))
+				if exitStatus != 0 {
+					Log("error", fmt.Sprintf("Exit status: %v, stdout: %s, stderr: %s", exitStatus, stdout, stderr))
+					return exitStatus
+				}
+				// no need to remove the container, if it was started with "docker run --rm", it will be removed
+			}
 		}
+
 		envFile := getEnvFilePath(runID, mergedConfig.Test)
-		d.FileService.RemoveGeneratedFile(mergedConfig.RemoveContainers, envFile)
+		// if container was removed by docker, the env file may be already removed too,
+		// so let's ignore error on removal here
+		d.FileService.RemoveGeneratedFileIgnoreError(mergedConfig.RemoveContainers, envFile, true)
+		Log("info", "Cleanup finished")
 	}
-	Log("debug", "Cleanup finished")
+	return 0
+}
+
+func (d DockerDriver) HandleMultipleSignal(mergedConfig Config, runID string) int {
+	if mergedConfig.RemoveContainers != "false" {
+		Log("debug", "Multiple signals caught, running docker kill and immediate exit")
+		if !d.FileService.FileExists(getEnvFilePath(runID, mergedConfig.Test)) {
+			Log("debug", "Environment file does not exist, either containers not created or already cleaned")
+			return 0
+		}
+		stdout, stderr, exitStatus := d.ShellService.RunGetOutput(fmt.Sprintf("docker kill %s", runID))
+		if exitStatus != 0 {
+			Log("debug", fmt.Sprintf("Exit status non zero: %v, stdout: %s, stderr %s",
+				exitStatus, stdout, stderr))
+		} else {
+			Log("debug", "docker kill was successful")
+		}
+		return exitStatus
+	}
 	return 0
 }
 
