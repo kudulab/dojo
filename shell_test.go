@@ -43,17 +43,17 @@ func TestMockedShellService_CheckIfInteractive(t *testing.T){
 	assert.False(t, interactive)
 }
 func TestBashShellService_CheckIfInteractive(t *testing.T) {
-	shell := BashShellService{ShellBinary: "bash"}
+	shell := NewBashShellService()
 	interactive := shell.CheckIfInteractive()
 	assert.False(t, interactive)
 }
 func TestBashShellService_RunInteractive(t *testing.T) {
-	shell := BashShellService{ShellBinary: "bash"}
+	shell := NewBashShellService()
 	exitstatus := shell.RunInteractive("echo hello")
 	assert.Equal(t, 0, exitstatus)
 }
 func TestBashShellService_RunGetOutput(t *testing.T) {
-	shell := BashShellService{ShellBinary: "bash"}
+	shell := NewBashShellService()
 	stdout, sterr, exitstatus := shell.RunGetOutput("echo hello")
 	assert.Equal(t, "hello\n", stdout)
 	assert.Equal(t, "", sterr)

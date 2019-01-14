@@ -16,6 +16,9 @@ case "${command}" in
     itest)
         (set -x; bats ./test; )
         ;;
+    test_signals)
+        (set -x; ./test/signal/signals-tests.sh; )
+        ;;
     *)
         echo "Invalid command: '${command}'"
         exit 1

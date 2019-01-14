@@ -16,12 +16,12 @@ type ShellServiceInterface interface {
 }
 
 func NewBashShellService() BashShellService {
-	return BashShellService{"bash"}
+	return BashShellService{}
 }
 
 type BashShellService struct {
-	ShellBinary string
 }
+
 
 func (bs BashShellService) RunInteractive(cmdString string) int {
 	cmd := exec.Command("bash", "-c", cmdString)

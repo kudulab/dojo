@@ -33,3 +33,8 @@ pipelines:
                 arguments:
                     - -c
                     - ./tasks itest
+            - exec:
+                command: bash
+                arguments:
+                    - -c
+                    - ./tasks test_signals
