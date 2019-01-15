@@ -20,6 +20,16 @@ func handleConfig() Config {
 	configFile := configFromCLI.ConfigFile
 	if configFile == "" {
 		configFile = "Dojofile"
+	} else {
+		_, err := os.Lstat(configFile)
+		if err != nil {
+			if os.IsNotExist(err) {
+				// user set custom config file and it does not exist
+				Log("error", fmt.Sprintf("ConfigFile set among cli options: \"%s\" does not exist", configFile))
+				os.Exit(1)
+			}
+			panic(fmt.Sprintf("error when running os.Lstat(%q): %s", configFile, err))
+		}
 	}
 	configFromFile := getFileConfig(configFile)
 	defaultConfig := getDefaultConfig(configFile)
