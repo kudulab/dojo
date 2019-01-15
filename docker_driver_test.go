@@ -57,7 +57,7 @@ func TestDockerDriver_ConstructDockerRunCmd_Command(t *testing.T){
 		mytestStruct{ userCommandConfig: "",
 			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro --env-file=/tmp/some-env-file --name=name1 img:1.2.3"},
 		mytestStruct{ userCommandConfig: "bash",
-			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro --env-file=/tmp/some-env-file --name=name1 img:1.2.3 \"bash\""},
+			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro --env-file=/tmp/some-env-file --name=name1 img:1.2.3 bash"},
 		mytestStruct{ userCommandConfig: "bash -c \"echo hello\"",
 			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro --env-file=/tmp/some-env-file --name=name1 img:1.2.3 bash -c \"echo hello\""},
 	}
@@ -70,6 +70,7 @@ func TestDockerDriver_ConstructDockerRunCmd_Command(t *testing.T){
 		assert.Equal(t, v.expOutput, cmd, fmt.Sprintf("userCommandConfig: %v", v.userCommandConfig))
 	}
 }
+
 func TestDockerDriver_ConstructDockerRunCmd_DisplayEnvVar(t *testing.T){
 	type mytestStruct struct {
 		displaySet bool

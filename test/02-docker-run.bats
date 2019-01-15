@@ -11,7 +11,7 @@ DOJO_PATH=$(readlink -f "./bin/dojo")
   run ${DOJO_PATH} --debug=true --test=true --image=alpine:3.8 whoami
   assert_output --partial "Dojo version"
   assert_output --partial "root"
-  assert_output --partial "alpine:3.8 \"whoami\""
+  assert_output --partial "alpine:3.8 whoami"
   assert_output --partial "Exit status: 0"
   refute_output --partial "WARN"
   refute_output --partial "warn"
@@ -54,7 +54,7 @@ DOJO_PATH=$(readlink -f "./bin/dojo")
   run ${DOJO_PATH} --debug=true --test=true --image=alpine:3.8 -i=false -- whoami
   assert_output --partial "Dojo version"
   assert_output --partial "root"
-  assert_output --partial "alpine:3.8 \"whoami\""
+  assert_output --partial "alpine:3.8 whoami"
   assert_output --partial "Exit status: 0"
   refute_output --partial "WARN"
   refute_output --partial "warn"
@@ -70,6 +70,21 @@ DOJO_PATH=$(readlink -f "./bin/dojo")
   run ${DOJO_PATH} --debug=true --test=true --image=alpine:3.8 sh -c "echo hello"
   assert_output --partial "Dojo version"
   assert_output --partial "alpine:3.8 sh -c \"echo hello\""
+  assert_output --partial "Exit status: 0"
+  refute_output --partial "WARN"
+  refute_output --partial "warn"
+  refute_output --partial "ERROR"
+  refute_output --partial "error"
+  assert_equal "$status" 0
+  testEnvFileIsRemoved
+  testDockerContainerIsRemoved
+}
+@test "driver: docker, action: run, command: set after -- with quotes" {
+  cleanUpDockerContainer
+  cleanUpEnvFiles
+  run ${DOJO_PATH} --debug=true --test=true --image=alpine:3.8 -i=false --docker-options="--entrypoint=sh" -- -c "whoami"
+  assert_output --partial "Dojo version"
+  assert_output --partial "alpine:3.8 -c whoami"
   assert_output --partial "Exit status: 0"
   refute_output --partial "WARN"
   refute_output --partial "warn"

@@ -60,13 +60,7 @@ func (d DockerDriver) ConstructDockerRunCmd(config Config, envFilePath string, c
 	cmd += fmt.Sprintf(" --name=%s", containerName)
 	cmd += fmt.Sprintf(" %s", config.DockerImage)
 	if config.RunCommand != "" {
-		if strings.Contains(config.RunCommand, "\"") {
-			// command contains quotes or is wrapped with quotes, do not wrap it again
-			cmd += fmt.Sprintf(" %s", config.RunCommand)
-		} else {
-			// wrap command with quotes
-			cmd += fmt.Sprintf(" \"%s\"", config.RunCommand)
-		}
+		cmd += fmt.Sprintf(" %s", config.RunCommand)
 	}
 	return cmd
 }

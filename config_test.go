@@ -26,6 +26,8 @@ func Test_smartJoinCommandArgs(t *testing.T){
 		// user command: sh -c "docker run -ti \"echo hello\""
 		// or: sh -c 'docker run -ti "echo hello"'
 		{[]string{"sh", "-c", "docker run -ti \"echo hello\""}, "sh -c \"docker run -ti \\\"echo hello\\\"\""},
+		// e.g. entrypoint is /bin/bash, command: -c whoami
+		{[]string{"-c", "whoami"}, "-c whoami"},
 	}
 	for _,v := range mytests {
 		outputCmd := smartJoinCommandArgs(v.args)
