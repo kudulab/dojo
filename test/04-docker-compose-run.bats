@@ -126,3 +126,20 @@ function testDCNetworkIsRemoved() {
   testDCContainersAreRemoved
   testDCNetworkIsRemoved
 }
+@test "driver: docker-compose, action: run, environment preserved" {
+  cleanUpDCContainers
+  cleanUpDCNetwork
+  cleanUpEnvFiles
+  cleanUpDCDojoFile
+  run bash -c "export ABC=custom_value ; ${DOJO_PATH} --driver=docker-compose --dcf=./test/test-files/itest-dc.yaml --debug=true --test=true --image=alpine:3.8 sh -c 'env | grep ABC'"
+  assert_output --partial "Dojo version"
+  assert_output --partial "custom_value"
+  # set in docker-compose file
+  assert_output --partial "1234"
+  assert_output --partial "Exit status from run command: 0"
+  assert_equal "$status" 0
+  testEnvFileIsRemoved
+  testDCDojoFileIsRemoved
+  testDCContainersAreRemoved
+  testDCNetworkIsRemoved
+}

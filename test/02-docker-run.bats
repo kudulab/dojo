@@ -79,6 +79,17 @@ DOJO_PATH=$(readlink -f "./bin/dojo")
   testEnvFileIsRemoved
   testDockerContainerIsRemoved
 }
+@test "driver: docker, action: run, environment preserved" {
+  cleanUpDockerContainer
+  cleanUpEnvFiles
+  run bash -c "export ABC=custom_value ; ${DOJO_PATH} --debug=true --test=true --image=alpine:3.8 sh -c 'env | grep ABC'"
+  assert_output --partial "Dojo version"
+  assert_output --partial "custom_value"
+  assert_output --partial "Exit status: 0"
+  assert_equal "$status" 0
+  testEnvFileIsRemoved
+  testDockerContainerIsRemoved
+}
 @test "driver: docker, action: run, --rm=false" {
   cleanUpDockerContainer
   cleanUpEnvFiles
