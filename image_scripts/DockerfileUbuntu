@@ -1,0 +1,21 @@
+FROM ubuntu:16.04
+
+# For Dojo:
+# * entrypoint requires sudo and bash
+RUN apt-get update && \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends\
+  sudo
+
+
+# install default Dojo configs
+COPY src /tmp/image_scripts_src
+RUN /tmp/image_scripts_src/install.sh
+
+ENTRYPOINT ["/usr/bin/entrypoint.sh"]
+CMD ["/bin/bash"]
+
+# For Tests only:
+# * install custom Dojo configs (for tests)
+COPY test/test-files/etc_dojo.d/scripts/* /etc/dojo.d/scripts/
+# not used:
+# COPY test/test-files/etc_dojo.d/variables/* /etc/dojo.d/variables/

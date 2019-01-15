@@ -9,7 +9,7 @@ Run those command in `ide`:
 ```
 run integration tests in environment with Bats installed:
 ```
-./tasks itest
+./tasks e2e
 ```
 
 ### How to test that Dojo reacts on signals

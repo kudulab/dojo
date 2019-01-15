@@ -2,3 +2,4 @@ bin/*
 pkg/*
 vendor/*
 *.dojo
+*/Dojofile.to_be_tested*

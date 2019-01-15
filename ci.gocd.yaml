@@ -10,31 +10,84 @@ pipelines:
         - "doc/**/*"
         - "**/*.md"
     stages:
-    - test:
-        clean_workspace: true
-        jobs:
-          test:
-            elastic_profile_id: w.c1.m1024.e5
-            tasks:
-            - exec:
-                command: ide
-                arguments:
-                    - ./tasks deps
-            - exec:
-                command: ide
-                arguments:
-                    - ./tasks build
-            - exec:
-                command: ide
-                arguments:
-                    - ./tasks unit
-            - exec:
-                command: bash
-                arguments:
+      - build_unit:
+          clean_workspace: true
+          jobs:
+            build_unit:
+              elastic_profile_id: w.c1.m1024.e5
+              artifacts:
+                - build:
+                    source: bin/dojo
+                    destination:
+              tasks:
+                - exec:
+                    command: ide
+                    arguments:
+                      - ./tasks deps
+                - exec:
+                    command: ide
+                    arguments:
+                      - ./tasks build
+                - exec:
+                    command: ide
+                    arguments:
+                      - ./tasks unit
+      - test:
+          clean_workspace: true
+          jobs:
+            e2e:
+              elastic_profile_id: w.c1.m1024.e5
+              tasks:
+                - fetch:
+                    stage: build_unit
+                    job: build_unit
+                    is_file: yes
+                    source: dojo
+                    destination: bin
+                - exec:
+                    command: bash
+                    arguments:
                     - -c
-                    - ./tasks itest
-            - exec:
-                command: bash
-                arguments:
+                    - chmod +x bin/dojo
+                - exec:
+                    command: bash
+                    arguments:
+                    - -c
+                    - ./tasks e2e
+                - exec:
+                    command: bash
+                    arguments:
                     - -c
                     - ./tasks test_signals
+      - test_images:
+          clean_workspace: true
+          jobs:
+            test_images:
+              elastic_profile_id: w.c1.m1024.e5
+              tasks:
+                - fetch:
+                    stage: build_unit
+                    job: build_unit
+                    is_file: yes
+                    source: dojo
+                    destination: bin
+                - exec:
+                    command: bash
+                    arguments:
+                    - -c
+                    - chmod +x bin/dojo
+                - exec:
+                    command: bash
+                    arguments:
+                        - -c
+                        - cd image_scripts && ./tasks build
+                - exec:
+                    command: bash
+                    arguments:
+                        - -c
+                        - cd image_scripts && ./tasks test_scripts
+                - exec:
+                    command: bash
+                    arguments:
+                        - -c
+                        - cd image_scripts && ./tasks e2e

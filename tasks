@@ -13,7 +13,7 @@ case "${command}" in
     unit)
         (set -x; go test -v -race ./...; )
         ;;
-    itest)
+    e2e)
         (set -x; bats ./test; )
         ;;
     test_signals)

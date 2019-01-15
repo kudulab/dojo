@@ -1,0 +1,21 @@
+FROM alpine:3.8
+
+# For Dojo:
+# * entrypoint requires sudo and bash
+# * install shadow to get usermod and groupmod commands
+# * add community edge repository to install shadow package
+RUN echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories && \
+  apk add --no-cache bash shadow sudo
+
+# install default Dojo configs
+COPY src /tmp/image_scripts_src
+RUN /tmp/image_scripts_src/install.sh
+
+ENTRYPOINT ["/usr/bin/entrypoint.sh"]
+CMD ["/bin/bash"]
+
+# For Tests only:
+# * install custom Dojo configs (for tests)
+COPY test/test-files/etc_dojo.d/scripts/* /etc/dojo.d/scripts/
+# not used:
+# COPY test/test-files/etc_dojo.d/variables/* /etc/dojo.d/variables/

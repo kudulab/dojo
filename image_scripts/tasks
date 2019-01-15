@@ -1,0 +1,50 @@
+#!/bin/bash
+
+set -e
+
+function generate_dojofile1() {
+    img=$1
+    echo "DOJO_DOCKER_OPTIONS=\"--entrypoint=/bin/bash\"" > ./Dojofile.to_be_tested_scripts
+    echo "DOJO_IDENTITY_OUTER=\"$(pwd)/test/test-files/dojo_identities/full\"" >> ./Dojofile.to_be_tested_scripts
+    echo "DOJO_WORK_OUTER=$(pwd)/test/test-files/dojo_work" >> Dojofile.to_be_tested_scripts
+    echo "DOJO_DOCKER_IMAGE=${img}" >> Dojofile.to_be_tested_scripts
+    echo "Testing image: ${img}"
+}
+function generate_dojofile2() {
+    img=$1
+    echo "DOJO_IDENTITY_OUTER=\"$(pwd)/test/test-files/dojo_identities/full\"" > ./Dojofile.to_be_tested
+    echo "DOJO_WORK_OUTER=$(pwd)/test/test-files/dojo_work" >> Dojofile.to_be_tested
+    echo "DOJO_DOCKER_IMAGE=${img}" >> Dojofile.to_be_tested
+    echo "Testing image: ${img}"
+}
+
+command="$1"
+case "${command}" in
+  build)
+      # this is needed to run itest
+      docker build -f DockerfileAlpine -t dojo-image-scripts:alpine .
+      docker build -f DockerfileUbuntu -t dojo-image-scripts:ubuntu .
+      exit $?
+      ;;
+  test_scripts)
+      # do not use the production ENTRYPOINT
+      generate_dojofile1 "dojo-image-scripts:alpine"
+      bats "$(pwd)/test/scripts/bats"
+      generate_dojofile1 "dojo-image-scripts:ubuntu"
+      bats "$(pwd)/test/scripts/bats"
+      exit $?
+      ;;
+  e2e)
+      # use the production ENTRYPOINT
+      generate_dojofile2 "dojo-image-scripts:alpine"
+      bats "$(pwd)/test/e2e/bats"
+      generate_dojofile2 "dojo-image-scripts:ubuntu"
+      bats "$(pwd)/test/e2e/bats"
+      exit $?
+      ;;
+  *)
+      echo "Invalid command: '${command}'"
+      exit 1
+      ;;
+esac
+set +e
