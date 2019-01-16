@@ -23,6 +23,10 @@ pipelines:
                 - exec:
                     command: ide
                     arguments:
+                    - ./tasks verify_version
+                - exec:
+                    command: ide
+                    arguments:
                       - ./tasks deps
                 - exec:
                     command: ide
@@ -91,3 +95,14 @@ pipelines:
                     arguments:
                         - -c
                         - cd image_scripts && ./tasks e2e
+      - release:
+          clean_workspace: true
+          jobs:
+            code:
+              elastic_profile_id: w.c1.m1024.e5
+              tasks:
+                - exec:
+                    command: bash
+                    arguments:
+                      - -c
+                      - ./tasks release

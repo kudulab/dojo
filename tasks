@@ -1,6 +1,14 @@
 #!/bin/bash
 set -e
 
+if [[ ! -f ./releaser ]];then
+  timeout 2 wget -O releaser http://http.archive.ai-traders.com/releaser/1.0.8/releaser || { echo "Cannot download releaser, ignoring"; rm -f ./releaser; }
+fi
+if [[ -f ./releaser ]];then
+  source ./releaser
+  releaser_init
+fi
+
 command="$1"
 case "${command}" in
     deps)
@@ -18,6 +26,41 @@ case "${command}" in
         ;;
     test_signals)
         (set -x; ./test/signal/signals-tests.sh; )
+        ;;
+    set_version)
+        if [[ -n "$2" ]]; then
+            next_version="$2"
+        else
+            last_version="$(get_last_version_from_changelog ${changelog_file})"
+            next_version="$(bump_patch_version ${last_version})"
+        fi
+        set_version_in_changelog "${changelog_file}" "${next_version}"
+        echo "package main
+const DojoVersion = \"${next_version}\"
+" > "./version.go"
+        releaser_log_info "Set version: ${next_version}"
+        ;;
+    verify_version)
+        version="$(get_last_version_from_changelog ${changelog_file})"
+        if git tag | grep "${version}"; then
+            releaser_log_error "The version: ${version} was already git tagged"
+            exit 1
+        fi
+        changelog_first_line=$(cat ${changelog_file} | head -1)
+        if [[ "${changelog_first_line}" == "#"*"Unreleased"* ]] || [[ "${changelog_first_line}" == "#"*"unreleased"* ]] || [[ "${changelog_first_line}" == "#"*"UNRELEASED"* ]];then
+            releaser_log_error "Top of changelog has 'Unreleased' flag"
+            exit 1
+        fi
+        if ! grep "${version}" ./version.go >/dev/null; then
+            releaser_log_error "The file version.go does not contain: ${version}"
+            exit 1
+        fi
+        releaser_log_info "Version: ${version} verified successfully"
+        ;;
+    release)
+        version="$(get_last_version_from_changelog ${changelog_file})"
+        git tag "${version}"
+        git push origin "${version}"
         ;;
     *)
         echo "Invalid command: '${command}'"
