@@ -194,10 +194,15 @@ func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envSe
 
 	exitStatus := dc.ShellService.RunInteractive(cmd)
 	Log("debug", fmt.Sprintf("Exit status from run command: %v", exitStatus))
+
 	Log("debug", "Stopping containers")
-	dc.ShellService.RunInteractive(cmdStop)
+	exitStatusStop := dc.ShellService.RunInteractive(cmdStop)
+	Log("debug", fmt.Sprintf("Exit status from stop command: %v", exitStatusStop))
+
 	Log("debug", "Removing containers")
-	dc.ShellService.RunInteractive(cmdRm)
+	exitStatusRm := dc.ShellService.RunInteractive(cmdRm)
+	Log("debug", fmt.Sprintf("Exit status from rm command: %v", exitStatusRm))
+
 	_, _, networkExists := dc.ShellService.RunGetOutput(fmt.Sprintf("docker network inspect %s", expectedDockerNetwork))
 	if networkExists == 0 {
 		Log("debug", fmt.Sprintf("Removing docker network: %s", expectedDockerNetwork))
@@ -208,6 +213,12 @@ func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envSe
 		}
 	} else {
 		Log("debug", fmt.Sprintf("Not removing docker network: %s, it does not exist", expectedDockerNetwork))
+	}
+	if exitStatusStop != 0 {
+		exitStatus = exitStatusStop
+	}
+	if exitStatusRm != 0 {
+		exitStatus = exitStatusRm
 	}
 	return exitStatus
 }
