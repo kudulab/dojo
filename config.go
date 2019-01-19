@@ -337,7 +337,7 @@ func verifyConfig(config *Config) error {
 	if config.Driver == "dc" {
 		config.Driver = "docker-compose"
 	}
-	if config.Action != "run" && config.Action != "pull" && config.Action != "help" && config.Action != "version" {
+	if config.Action != "run" && config.Action != "pull" {
 		return fmt.Errorf("Invalid configuration, unsupported Action: %s. Supported: run, pull", config.Action)
 	}
 	if config.Driver != "docker" && config.Driver != "docker-compose" {
