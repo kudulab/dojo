@@ -108,21 +108,19 @@ services:
 	return contents
 }
 
-func (dc DockerComposeDriver) ConstructDockerComposeCommandPart1(config Config, projectName string, dojoGeneratedDCFile string) string {
+func (dc DockerComposeDriver) ConstructDockerComposeCommandPart1(config Config, projectName string) string {
 	if projectName == "" {
 		panic("projectName was not set")
-	}
-	if dojoGeneratedDCFile == "" {
-		panic("dojoGeneratedDCFile was not set")
 	}
 	if config.DockerComposeFile == "" {
 		panic("config.DockerComposeFile was not set")
 	}
-	cmd := fmt.Sprintf("docker-compose -f %s -f %s -p %s", config.DockerComposeFile, dojoGeneratedDCFile, projectName)
+	dcGenFile := dc.getDCGeneratedFilePath(config.DockerComposeFile)
+	cmd := fmt.Sprintf("docker-compose -f %s -f %s -p %s", config.DockerComposeFile, dcGenFile, projectName)
 	return cmd
 }
-func (dc DockerComposeDriver) ConstructDockerComposeCommandRun(config Config, projectName string, dojoGeneratedDCFile string) string {
-	cmd := dc.ConstructDockerComposeCommandPart1(config, projectName, dojoGeneratedDCFile)
+func (dc DockerComposeDriver) ConstructDockerComposeCommandRun(config Config, projectName string) string {
+	cmd := dc.ConstructDockerComposeCommandPart1(config, projectName)
 	cmd += " run --rm"
 	shellIsInteractive := dc.ShellService.CheckIfInteractive()
 	if !shellIsInteractive && config.RunCommand == "" {
@@ -146,14 +144,24 @@ func (dc DockerComposeDriver) ConstructDockerComposeCommandRun(config Config, pr
 	}
 	return cmd
 }
-func (dc DockerComposeDriver) ConstructDockerComposeCommandStop(config Config, projectName string, dojoGeneratedDCFile string) string {
-	cmd := dc.ConstructDockerComposeCommandPart1(config, projectName, dojoGeneratedDCFile)
+func (dc DockerComposeDriver) ConstructDockerComposeCommandStop(config Config, projectName string) string {
+	cmd := dc.ConstructDockerComposeCommandPart1(config, projectName)
 	cmd += " stop"
 	return cmd
 }
-func (dc DockerComposeDriver) ConstructDockerComposeCommandRm(config Config, projectName string, dojoGeneratedDCFile string) string {
-	cmd := dc.ConstructDockerComposeCommandPart1(config, projectName, dojoGeneratedDCFile)
+func (dc DockerComposeDriver) ConstructDockerComposeCommandRm(config Config, projectName string) string {
+	cmd := dc.ConstructDockerComposeCommandPart1(config, projectName)
 	cmd += " rm -f"
+	return cmd
+}
+func (dc DockerComposeDriver) ConstructDockerComposeCommandPs(config Config, projectName string) string {
+	cmd := dc.ConstructDockerComposeCommandPart1(config, projectName)
+	cmd += " ps -q"
+	return cmd
+}
+func (dc DockerComposeDriver) ConstructDockerComposeCommandDown(config Config, projectName string) string {
+	cmd := dc.ConstructDockerComposeCommandPart1(config, projectName)
+	cmd += " down"
 	return cmd
 }
 func (dc DockerComposeDriver) GetExpDockerNetwork(runID string) string {
@@ -182,11 +190,11 @@ func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envSe
 	// so let's ignore error on removal here
 	defer dc.FileService.RemoveGeneratedFileIgnoreError(mergedConfig.RemoveContainers, dojoDCGeneratedFile, true)
 
-	cmd := dc.ConstructDockerComposeCommandRun(mergedConfig, runID, dojoDCGeneratedFile)
+	cmd := dc.ConstructDockerComposeCommandRun(mergedConfig, runID)
 	Log("info", green(fmt.Sprintf("docker-compose run command will be:\n %v", cmd)))
-	cmdStop := dc.ConstructDockerComposeCommandStop(mergedConfig, runID, dojoDCGeneratedFile)
+	cmdStop := dc.ConstructDockerComposeCommandStop(mergedConfig, runID)
 	Log("debug", fmt.Sprintf("docker-compose stop command will be:\n %v", cmdStop))
-	cmdRm := dc.ConstructDockerComposeCommandRm(mergedConfig, runID, dojoDCGeneratedFile)
+	cmdRm := dc.ConstructDockerComposeCommandRm(mergedConfig, runID)
 	Log("debug", fmt.Sprintf("docker-compose rm command will be:\n %v", cmdRm))
 
 	expectedDockerNetwork := dc.GetExpDockerNetwork(runID)
@@ -238,7 +246,7 @@ func (dc DockerComposeDriver) handleDCFilesForPull(mergedConfig Config) (string,
 
 func (dc DockerComposeDriver) ConstructDockerComposeCommandPull(config Config, dojoGeneratedDCFile string) string {
 	// projectName does not matter for docker-compose pull command
-	cmd := dc.ConstructDockerComposeCommandPart1(config, "dojo", dojoGeneratedDCFile)
+	cmd := dc.ConstructDockerComposeCommandPart1(config, "dojo")
 	cmd += " pull"
 	return cmd
 }
@@ -276,8 +284,7 @@ func (d DockerComposeDriver) HandleSignal(mergedConfig Config, runID string) int
 			return 0
 		}
 
-		cmdPart1 := d.ConstructDockerComposeCommandPart1(mergedConfig, runID, d.getDCGeneratedFilePath(mergedConfig.DockerComposeFile))
-		cmd := cmdPart1 + " ps -q"
+		cmd := d.ConstructDockerComposeCommandPs(mergedConfig, runID)
 
 		stdout, stderr, exitStatus := d.ShellService.RunGetOutput(cmd)
 		if stdout == "" && exitStatus == 0 {
@@ -296,7 +303,7 @@ func (d DockerComposeDriver) HandleSignal(mergedConfig Config, runID string) int
 				Log("info", fmt.Sprintf("Stopping docker-compose project: %s", runID))
 				// docker-compose stop does not wait until containers are stopped, thus use this instead:
 				// do not use "rm --force --stop", because "down" also removes networks
-				stopCmd := cmdPart1 + " down"
+				stopCmd := d.ConstructDockerComposeCommandDown(mergedConfig, runID)
 				stdout, stderr, exitStatus := d.ShellService.RunGetOutput(stopCmd)
 				if exitStatus != 0 {
 					Log("error", getCmdReturnPrettyString(stopCmd, stdout, stderr, exitStatus))

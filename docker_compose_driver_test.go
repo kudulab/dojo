@@ -116,18 +116,18 @@ func Test_ConstructDockerComposeCommandRun_Interactive(t *testing.T){
 	}
 	mytests := []mytestStruct{
 		mytestStruct{ shellInteractive: true, userInteractiveConfig: "true",
-			expOutput: "docker-compose -f docker-compose.yml -f /tmp/dummy -p 1234 run --rm --some-opt default bla"},
+			expOutput: "docker-compose -f /tmp/dummy.yml -f /tmp/dummy.yml.dojo -p 1234 run --rm --some-opt default bla"},
 		mytestStruct{ shellInteractive: true, userInteractiveConfig: "false",
-			expOutput: "docker-compose -f docker-compose.yml -f /tmp/dummy -p 1234 run --rm -T --some-opt default bla"},
+			expOutput: "docker-compose -f /tmp/dummy.yml -f /tmp/dummy.yml.dojo -p 1234 run --rm -T --some-opt default bla"},
 		mytestStruct{ shellInteractive: true, userInteractiveConfig: "",
-			expOutput: "docker-compose -f docker-compose.yml -f /tmp/dummy -p 1234 run --rm --some-opt default bla"},
+			expOutput: "docker-compose -f /tmp/dummy.yml -f /tmp/dummy.yml.dojo -p 1234 run --rm --some-opt default bla"},
 
 		mytestStruct{ shellInteractive: false, userInteractiveConfig: "true",
-			expOutput: "docker-compose -f docker-compose.yml -f /tmp/dummy -p 1234 run --rm --some-opt default bla"},
+			expOutput: "docker-compose -f /tmp/dummy.yml -f /tmp/dummy.yml.dojo -p 1234 run --rm --some-opt default bla"},
 		mytestStruct{ shellInteractive: false, userInteractiveConfig: "false",
-			expOutput: "docker-compose -f docker-compose.yml -f /tmp/dummy -p 1234 run --rm -T --some-opt default bla"},
+			expOutput: "docker-compose -f /tmp/dummy.yml -f /tmp/dummy.yml.dojo -p 1234 run --rm -T --some-opt default bla"},
 		mytestStruct{ shellInteractive: false, userInteractiveConfig: "",
-			expOutput: "docker-compose -f docker-compose.yml -f /tmp/dummy -p 1234 run --rm -T --some-opt default bla"},
+			expOutput: "docker-compose -f /tmp/dummy.yml -f /tmp/dummy.yml.dojo -p 1234 run --rm -T --some-opt default bla"},
 	}
 	setTestEnv()
 	for _,v := range mytests {
@@ -135,6 +135,7 @@ func Test_ConstructDockerComposeCommandRun_Interactive(t *testing.T){
 		config.Interactive = v.userInteractiveConfig
 		config.RunCommand = "bla"
 		config.DockerComposeOptions = "--some-opt"
+		config.DockerComposeFile = "/tmp/dummy.yml"
 		var ss ShellServiceInterface
 		if v.shellInteractive {
 			ss = MockedShellServiceInteractive{}
@@ -142,7 +143,7 @@ func Test_ConstructDockerComposeCommandRun_Interactive(t *testing.T){
 			ss = MockedShellServiceNotInteractive{}
 		}
 		dc := NewDockerComposeDriver(ss, NewMockedFileService())
-		cmd := dc.ConstructDockerComposeCommandRun(config, "1234", "/tmp/dummy")
+		cmd := dc.ConstructDockerComposeCommandRun(config, "1234")
 		assert.Equal(t, v.expOutput, cmd, fmt.Sprintf("shellInteractive: %v, userConfig: %v", v.shellInteractive, v.userInteractiveConfig))
 	}
 }
@@ -151,6 +152,7 @@ func Test_ConstructDockerComposeCommandRun_NotInteractive_NoCommand(t *testing.T
 	config := getTestConfig()
 	config.RunCommand = ""
 	config.DockerComposeOptions = "--some-opt"
+	config.DockerComposeFile = "/tmp/dummy.yml"
 
 	defer func() {
 		if r := recover(); r!= nil {
@@ -160,7 +162,7 @@ func Test_ConstructDockerComposeCommandRun_NotInteractive_NoCommand(t *testing.T
 		}
 	}()
 	dc := NewDockerComposeDriver(MockedShellServiceNotInteractive{}, NewMockedFileService())
-	dc.ConstructDockerComposeCommandRun(config, "1234", "/tmp/dummy")
+	dc.ConstructDockerComposeCommandRun(config, "1234")
 	t.Fatalf("Expected panic")
 
 }
@@ -172,9 +174,9 @@ func Test_ConstructDockerComposeCommandRun(t *testing.T){
 	}
 	mytests := []mytestStruct{
 		mytestStruct{ userCommandConfig: "bash",
-			expOutput: "docker-compose -f docker-compose.yml -f /tmp/dummy -p 1234 run --rm -T --some-opt default bash"},
+			expOutput: "docker-compose -f /tmp/dummy.yml -f /tmp/dummy.yml.dojo -p 1234 run --rm -T --some-opt default bash"},
 		mytestStruct{ userCommandConfig: "bash -c \"echo hello\"",
-			expOutput: "docker-compose -f docker-compose.yml -f /tmp/dummy -p 1234 run --rm -T --some-opt default bash -c \"echo hello\""},
+			expOutput: "docker-compose -f /tmp/dummy.yml -f /tmp/dummy.yml.dojo -p 1234 run --rm -T --some-opt default bash -c \"echo hello\""},
 	}
 	setTestEnv()
 	dc := NewDockerComposeDriver(MockedShellServiceNotInteractive{}, NewMockedFileService())
@@ -182,7 +184,8 @@ func Test_ConstructDockerComposeCommandRun(t *testing.T){
 		config := getTestConfig()
 		config.RunCommand = v.userCommandConfig
 		config.DockerComposeOptions = "--some-opt"
-		cmd := dc.ConstructDockerComposeCommandRun(config, "1234", "/tmp/dummy")
+		config.DockerComposeFile = "/tmp/dummy.yml"
+		cmd := dc.ConstructDockerComposeCommandRun(config, "1234")
 		assert.Equal(t, v.expOutput, cmd, fmt.Sprintf("userCommandConfig: %v", v.userCommandConfig))
 	}
 }
@@ -194,14 +197,15 @@ func Test_ConstructDockerComposeCommandStop(t *testing.T){
 	}
 	mytests := []mytestStruct{
 		mytestStruct{ userCommandConfig: "",
-			expOutput: "docker-compose -f docker-compose.yml -f /tmp/dummy -p 1234 stop"},
+			expOutput: "docker-compose -f /tmp/dummy.yml -f /tmp/dummy.yml.dojo -p 1234 stop"},
 	}
 	dc := NewDockerComposeDriver(MockedShellServiceNotInteractive{}, NewMockedFileService())
 	for _,v := range mytests {
 		config := getTestConfig()
 		config.RunCommand = v.userCommandConfig
 		config.DockerComposeOptions = "--some-opt"
-		cmd := dc.ConstructDockerComposeCommandStop(config, "1234", "/tmp/dummy")
+		config.DockerComposeFile = "/tmp/dummy.yml"
+		cmd := dc.ConstructDockerComposeCommandStop(config, "1234")
 		assert.Equal(t, v.expOutput, cmd, fmt.Sprintf("userCommandConfig: %v", v.userCommandConfig))
 	}
 }
@@ -213,14 +217,15 @@ func Test_ConstructDockerComposeCommandRm(t *testing.T){
 	}
 	mytests := []mytestStruct{
 		mytestStruct{ userCommandConfig: "",
-			expOutput: "docker-compose -f docker-compose.yml -f /tmp/dummy -p 1234 rm -f"},
+			expOutput: "docker-compose -f /tmp/dummy.yml -f /tmp/dummy.yml.dojo -p 1234 rm -f"},
 	}
 	dc := NewDockerComposeDriver(MockedShellServiceNotInteractive{}, NewMockedFileService())
 	for _,v := range mytests {
 		config := getTestConfig()
 		config.RunCommand = v.userCommandConfig
 		config.DockerComposeOptions = "--some-opt"
-		cmd := dc.ConstructDockerComposeCommandRm(config, "1234", "/tmp/dummy")
+		config.DockerComposeFile = "/tmp/dummy.yml"
+		cmd := dc.ConstructDockerComposeCommandRm(config, "1234")
 		assert.Equal(t, v.expOutput, cmd, fmt.Sprintf("userCommandConfig: %v", v.userCommandConfig))
 	}
 }
