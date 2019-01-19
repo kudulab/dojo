@@ -214,9 +214,11 @@ func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envSe
 	_, _, networkExists := dc.ShellService.RunGetOutput(fmt.Sprintf("docker network inspect %s", expectedDockerNetwork))
 	if networkExists == 0 {
 		Log("debug", fmt.Sprintf("Removing docker network: %s", expectedDockerNetwork))
-		stdout, stderr, es := dc.ShellService.RunGetOutput(fmt.Sprintf("docker network rm %s", expectedDockerNetwork))
+		cmdDockerNetRm := fmt.Sprintf("docker network rm %s", expectedDockerNetwork)
+		stdout, stderr, es := dc.ShellService.RunGetOutput(cmdDockerNetRm)
 		if es != 0 {
-			Log("error", fmt.Sprintf("Error when removing docker network %s, exit status: %v\nstdout: %s\nstderr%s", expectedDockerNetwork, es, stdout, stderr))
+			cmdInfo := cmdInfoToString(cmdDockerNetRm, stdout, stderr, es)
+			Log("error", cmdInfo)
 			exitStatus = 1
 		}
 	} else {
@@ -292,7 +294,7 @@ func (d DockerComposeDriver) HandleSignal(mergedConfig Config, runID string) int
 		} else if exitStatus != 0 {
 			// unexpected error case
 			Log("info", "Not cleaning")
-			Log("info", getCmdReturnPrettyString(cmd, stdout, stderr, exitStatus))
+			Log("info", cmdInfoToString(cmd, stdout, stderr, exitStatus))
 		} else {
 			// Containers are either:
 			// * created and not running
@@ -306,7 +308,7 @@ func (d DockerComposeDriver) HandleSignal(mergedConfig Config, runID string) int
 				stopCmd := d.ConstructDockerComposeCommandDown(mergedConfig, runID)
 				stdout, stderr, exitStatus := d.ShellService.RunGetOutput(stopCmd)
 				if exitStatus != 0 {
-					Log("error", getCmdReturnPrettyString(stopCmd, stdout, stderr, exitStatus))
+					Log("error", cmdInfoToString(stopCmd, stdout, stderr, exitStatus))
 					return exitStatus
 				}
 			}
@@ -319,14 +321,6 @@ func (d DockerComposeDriver) HandleSignal(mergedConfig Config, runID string) int
 		Log("info", "Cleanup finished")
 	}
 	return 0
-}
-
-func getCmdReturnPrettyString(cmd string, stdout string, stderr string, exitStatus int) string {
-	return fmt.Sprintf(`Command: %s returned:
-exit status: %v
-stdout: %s
-stderr: %s`,
-		cmd, exitStatus, stdout, stderr)
 }
 
 func (d DockerComposeDriver) waitForEnvFileRemoval(envFile string) bool {

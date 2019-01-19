@@ -92,3 +92,11 @@ func getRunID(test string) string {
 		return "testdojorunid"
 	}
 }
+
+func cmdInfoToString(cmd string, stdout string, stderr string, exitStatus int) string {
+	return fmt.Sprintf(`Command: %s
+exit status: %v
+stdout: %s
+stderr: %s`,
+		cmd, exitStatus, stdout, stderr)
+}

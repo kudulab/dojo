@@ -138,7 +138,8 @@ func (d DockerDriver) HandleSignal(mergedConfig Config, runID string) int {
 			Log("info", fmt.Sprintf("Cleaning not needed, the container was not created: %s", runID))
 		} else if exitStatus != 0 {
 			// unexpected error case
-			Log("info", fmt.Sprintf("Not cleaning. stdout: %s, stderr: %s, exitStatus: %v", stdout, stderr, exitStatus))
+			cmdInfo := cmdInfoToString(cmd, stdout, stderr, exitStatus)
+			Log("info", fmt.Sprintf("Not cleaning. Unexpected non-0 exit status.\n%s", cmdInfo))
 		} else {
 			// Container is either:
 			// * created and not running
@@ -149,7 +150,8 @@ func (d DockerDriver) HandleSignal(mergedConfig Config, runID string) int {
 				Log("info", fmt.Sprintf("Stopping container: %s", runID))
 				stdout, stderr, exitStatus := d.ShellService.RunGetOutput(fmt.Sprintf("docker stop %s 2>&1", runID))
 				if exitStatus != 0 {
-					Log("error", fmt.Sprintf("Exit status: %v, stdout: %s, stderr: %s", exitStatus, stdout, stderr))
+					cmdInfo := cmdInfoToString(cmd, stdout, stderr, exitStatus)
+					Log("error", cmdInfo)
 					return exitStatus
 				}
 				// no need to remove the container, if it was started with "docker run --rm", it will be removed
@@ -172,10 +174,11 @@ func (d DockerDriver) HandleMultipleSignal(mergedConfig Config, runID string) in
 			Log("debug", "Environment file does not exist, either containers not created or already cleaned")
 			return 0
 		}
+		cmd := fmt.Sprintf("docker kill %s", runID)
 		stdout, stderr, exitStatus := d.ShellService.RunGetOutput(fmt.Sprintf("docker kill %s", runID))
 		if exitStatus != 0 {
-			Log("debug", fmt.Sprintf("Exit status non zero: %v, stdout: %s, stderr %s",
-				exitStatus, stdout, stderr))
+			cmdInfo := cmdInfoToString(cmd, stdout, stderr, exitStatus)
+			Log("debug", cmdInfo)
 		} else {
 			Log("debug", "docker kill was successful")
 		}
