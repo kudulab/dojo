@@ -70,19 +70,6 @@ func main() {
 	Log("info", fmt.Sprintf("Dojo version %s", DojoVersion))
 	mergedConfig := handleConfig()
 
-	// This variable is needed to perform cleanup on any signal.
-	// In order to avoid race conditions, let's write to this variable before
-	// using multiple goroutines. And let's never write to it again.
-	runID := ""
-	if mergedConfig.Action == "run" {
-		runID = getRunID(mergedConfig.Test)
-	}
-
-	signalChannel := make(chan os.Signal, 1)
-	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
-	doneChannel := make(chan int, 1)
-
-	envService := EnvService{}
 	fileService := FileService{}
 	shellService := NewBashShellService()
 	var driver DojoDriverInterface
@@ -92,14 +79,25 @@ func main() {
 		driver = NewDockerComposeDriver(shellService, fileService)
 	}
 
+	if mergedConfig.Action == "pull" {
+		exitstatus := driver.HandlePull(mergedConfig)
+		os.Exit(exitstatus)
+	}
+	// action is run
+
+	// This variable is needed to perform cleanup on any signal.
+	// In order to avoid race conditions, let's write to this variable before
+	// using multiple goroutines. And let's never write to it again.
+	runID := getRunID(mergedConfig.Test)
+
+	signalChannel := make(chan os.Signal, 1)
+	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
+	doneChannel := make(chan int, 1)
+
 	go func(){
-		if mergedConfig.Action == "run" {
-			exitstatus := driver.HandleRun(mergedConfig, runID, envService)
-			doneChannel <- exitstatus
-		} else if mergedConfig.Action == "pull" {
-			exitstatus := driver.HandlePull(mergedConfig)
-			doneChannel <- exitstatus
-		}
+		envService := EnvService{}
+		exitstatus := driver.HandleRun(mergedConfig, runID, envService)
+		doneChannel <- exitstatus
 	}()
 
 	select {
