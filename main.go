@@ -7,15 +7,14 @@ import (
 	"syscall"
 )
 
-var LogLevel string = "debug"
 
-func handleConfig() Config {
+func handleConfig(logger *Logger) Config {
 	configFromCLI:= getCLIConfig()
 	// debug option can be set on CLI only
 	if configFromCLI.Debug == "true" {
-		SetLogLevel("debug")
+		logger.SetLogLevel("debug")
 	} else {
-		SetLogLevel("info")
+		logger.SetLogLevel("info")
 	}
 	configFile := configFromCLI.ConfigFile
 	if configFile == "" {
@@ -25,36 +24,36 @@ func handleConfig() Config {
 		if err != nil {
 			if os.IsNotExist(err) {
 				// user set custom config file and it does not exist
-				Log("error", fmt.Sprintf("ConfigFile set among cli options: \"%s\" does not exist", configFile))
+				logger.Log("error", fmt.Sprintf("ConfigFile set among cli options: \"%s\" does not exist", configFile))
 				os.Exit(1)
 			}
 			panic(fmt.Sprintf("error when running os.Lstat(%q): %s", configFile, err))
 		}
 	}
-	configFromFile := getFileConfig(configFile)
+	configFromFile := getFileConfig(logger, configFile)
 	defaultConfig := getDefaultConfig(configFile)
 	mergedConfig := getMergedConfig(configFromCLI, configFromFile, defaultConfig)
-	err := verifyConfig(&mergedConfig)
+	err := verifyConfig(logger, &mergedConfig)
 	if err != nil {
-		Log("error", err.Error())
+		logger.Log("error", err.Error())
 		os.Exit(1)
 	}
-	Log("debug", fmt.Sprintf("configFromCLI: %s", configFromCLI))
-	Log("debug", fmt.Sprintf("configFromFile: %s", configFromFile))
-	Log("debug", fmt.Sprintf("mergedConfig: %s", mergedConfig))
-	Log("debug", fmt.Sprint("Config verified successfully"))
+	logger.Log("debug", fmt.Sprintf("configFromCLI: %s", configFromCLI))
+	logger.Log("debug", fmt.Sprintf("configFromFile: %s", configFromFile))
+	logger.Log("debug", fmt.Sprintf("mergedConfig: %s", mergedConfig))
+	logger.Log("debug", fmt.Sprint("Config verified successfully"))
 	return mergedConfig
 }
 
-func handleSignal(mergedConfig Config, runID string, driver DojoDriverInterface, multipleSignal bool) int {
+func handleSignal(logger *Logger, mergedConfig Config, runID string, driver DojoDriverInterface, multipleSignal bool) int {
 	var exitStatus int
-	if mergedConfig.Action == "pull" {
-		Log("debug", "No cleaning needed (pull action)")
+	if mergedConfig.Action != "run" {
+		logger.Log("debug", "No cleaning needed (action was not: run)")
 		return 0
 	}
 	if mergedConfig.Action == "run" {
 		if runID == "" {
-			Log("debug", "No cleaning needed (runID not yet generated)")
+			logger.Log("debug", "No cleaning needed (runID not yet generated)")
 			return 0
 		}
 		if multipleSignal {
@@ -67,16 +66,17 @@ func handleSignal(mergedConfig Config, runID string, driver DojoDriverInterface,
 }
 
 func main() {
-	Log("info", fmt.Sprintf("Dojo version %s", DojoVersion))
-	mergedConfig := handleConfig()
+	logger := NewLogger("debug")
+	logger.Log("info", fmt.Sprintf("Dojo version %s", DojoVersion))
+	mergedConfig := handleConfig(logger)
 
-	fileService := FileService{}
-	shellService := NewBashShellService()
+	fileService := NewFileService(logger)
+	shellService := NewBashShellService(logger)
 	var driver DojoDriverInterface
 	if mergedConfig.Driver == "docker"{
-		driver = NewDockerDriver(shellService, fileService)
+		driver = NewDockerDriver(shellService, fileService, logger)
 	} else {
-		driver = NewDockerComposeDriver(shellService, fileService)
+		driver = NewDockerComposeDriver(shellService, fileService, logger)
 	}
 
 	if mergedConfig.Action == "pull" {
@@ -102,7 +102,7 @@ func main() {
 
 	select {
 	case signalCaught := <-signalChannel:
-		Log("error", fmt.Sprintf("Caught signal: %s", signalCaught.String()))
+		logger.Log("error", fmt.Sprintf("Caught signal: %s", signalCaught.String()))
 		exitStatus := 1
 		switch signalCaught {
 		// kill -SIGINT XXXX or Ctrl+c
@@ -117,7 +117,7 @@ func main() {
 		signal.Notify(multipleSignalChannel, os.Interrupt, syscall.SIGTERM)
 		doneAfterOneSignalChannel := make(chan int, 1)
 		go func() {
-			exitStatusFromCleanup := handleSignal(mergedConfig, runID, driver, false)
+			exitStatusFromCleanup := handleSignal(logger, mergedConfig, runID, driver, false)
 			if exitStatusFromCleanup != 0 {
 				exitStatus = exitStatusFromCleanup
 			}
@@ -125,21 +125,21 @@ func main() {
 		}()
 		select {
 		case multipleSignalCaught := <-multipleSignalChannel:
-			Log("error", fmt.Sprintf("Caught another signal: %s", multipleSignalCaught.String()))
+			logger.Log("error", fmt.Sprintf("Caught another signal: %s", multipleSignalCaught.String()))
 			exitStatus = 3
-			exitStatusFromCleanup := handleSignal(mergedConfig, runID, driver, true)
+			exitStatusFromCleanup := handleSignal(logger, mergedConfig, runID, driver, true)
 			if exitStatusFromCleanup != 0 {
 				exitStatus = exitStatusFromCleanup
 			}
-			Log("debug", "Finished after multiple signals")
+			logger.Log("debug", "Finished after multiple signals")
 			os.Exit(exitStatus)
 
 		case doneAfter1Signal := <- doneAfterOneSignalChannel:
-			Log("debug", "Finished after 1 signal")
+			logger.Log("debug", "Finished after 1 signal")
 			os.Exit(doneAfter1Signal)
 		}
 	case done := <-doneChannel:
-		Log("debug", "Finished, normal way")
+		logger.Log("debug", "Finished, normal way")
 		os.Exit(done)
 	}
 }

@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/stretchr/testify/assert"
-	"log"
 	"strings"
 	"testing"
 )
 
 func TestLog_UnsupportedLevel(t *testing.T) {
+	logger := NewLogger("info")
 	defer func() {
 		if r := recover(); r != nil {
 			expMsg := "Unsupported log level: unsupported"
@@ -18,40 +18,42 @@ func TestLog_UnsupportedLevel(t *testing.T) {
 			}
 		}
 	}()
-	Log("unsupported", "abc")
+	logger.Log("unsupported", "abc")
 	t.Fatal("Expected panic, but no panic")
 }
 
-func TestLog_InfoShownByDefault(t *testing.T) {
+func TestLog_Info(t *testing.T) {
+	logger := NewLogger("info")
 	// set custom Log output target
 	var str bytes.Buffer
-	log.SetOutput(&str)
+	logger.SetOutput(&str)
 
-	Log("info", "hello")
+	logger.Log("info", "hello")
 	output := strings.TrimSuffix(str.String(), "\n")
 	assert.Contains(t, output, "INFO")
 	assert.Contains(t, output, "hello")
 }
 
-func TestLog_DebugShownByDefaultAtStart(t *testing.T) {
+func TestLog_Debug(t *testing.T) {
+	logger := NewLogger("debug")
 	// set custom Log output target
 	var str bytes.Buffer
-	log.SetOutput(&str)
+	logger.SetOutput(&str)
 
-	Log("debug", "my debug msg")
+	logger.Log("debug", "my debug msg")
 	output := strings.TrimSuffix(str.String(), "\n")
 	assert.Contains(t, output, "DEBUG")
 	assert.Contains(t, output, "my debug msg")
 }
 
 func TestLog_MixLevel_DebugUnset(t *testing.T) {
+	logger := NewLogger("info")
 	// set custom Log output target
 	var str bytes.Buffer
-	log.SetOutput(&str)
-	SetLogLevel("info")
+	logger.SetOutput(&str)
 
-	Log("info", "hello")
-	Log("debug", "my debug msg")
+	logger.Log("info", "hello")
+	logger.Log("debug", "my debug msg")
 	output := strings.TrimSuffix(str.String(), "\n")
 	assert.Contains(t, output, "INFO")
 	assert.Contains(t, output, "hello")
@@ -60,14 +62,13 @@ func TestLog_MixLevel_DebugUnset(t *testing.T) {
 }
 
 func TestLog_MixLevel_DebugSet(t *testing.T) {
+	logger := NewLogger("debug")
 	// set custom Log output target
 	var str bytes.Buffer
-	log.SetOutput(&str)
+	logger.SetOutput(&str)
 
-	SetLogLevel("debug")
-
-	Log("info", "hello")
-	Log("debug", "my debug msg")
+	logger.Log("info", "hello")
+	logger.Log("debug", "my debug msg")
 	output := strings.TrimSuffix(str.String(), "\n")
 	assert.Contains(t, output, "INFO")
 	assert.Contains(t, output, "hello")
@@ -75,17 +76,20 @@ func TestLog_MixLevel_DebugSet(t *testing.T) {
 	assert.Contains(t, output, "my debug msg")
 }
 
-func logSth() {
-	Log("debug", "logging sth")
+func logSth(logger *Logger) {
+	logger.Log("debug", "logging sth")
 }
 
 // When you run this test separately, you see output.
 func TestLog_MixLevel_ForHuman(t *testing.T) {
-	SetLogLevel("debug")
+	logger := NewLogger("debug")
+	// set custom Log output target
+	var str bytes.Buffer
+	logger.SetOutput(&str)
 
-	Log("info", "hello")
-	Log("debug", "my debug msg")
-	logSth()
+	logger.Log("info", "hello")
+	logger.Log("debug", "my debug msg")
+	logSth(logger)
 }
 func Test_getRunID(t *testing.T) {
 	runID := getRunID("false")

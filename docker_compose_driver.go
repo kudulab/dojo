@@ -12,18 +12,23 @@ import (
 type DockerComposeDriver struct {
 	ShellService ShellServiceInterface
 	FileService  FileServiceInterface
+	Logger *Logger
 }
 
-func NewDockerComposeDriver(shellService ShellServiceInterface, fs FileServiceInterface) DockerComposeDriver {
+func NewDockerComposeDriver(shellService ShellServiceInterface, fs FileServiceInterface, logger *Logger) DockerComposeDriver {
 	if shellService == nil {
 		panic(errors.New("shellService was nil"))
 	}
 	if fs == nil {
 		panic(errors.New("fs was nil"))
 	}
+	if logger == nil {
+		panic(errors.New("logger was nil"))
+	}
 	return DockerComposeDriver{
 		ShellService: shellService,
 		FileService: fs,
+		Logger: logger,
 	}
 }
 
@@ -62,7 +67,7 @@ func (dc DockerComposeDriver) handleDCFilesForRun(mergedConfig Config, envFile s
 	fileContents := dc.FileService.ReadDockerComposeFile(mergedConfig.DockerComposeFile)
 	version, err := dc.verifyDCFile(fileContents, mergedConfig.DockerComposeFile)
 	if err != nil {
-		Log("error", fmt.Sprintf("Docker-compose file %s is not correct: %s", mergedConfig.DockerComposeFile, err.Error()))
+		dc.Logger.Log("error", fmt.Sprintf("Docker-compose file %s is not correct: %s", mergedConfig.DockerComposeFile, err.Error()))
 		return "", err
 	}
 	dojoDCFileContents := dc.generateDCFileContentsForRun(mergedConfig, version, envFile)
@@ -77,7 +82,7 @@ func (dc DockerComposeDriver) getDCGeneratedFilePath(dcfilePath string) string {
 
 func (dc DockerComposeDriver) generateDCFileContentsForRun(config Config, version float64, envFile string) string {
 	if dc.FileService.GetFileUid(config.WorkDirOuter) == 0 {
-		Log("warn", fmt.Sprintf("WorkDirOuter: %s is owned by root, which is not recommended", config.WorkDirOuter))
+		dc.Logger.Log("warn", fmt.Sprintf("WorkDirOuter: %s is owned by root, which is not recommended", config.WorkDirOuter))
 	}
 	contents := fmt.Sprintf(
 		`version: '%v'
@@ -174,7 +179,7 @@ func (dc DockerComposeDriver) GetExpDockerNetwork(runID string) string {
 }
 func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envService EnvServiceInterface) int {
 	if envService.IsCurrentUserRoot() {
-		Log("warn", "Current user is root, which is not recommended")
+		dc.Logger.Log("warn", "Current user is root, which is not recommended")
 	}
 	envFile := getEnvFilePath(runID, mergedConfig.Test)
 	saveEnvToFile(dc.FileService, envFile, mergedConfig.BlacklistVariables, envService.Variables())
@@ -191,38 +196,38 @@ func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envSe
 	defer dc.FileService.RemoveGeneratedFileIgnoreError(mergedConfig.RemoveContainers, dojoDCGeneratedFile, true)
 
 	cmd := dc.ConstructDockerComposeCommandRun(mergedConfig, runID)
-	Log("info", green(fmt.Sprintf("docker-compose run command will be:\n %v", cmd)))
+	dc.Logger.Log("info", green(fmt.Sprintf("docker-compose run command will be:\n %v", cmd)))
 	cmdStop := dc.ConstructDockerComposeCommandStop(mergedConfig, runID)
-	Log("debug", fmt.Sprintf("docker-compose stop command will be:\n %v", cmdStop))
+	dc.Logger.Log("debug", fmt.Sprintf("docker-compose stop command will be:\n %v", cmdStop))
 	cmdRm := dc.ConstructDockerComposeCommandRm(mergedConfig, runID)
-	Log("debug", fmt.Sprintf("docker-compose rm command will be:\n %v", cmdRm))
+	dc.Logger.Log("debug", fmt.Sprintf("docker-compose rm command will be:\n %v", cmdRm))
 
 	expectedDockerNetwork := dc.GetExpDockerNetwork(runID)
-	Log("debug", fmt.Sprintf("expected docker-compose network will be:\n %v", expectedDockerNetwork))
+	dc.Logger.Log("debug", fmt.Sprintf("expected docker-compose network will be:\n %v", expectedDockerNetwork))
 
 	exitStatus := dc.ShellService.RunInteractive(cmd)
-	Log("debug", fmt.Sprintf("Exit status from run command: %v", exitStatus))
+	dc.Logger.Log("debug", fmt.Sprintf("Exit status from run command: %v", exitStatus))
 
-	Log("debug", "Stopping containers")
+	dc.Logger.Log("debug", "Stopping containers")
 	exitStatusStop := dc.ShellService.RunInteractive(cmdStop)
-	Log("debug", fmt.Sprintf("Exit status from stop command: %v", exitStatusStop))
+	dc.Logger.Log("debug", fmt.Sprintf("Exit status from stop command: %v", exitStatusStop))
 
-	Log("debug", "Removing containers")
+	dc.Logger.Log("debug", "Removing containers")
 	exitStatusRm := dc.ShellService.RunInteractive(cmdRm)
-	Log("debug", fmt.Sprintf("Exit status from rm command: %v", exitStatusRm))
+	dc.Logger.Log("debug", fmt.Sprintf("Exit status from rm command: %v", exitStatusRm))
 
 	_, _, networkExists := dc.ShellService.RunGetOutput(fmt.Sprintf("docker network inspect %s", expectedDockerNetwork))
 	if networkExists == 0 {
-		Log("debug", fmt.Sprintf("Removing docker network: %s", expectedDockerNetwork))
+		dc.Logger.Log("debug", fmt.Sprintf("Removing docker network: %s", expectedDockerNetwork))
 		cmdDockerNetRm := fmt.Sprintf("docker network rm %s", expectedDockerNetwork)
 		stdout, stderr, es := dc.ShellService.RunGetOutput(cmdDockerNetRm)
 		if es != 0 {
 			cmdInfo := cmdInfoToString(cmdDockerNetRm, stdout, stderr, es)
-			Log("error", cmdInfo)
+			dc.Logger.Log("error", cmdInfo)
 			exitStatus = 1
 		}
 	} else {
-		Log("debug", fmt.Sprintf("Not removing docker network: %s, it does not exist", expectedDockerNetwork))
+		dc.Logger.Log("debug", fmt.Sprintf("Not removing docker network: %s, it does not exist", expectedDockerNetwork))
 	}
 	if exitStatusStop != 0 {
 		exitStatus = exitStatusStop
@@ -237,7 +242,7 @@ func (dc DockerComposeDriver) handleDCFilesForPull(mergedConfig Config) (string,
 	fileContents := dc.FileService.ReadDockerComposeFile(mergedConfig.DockerComposeFile)
 	version, err := dc.verifyDCFile(fileContents, mergedConfig.DockerComposeFile)
 	if err != nil {
-		Log("error", fmt.Sprintf("Docker-compose file %s is not correct: %s", mergedConfig.DockerComposeFile, err.Error()))
+		dc.Logger.Log("error", fmt.Sprintf("Docker-compose file %s is not correct: %s", mergedConfig.DockerComposeFile, err.Error()))
 		return "", err
 	}
 	dojoDCFileContents := dc.generateDCFileContentsForPull(mergedConfig, version)
@@ -261,54 +266,54 @@ func (dc DockerComposeDriver) HandlePull(mergedConfig Config) int {
 	defer dc.FileService.RemoveGeneratedFile(mergedConfig.RemoveContainers, dojoDCGeneratedFile)
 
 	cmd := dc.ConstructDockerComposeCommandPull(mergedConfig, dojoDCGeneratedFile)
-	Log("info", green(fmt.Sprintf("docker-compose pull command will be:\n %v", cmd)))
+	dc.Logger.Log("info", green(fmt.Sprintf("docker-compose pull command will be:\n %v", cmd)))
 	exitStatus := dc.ShellService.RunInteractive(cmd)
-	Log("debug", fmt.Sprintf("Exit status from pull command: %v", exitStatus))
+	dc.Logger.Log("debug", fmt.Sprintf("Exit status from pull command: %v", exitStatus))
 	return exitStatus
 }
 
-func (d DockerComposeDriver) checkContainersRemoved(cmd string) bool {
-	stdout, _, es := d.ShellService.RunGetOutput(cmd)
+func (dc DockerComposeDriver) checkContainersRemoved(cmd string) bool {
+	stdout, _, es := dc.ShellService.RunGetOutput(cmd)
 	if stdout == "" && es == 0 {
-		Log("info", "Containers removed by docker-compose")
+		dc.Logger.Log("info", "Containers removed by docker-compose")
 		return true
 	}
-	Log("info", "Containers not removed")
+	dc.Logger.Log("info", "Containers not removed")
 	return false
 }
 
-func (d DockerComposeDriver) HandleSignal(mergedConfig Config, runID string) int {
+func (dc DockerComposeDriver) HandleSignal(mergedConfig Config, runID string) int {
 	if mergedConfig.RemoveContainers != "false" {
-		Log("debug", "Cleaning on signal")
-		fileRemoved := d.waitForEnvFileRemoval(getEnvFilePath(runID, mergedConfig.Test))
+		dc.Logger.Log("debug", "Cleaning on signal")
+		fileRemoved := dc.waitForEnvFileRemoval(getEnvFilePath(runID, mergedConfig.Test))
 		if fileRemoved {
 			// cleaned up without additional help
 			return 0
 		}
 
-		cmd := d.ConstructDockerComposeCommandPs(mergedConfig, runID)
+		cmd := dc.ConstructDockerComposeCommandPs(mergedConfig, runID)
 
-		stdout, stderr, exitStatus := d.ShellService.RunGetOutput(cmd)
+		stdout, stderr, exitStatus := dc.ShellService.RunGetOutput(cmd)
 		if stdout == "" && exitStatus == 0 {
-			Log("info", fmt.Sprintf("Cleaning not needed, the containers were not created: %s", runID))
+			dc.Logger.Log("info", fmt.Sprintf("Cleaning not needed, the containers were not created: %s", runID))
 		} else if exitStatus != 0 {
 			// unexpected error case
-			Log("info", "Not cleaning")
-			Log("info", cmdInfoToString(cmd, stdout, stderr, exitStatus))
+			dc.Logger.Log("info", "Not cleaning")
+			dc.Logger.Log("info", cmdInfoToString(cmd, stdout, stderr, exitStatus))
 		} else {
 			// Containers are either:
 			// * created and not running
 			// * or running
 			// They still may be removed by docker-compose.
-			containersRemoved := d.checkContainersRemoved(cmd)
+			containersRemoved := dc.checkContainersRemoved(cmd)
 			if !containersRemoved {
-				Log("info", fmt.Sprintf("Stopping docker-compose project: %s", runID))
+				dc.Logger.Log("info", fmt.Sprintf("Stopping docker-compose project: %s", runID))
 				// docker-compose stop does not wait until containers are stopped, thus use this instead:
 				// do not use "rm --force --stop", because "down" also removes networks
-				stopCmd := d.ConstructDockerComposeCommandDown(mergedConfig, runID)
-				stdout, stderr, exitStatus := d.ShellService.RunGetOutput(stopCmd)
+				stopCmd := dc.ConstructDockerComposeCommandDown(mergedConfig, runID)
+				stdout, stderr, exitStatus := dc.ShellService.RunGetOutput(stopCmd)
 				if exitStatus != 0 {
-					Log("error", cmdInfoToString(stopCmd, stdout, stderr, exitStatus))
+					dc.Logger.Log("error", cmdInfoToString(stopCmd, stdout, stderr, exitStatus))
 					return exitStatus
 				}
 			}
@@ -317,34 +322,34 @@ func (d DockerComposeDriver) HandleSignal(mergedConfig Config, runID string) int
 		envFile := getEnvFilePath(runID, mergedConfig.Test)
 		// if containers were removed by docker-compose, the env file may be already removed too,
 		// so let's ignore error on removal here
-		d.FileService.RemoveGeneratedFileIgnoreError(mergedConfig.RemoveContainers, envFile, true)
-		Log("info", "Cleanup finished")
+		dc.FileService.RemoveGeneratedFileIgnoreError(mergedConfig.RemoveContainers, envFile, true)
+		dc.Logger.Log("info", "Cleanup finished")
 	}
 	return 0
 }
 
-func (d DockerComposeDriver) waitForEnvFileRemoval(envFile string) bool {
+func (dc DockerComposeDriver) waitForEnvFileRemoval(envFile string) bool {
 	// 12 is too little
 	timeout := 20
-	Log("info", fmt.Sprintf("Waiting max %vs for environment file to be removed", timeout))
+	dc.Logger.Log("info", fmt.Sprintf("Waiting max %vs for environment file to be removed", timeout))
 	for i:=0; i<timeout; i++ {
-		if !d.FileService.FileExists(envFile) {
-			Log("info", "Containers removed by docker-compose")
+		if !dc.FileService.FileExists(envFile) {
+			dc.Logger.Log("info", "Containers removed by docker-compose")
 			return true
 		}
-		Log("info", fmt.Sprintf("Trial: %v", i))
+		dc.Logger.Log("info", fmt.Sprintf("Trial: %v", i))
 		time.Sleep(time.Second)
 	}
-	Log("info", fmt.Sprintf("Environment file not removed after %vs", timeout))
+	dc.Logger.Log("info", fmt.Sprintf("Environment file not removed after %vs", timeout))
 	return false
 }
 
-func (d DockerComposeDriver) HandleMultipleSignal(mergedConfig Config, runID string) int {
-	Log("debug", "Multiple signals caught")
+func (dc DockerComposeDriver) HandleMultipleSignal(mergedConfig Config, runID string) int {
+	dc.Logger.Log("debug", "Multiple signals caught")
 	// On two Ctrl+C signals docker-compose reacts and stops and removes (kills?) the docker containers.
 	// We shall not perform any additional cleanup
 	// So let's just wait for the environment file to be removed
-	fileRemoved := d.waitForEnvFileRemoval(getEnvFilePath(runID, mergedConfig.Test))
+	fileRemoved := dc.waitForEnvFileRemoval(getEnvFilePath(runID, mergedConfig.Test))
 	if fileRemoved {
 		return 0
 	}

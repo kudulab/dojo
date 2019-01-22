@@ -143,7 +143,8 @@ func Test_getFileConfig(t *testing.T) {
 	fmt.Fprintf(file, "DOJO_BLACKLIST_VARIABLES=VAR1,VAR2,ABC\n")
 	fmt.Fprintf(file, "DOJO_LOG_LEVEL=info\n")
 
-	config := getFileConfig(configFile)
+	logger := NewLogger("debug")
+	config := getFileConfig(logger, configFile)
 	expectedConfig := Config{
 		Action:             "",
 		DockerImage:        "docker-registry.example.com/dojo:1.3.2",
@@ -178,7 +179,8 @@ func Test_getFileConfig_debug(t *testing.T) {
 	defer os.Remove(configFile)
 	fmt.Fprintf(file, "DOJO_LOG_LEVEL=debug\n")
 
-	config := getFileConfig(configFile)
+	logger := NewLogger("debug")
+	config := getFileConfig(logger, configFile)
 	expectedConfig := Config{
 		Action: "",
 		Debug:"true",
@@ -220,7 +222,8 @@ func Test_verifyConfig_invalidAction(t *testing.T) {
 		Driver: "docker",
 		Debug: "true",
 	}
-	err := verifyConfig(config)
+	logger := NewLogger("debug")
+	err := verifyConfig(logger, config)
 	assert.NotNil(t, err)
 	assert.Equal(t, "Invalid configuration, unsupported Action: dummy. Supported: run, pull", err.Error())
 }
@@ -231,7 +234,8 @@ func Test_verifyConfig_invalidDriver(t *testing.T) {
 		Driver: "mydriver",
 		Debug: "true",
 	}
-	err := verifyConfig(config)
+	logger := NewLogger("debug")
+	err := verifyConfig(logger, config)
 	assert.NotNil(t, err)
 	assert.Equal(t, "Invalid configuration, unsupported Driver: mydriver. Supported: docker, docker-compose", err.Error())
 }
@@ -247,7 +251,8 @@ func Test_verifyConfig_driverShorthandDC(t *testing.T) {
 		DockerComposeFile: dcFile,
 	}
 	os.Create(dcFile)
-	err := verifyConfig(config)
+	logger := NewLogger("debug")
+	err := verifyConfig(logger, config)
 	assert.Nil(t, err)
 	assert.Equal(t, "docker-compose", config.Driver)
 	os.Remove(dcFile)

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"os"
@@ -11,6 +12,24 @@ import (
 	"strings"
 	"time"
 )
+
+type Logger struct {
+	Level string
+}
+
+func NewLogger(level string) *Logger {
+	return &Logger{
+		Level: strings.ToLower(level),
+	}
+}
+
+func (l *Logger) SetLogLevel(level string) {
+	l.Level = strings.ToLower(level)
+}
+
+func (l *Logger) SetOutput(w io.Writer) {
+	log.SetOutput(w)
+}
 
 func getGoroutineID() uint64 {
 	b := make([]byte, 64)
@@ -21,18 +40,11 @@ func getGoroutineID() uint64 {
 	return n
 }
 
-func GetLogLevel() string {
-	return LogLevel
-}
-func SetLogLevel(level string) {
-	LogLevel = strings.ToLower(level)
-}
-
-func Log(level, msg string) {
+func (l *Logger) Log(level, msg string) {
 	if level != "info" && level != "debug" && level != "warn" && level != "error" {
 		panic(fmt.Sprintf("Unsupported log level: %v", level))
 	}
-	if level == "debug" && GetLogLevel() != "debug" {
+	if level == "debug" && l.Level != "debug" {
 		return // do not print debug log message
 	}
 

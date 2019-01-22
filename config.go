@@ -237,12 +237,12 @@ func ConfigToMap(config Config) map[string]string {
 
 // getFileConfig never returns error. If config file does not exist,
 // it returns Config object with default values.
-func getFileConfig(filePath string) Config {
+func getFileConfig(logger *Logger, filePath string) Config {
 	config := Config{}
 	if _, err := os.Stat(filePath); err == nil {
 		contents, err := ioutil.ReadFile(filePath)
 		if err != nil {
-			fmt.Print(err)
+			panic(err)
 		}
 		lines := strings.Split(string(contents), "\n")
 
@@ -284,7 +284,7 @@ func getFileConfig(filePath string) Config {
 			}
 		}
 	} else {
-		Log("debug", fmt.Sprintf("Config file does not exist: %s", filePath))
+		logger.Log("debug", fmt.Sprintf("Config file does not exist: %s", filePath))
 	}
 	return config
 }
@@ -333,7 +333,7 @@ func getMergedConfig(moreImportantConfig Config, lessImportantConfig Config, lea
 	return config
 }
 
-func verifyConfig(config *Config) error {
+func verifyConfig(logger *Logger, config *Config) error {
 	if config.Driver == "dc" {
 		config.Driver = "docker-compose"
 	}
@@ -353,7 +353,7 @@ func verifyConfig(config *Config) error {
 		return fmt.Errorf("DockerOptions option is unsupported for driver: docker-compose")
 	}
 	if config.RemoveContainers == "false" && config.Driver == "docker-compose" {
-		Log("warn", "RemoveContainers=false is unsupported for driver: docker-compose")
+		logger.Log("warn", "RemoveContainers=false is unsupported for driver: docker-compose")
 	}
 	if config.RemoveContainers != "true" && config.RemoveContainers != "false" {
 		return fmt.Errorf("Invalid configuration, unsupported RemoveContainers: %s. Supported: true, false", config.RemoveContainers)

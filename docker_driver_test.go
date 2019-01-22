@@ -34,16 +34,17 @@ func TestDockerDriver_ConstructDockerRunCmd_Interactive(t *testing.T){
 			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro --env-file=/tmp/some-env-file --name=name1 img:1.2.3"},
 	}
 	setTestEnv()
+	logger := NewLogger("debug")
 	for _,v := range mytests {
 		config := getTestConfig()
 		config.Interactive = v.userInteractiveConfig
 		var ss ShellServiceInterface
 		if v.shellInteractive {
-			ss = MockedShellServiceInteractive{}
+			ss = NewMockedShellServiceInteractive(logger)
 		} else {
-			ss = MockedShellServiceNotInteractive{}
+			ss = NewMockedShellServiceNotInteractive(logger)
 		}
-		d := NewDockerDriver(ss, NewMockedFileService())
+		d := NewDockerDriver(ss, NewMockedFileService(logger), logger)
 		cmd := d.ConstructDockerRunCmd(config, "/tmp/some-env-file", "name1")
 		assert.Equal(t, v.expOutput, cmd, fmt.Sprintf("shellInteractive: %v, userConfig: %v", v.shellInteractive, v.userInteractiveConfig))
 	}
@@ -65,7 +66,8 @@ func TestDockerDriver_ConstructDockerRunCmd_Command(t *testing.T){
 	for _,v := range mytests {
 		config := getTestConfig()
 		config.RunCommand = v.userCommandConfig
-		d := NewDockerDriver(MockedShellServiceNotInteractive{}, NewMockedFileService())
+		logger := NewLogger("debug")
+		d := NewDockerDriver(NewMockedShellServiceNotInteractive(logger), NewMockedFileService(logger), logger)
 		cmd := d.ConstructDockerRunCmd(config, "/tmp/some-env-file", "name1")
 		assert.Equal(t, v.expOutput, cmd, fmt.Sprintf("userCommandConfig: %v", v.userCommandConfig))
 	}
@@ -90,15 +92,17 @@ func TestDockerDriver_ConstructDockerRunCmd_DisplayEnvVar(t *testing.T){
 		} else {
 			setTestEnv()
 		}
-		d := NewDockerDriver(MockedShellServiceNotInteractive{}, NewMockedFileService())
+		logger := NewLogger("debug")
+		d := NewDockerDriver(NewMockedShellServiceNotInteractive(logger), NewMockedFileService(logger), logger)
 		cmd := d.ConstructDockerRunCmd(config, "/tmp/some-env-file", "name1")
 		assert.Equal(t, v.expOutput, cmd, fmt.Sprintf("displaySet: %v", v.displaySet))
 	}
 }
 
 func TestDockerDriver_HandleRun_Unit(t *testing.T) {
-	fs := NewMockedFileService()
-	d := NewDockerDriver(MockedShellServiceNotInteractive{}, fs)
+	logger := NewLogger("debug")
+	fs := NewMockedFileService(logger)
+	d := NewDockerDriver(NewMockedShellServiceNotInteractive(logger), fs, logger)
 	config := getTestConfig()
 	config.RunCommand = ""
 	es := d.HandleRun(config, "testrunid", MockedEnvService{})
@@ -123,7 +127,8 @@ func fileExists(filePath string) bool {
 }
 
 func TestDockerDriver_HandleRun_RealFileService(t *testing.T) {
-	d := NewDockerDriver(MockedShellServiceNotInteractive{}, FileService{})
+	logger := NewLogger("debug")
+	d := NewDockerDriver(NewMockedShellServiceNotInteractive(logger), NewFileService(logger), logger)
 	config := getTestConfig()
 	config.WorkDirOuter = "/tmp"
 	config.RunCommand = ""
@@ -133,7 +138,8 @@ func TestDockerDriver_HandleRun_RealFileService(t *testing.T) {
 }
 
 func TestDockerDriver_HandleRun_RealEnvService(t *testing.T) {
-	d := NewDockerDriver(MockedShellServiceNotInteractive{}, NewMockedFileService())
+	logger := NewLogger("debug")
+	d := NewDockerDriver(NewMockedShellServiceNotInteractive(logger), NewMockedFileService(logger), logger)
 	config := getTestConfig()
 	config.RunCommand = ""
 	es := d.HandleRun(config, "testrunid", EnvService{})
@@ -142,7 +148,8 @@ func TestDockerDriver_HandleRun_RealEnvService(t *testing.T) {
 }
 
 func TestDockerDriver_HandlePull_Unit(t *testing.T) {
-	d := NewDockerDriver(MockedShellServiceNotInteractive{}, NewMockedFileService())
+	logger := NewLogger("debug")
+	d := NewDockerDriver(NewMockedShellServiceNotInteractive(logger), NewMockedFileService(logger), logger)
 	config := getTestConfig()
 	es := d.HandlePull(config)
 	assert.Equal(t, 0, es)

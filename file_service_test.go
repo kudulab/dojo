@@ -7,13 +7,15 @@ import (
 type MockedFileService struct {
 	FilesWrittenTo map[string]string
 	FilesRemovals  []string
+	Logger *Logger
 }
-func NewMockedFileService() *MockedFileService {
+func NewMockedFileService(logger *Logger) *MockedFileService {
 	mm := make(map[string]string, 0)
 	rm := make([]string, 0)
 	return &MockedFileService{
 		FilesWrittenTo: mm,
 		FilesRemovals:  rm,
+		Logger: logger,
 	}
 }
 
@@ -23,22 +25,22 @@ func (f *MockedFileService) GetFileUid(filePath string) uint32 {
 
 func (f *MockedFileService) RemoveFile(filePath string, ignoreNoSuchFileError bool) {
 	f.FilesRemovals = append(f.FilesRemovals, filePath)
-	Log("debug", fmt.Sprintf("Pretending to remove file: %s", filePath))
+	f.Logger.Log("debug", fmt.Sprintf("Pretending to remove file: %s", filePath))
 	return
 }
 
 func (f *MockedFileService) ReadFile(filePath string) string {
-	Log("debug", fmt.Sprintf("Pretending to read file %s", filePath))
+	f.Logger.Log("debug", fmt.Sprintf("Pretending to read file %s", filePath))
 	return ""
 }
 
 func (f *MockedFileService) FileExists(filePath string) bool {
-	Log("debug", fmt.Sprintf("Pretending that file exists %s", filePath))
+	f.Logger.Log("debug", fmt.Sprintf("Pretending that file exists %s", filePath))
 	return true
 }
 
 func (f *MockedFileService) ReadDockerComposeFile(filePath string) string {
-	Log("debug", fmt.Sprintf("Pretending to read file %s, returning a constant string", filePath))
+	f.Logger.Log("debug", fmt.Sprintf("Pretending to read file %s, returning a constant string", filePath))
 	fileContents := `version: '2.2'
 services:
   default:
@@ -49,7 +51,7 @@ services:
 
 func (f *MockedFileService) WriteToFile(filePath string, contents string, logLevel string) {
 	f.FilesWrittenTo[filePath] = contents
-	Log(logLevel, fmt.Sprintf("Pretending to write to file %s, contents:\n %s", filePath, contents))
+	f.Logger.Log(logLevel, fmt.Sprintf("Pretending to write to file %s, contents:\n %s", filePath, contents))
 	return
 }
 
@@ -59,14 +61,14 @@ func (f *MockedFileService) GetCurrentDir() string {
 func (f *MockedFileService) RemoveGeneratedFile(removeContainers string, filePath string) {
 	if removeContainers != "false" {
 		f.FilesRemovals = append(f.FilesRemovals, filePath)
-		Log("debug", fmt.Sprintf("Pretending to remove generated file: %s", filePath))
+		f.Logger.Log("debug", fmt.Sprintf("Pretending to remove generated file: %s", filePath))
 	}
 	return
 }
 func (f *MockedFileService) RemoveGeneratedFileIgnoreError(removeContainers string, filePath string, ignoreError bool) {
 	if removeContainers != "false" {
 		f.FilesRemovals = append(f.FilesRemovals, filePath)
-		Log("debug", fmt.Sprintf("Pretending to remove generated file: %s", filePath))
+		f.Logger.Log("debug", fmt.Sprintf("Pretending to remove generated file: %s", filePath))
 	}
 	return
 }

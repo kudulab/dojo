@@ -9,13 +9,19 @@ import (
 
 type MockedShellServiceNotInteractive struct {
 	ShellBinary string
+	Logger *Logger
+}
+func NewMockedShellServiceNotInteractive(logger *Logger) MockedShellServiceNotInteractive {
+	return MockedShellServiceNotInteractive{
+		Logger: logger,
+	}
 }
 func (bs MockedShellServiceNotInteractive) RunInteractive(cmdString string) int {
-	Log("debug", fmt.Sprintf("Pretending to run: %s", cmdString))
+	bs.Logger.Log("debug", fmt.Sprintf("Pretending to run: %s", cmdString))
 	return 0
 }
 func (bs MockedShellServiceNotInteractive) RunGetOutput(cmdString string) (string, string, int) {
-	Log("debug", fmt.Sprintf("Pretending to run: %s", cmdString))
+	bs.Logger.Log("debug", fmt.Sprintf("Pretending to run: %s", cmdString))
 	return "", "", 0
 }
 func (bs MockedShellServiceNotInteractive) CheckIfInteractive() bool {
@@ -24,13 +30,19 @@ func (bs MockedShellServiceNotInteractive) CheckIfInteractive() bool {
 
 type MockedShellServiceInteractive struct {
 	ShellBinary string
+	Logger *Logger
+}
+func NewMockedShellServiceInteractive(logger *Logger) MockedShellServiceInteractive {
+	return MockedShellServiceInteractive{
+		Logger: logger,
+	}
 }
 func (bs MockedShellServiceInteractive) RunInteractive(cmdString string) int {
-	Log("debug", fmt.Sprintf("Pretending to run: %s", cmdString))
+	bs.Logger.Log("debug", fmt.Sprintf("Pretending to run: %s", cmdString))
 	return 0
 }
 func (bs MockedShellServiceInteractive) RunGetOutput(cmdString string) (string, string, int) {
-	Log("debug", fmt.Sprintf("Pretending to run: %s", cmdString))
+	bs.Logger.Log("debug", fmt.Sprintf("Pretending to run: %s", cmdString))
 	return "", "", 0
 }
 func (bs MockedShellServiceInteractive) CheckIfInteractive() bool {
@@ -38,22 +50,26 @@ func (bs MockedShellServiceInteractive) CheckIfInteractive() bool {
 }
 
 func TestMockedShellService_CheckIfInteractive(t *testing.T){
-	shell := MockedShellServiceNotInteractive{}
+	logger := NewLogger("debug")
+	shell := NewMockedShellServiceNotInteractive(logger)
 	interactive := shell.CheckIfInteractive()
 	assert.False(t, interactive)
 }
 func TestBashShellService_CheckIfInteractive(t *testing.T) {
-	shell := NewBashShellService()
+	logger := NewLogger("debug")
+	shell := NewBashShellService(logger)
 	interactive := shell.CheckIfInteractive()
 	assert.False(t, interactive)
 }
 func TestBashShellService_RunInteractive(t *testing.T) {
-	shell := NewBashShellService()
+	logger := NewLogger("debug")
+	shell := NewBashShellService(logger)
 	exitstatus := shell.RunInteractive("echo hello")
 	assert.Equal(t, 0, exitstatus)
 }
 func TestBashShellService_RunGetOutput(t *testing.T) {
-	shell := NewBashShellService()
+	logger := NewLogger("debug")
+	shell := NewBashShellService(logger)
 	stdout, sterr, exitstatus := shell.RunGetOutput("echo hello")
 	assert.Equal(t, "hello\n", stdout)
 	assert.Equal(t, "", sterr)

@@ -15,11 +15,14 @@ type ShellServiceInterface interface {
 	CheckIfInteractive() bool
 }
 
-func NewBashShellService() BashShellService {
-	return BashShellService{}
+func NewBashShellService(logger *Logger) BashShellService {
+	return BashShellService{
+		Logger: logger,
+	}
 }
 
 type BashShellService struct {
+	Logger *Logger
 }
 
 
@@ -39,7 +42,7 @@ func (bs BashShellService) RunInteractive(cmdString string) int {
 		panic("unexpected: err not nil, exitStatus was 0")
 	}
 	if signaled {
-		Log("debug", fmt.Sprintf("Signal: %v", signal))
+		bs.Logger.Log("debug", fmt.Sprintf("Signal: %v", signal))
 	}
 	return exitStatus
 }
@@ -61,7 +64,7 @@ func (bs BashShellService) RunGetOutput(cmdString string) (string, string, int) 
 		panic("unexpected: err not nil, exitStatus was 0")
 	}
 	if signaled {
-		Log("debug", fmt.Sprintf("Signal: %v", signal))
+		bs.Logger.Log("debug", fmt.Sprintf("Signal: %v", signal))
 	}
 	return stdout.String(), stderr.String(), exitStatus
 }
@@ -74,6 +77,6 @@ func (bs BashShellService) CheckIfInteractive() bool {
 	var termios syscall.Termios
 	_, _, err := syscall.Syscall6(syscall.SYS_IOCTL, fd, ioctlReadTermios, uintptr(unsafe.Pointer(&termios)), 0, 0, 0)
 	interactive := (err == 0)
-	Log("debug", fmt.Sprintf("Current shell is interactive: %v", interactive))
+	bs.Logger.Log("debug", fmt.Sprintf("Current shell is interactive: %v", interactive))
 	return interactive
 }

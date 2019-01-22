@@ -20,7 +20,15 @@ type FileServiceInterface interface {
 	FileExists(filePath string) bool
 }
 
-type FileService struct {}
+type FileService struct {
+	Logger *Logger
+}
+
+func NewFileService(logger *Logger) FileService {
+	return FileService{
+		Logger: logger,
+	}
+}
 
 func (f FileService) GetFileUid(filePath string) uint32 {
 	if filePath == "" {
@@ -42,12 +50,12 @@ func (f FileService) RemoveFile(filePath string, ignoreNoSuchFileError bool) {
 	err := os.Remove(filePath)
 	if err != nil {
 		if strings.Contains(err.Error(),"no such file or directory") && ignoreNoSuchFileError {
-			Log("debug", fmt.Sprintf("File already removed: %s", filePath))
+			f.Logger.Log("debug", fmt.Sprintf("File already removed: %s", filePath))
 			return
 		}
 		panic(err)
 	}
-	Log("debug", fmt.Sprintf("Removed file: %s", filePath))
+	f.Logger.Log("debug", fmt.Sprintf("Removed file: %s", filePath))
 }
 func (f FileService) ReadFile(filePath string) string {
 	if filePath == "" {
@@ -85,7 +93,7 @@ func (f FileService) WriteToFile(filePath string, contents string, logLevel stri
 	if err != nil {
 		panic(err)
 	}
-	Log(logLevel, fmt.Sprintf("Written file %s, contents:\n %s", filePath, contents))
+	f.Logger.Log(logLevel, fmt.Sprintf("Written file %s, contents:\n %s", filePath, contents))
 }
 
 func (f FileService) GetCurrentDir() string {
@@ -104,10 +112,10 @@ func (f FileService) RemoveGeneratedFile(removeContainers string, filePath strin
 		if err != nil {
 			panic(err)
 		}
-		Log("debug", fmt.Sprintf("Removed generated file: %s", filePath))
+		f.Logger.Log("debug", fmt.Sprintf("Removed generated file: %s", filePath))
 		return
 	} else {
-		Log("debug", fmt.Sprintf("Not removed generated file: %s, because RemoveContainers is set", filePath))
+		f.Logger.Log("debug", fmt.Sprintf("Not removed generated file: %s, because RemoveContainers is set", filePath))
 		return
 	}
 }
@@ -119,15 +127,15 @@ func (f FileService) RemoveGeneratedFileIgnoreError(removeContainers string, fil
 		err := os.Remove(filePath)
 		if err != nil {
 			if strings.Contains(err.Error(),"no such file or directory") && ignoreNoSuchFileError {
-				Log("debug", fmt.Sprintf("File already removed: %s", filePath))
+				f.Logger.Log("debug", fmt.Sprintf("File already removed: %s", filePath))
 				return
 			}
 			panic(err)
 		}
-		Log("debug", fmt.Sprintf("Removed file: %s", filePath))
+		f.Logger.Log("debug", fmt.Sprintf("Removed file: %s", filePath))
 		return
 	} else {
-		Log("debug", fmt.Sprintf("Not removed generated file: %s, because RemoveContainers is set", filePath))
+		f.Logger.Log("debug", fmt.Sprintf("Not removed generated file: %s, because RemoveContainers is set", filePath))
 		return
 	}
 }

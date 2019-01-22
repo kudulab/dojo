@@ -11,18 +11,23 @@ import (
 type DockerDriver struct {
 	ShellService ShellServiceInterface
 	FileService  FileServiceInterface
+	Logger *Logger
 }
 
-func NewDockerDriver(shellService ShellServiceInterface, fs FileServiceInterface) DockerDriver {
+func NewDockerDriver(shellService ShellServiceInterface, fs FileServiceInterface, logger *Logger) DockerDriver {
 	if shellService == nil {
 		panic(errors.New("shellService was nil"))
 	}
 	if fs == nil {
 		panic(errors.New("fs was nil"))
 	}
+	if logger == nil {
+		panic(errors.New("logger was nil"))
+	}
 	return DockerDriver{
 		ShellService: shellService,
 		FileService: fs,
+		Logger: logger,
 	}
 }
 
@@ -38,7 +43,7 @@ func (d DockerDriver) ConstructDockerRunCmd(config Config, envFilePath string, c
 		cmd += " --rm"
 	}
 	if d.FileService.GetFileUid(config.WorkDirOuter) == 0 {
-		Log("warn", fmt.Sprintf("WorkDirOuter: %s is owned by root, which is not recommended", config.WorkDirOuter))
+		d.Logger.Log("warn", fmt.Sprintf("WorkDirOuter: %s is owned by root, which is not recommended", config.WorkDirOuter))
 	}
 	cmd += fmt.Sprintf(" -v %s:%s -v %s:/dojo/identity:ro", config.WorkDirOuter, config.WorkDirInner, config.IdentityDirOuter)
 	cmd += fmt.Sprintf(" --env-file=%s", envFilePath)
@@ -67,14 +72,14 @@ func (d DockerDriver) ConstructDockerRunCmd(config Config, envFilePath string, c
 
 func (d DockerDriver) HandleRun(mergedConfig Config, runID string, envService EnvServiceInterface) int {
 	if envService.IsCurrentUserRoot() {
-		Log("warn", "Current user is root, which is not recommended")
+		d.Logger.Log("warn", "Current user is root, which is not recommended")
 	}
 	envFile := getEnvFilePath(runID, mergedConfig.Test)
 	saveEnvToFile(d.FileService, envFile, mergedConfig.BlacklistVariables, envService.Variables())
 	defer d.FileService.RemoveGeneratedFile(mergedConfig.RemoveContainers, envFile)
 
 	cmd := d.ConstructDockerRunCmd(mergedConfig, envFile, runID)
-	Log("info", green(fmt.Sprintf("docker command will be:\n %v", cmd)))
+	d.Logger.Log("info", green(fmt.Sprintf("docker command will be:\n %v", cmd)))
 
 	if mergedConfig.RemoveContainers != "true" {
 		// Removing docker container is impractical without additional steps here. We'd have to
@@ -89,15 +94,15 @@ func (d DockerDriver) HandleRun(mergedConfig Config, runID string, envService En
 		d.FileService.WriteToFile(rcFile2, fmt.Sprintf("DOJO_RUN_ID=%s",runID), "info")
 	}
 	exitStatus := d.ShellService.RunInteractive(cmd)
-	Log("debug", fmt.Sprintf("Exit status: %v", exitStatus))
+	d.Logger.Log("debug", fmt.Sprintf("Exit status: %v", exitStatus))
 	return exitStatus
 }
 
 func (d DockerDriver) HandlePull(mergedConfig Config) int {
 	cmd := fmt.Sprintf("docker pull %s", mergedConfig.DockerImage)
-	Log("info", green(fmt.Sprintf("docker pull command will be:\n %v", cmd)))
+	d.Logger.Log("info", green(fmt.Sprintf("docker pull command will be:\n %v", cmd)))
 	exitStatus := d.ShellService.RunInteractive(cmd)
-	Log("debug", fmt.Sprintf("Exit status from pull command: %v", exitStatus))
+	d.Logger.Log("debug", fmt.Sprintf("Exit status from pull command: %v", exitStatus))
 	return exitStatus
 }
 
@@ -105,17 +110,17 @@ func (d DockerDriver) HandlePull(mergedConfig Config) int {
 // (usually after several seconds)
 func (d DockerDriver) waitForContainerRemoval(cmd string) bool {
 	timeout := 12
-	Log("info", fmt.Sprintf("Waiting max %vs for container removal", timeout))
+	d.Logger.Log("info", fmt.Sprintf("Waiting max %vs for container removal", timeout))
 	for i:=0; i<timeout; i++ {
 		stdout, _, _ := d.ShellService.RunGetOutput(cmd)
 		if strings.Contains(stdout, "No such object") {
-			Log("info", "Container removed by docker")
+			d.Logger.Log("info", "Container removed by docker")
 			return true
 		}
-		Log("info", fmt.Sprintf("Trial: %v", i))
+		d.Logger.Log("info", fmt.Sprintf("Trial: %v", i))
 		time.Sleep(time.Second)
 	}
-	Log("info", fmt.Sprintf("Container not removed after %vs", timeout))
+	d.Logger.Log("info", fmt.Sprintf("Container not removed after %vs", timeout))
 	return false
 }
 
@@ -129,17 +134,17 @@ func (d DockerDriver) waitForContainerRemoval(cmd string) bool {
 // do not preserve signals.
 func (d DockerDriver) HandleSignal(mergedConfig Config, runID string) int {
 	if mergedConfig.RemoveContainers != "false" {
-		Log("debug", "Cleaning on signal")
+		d.Logger.Log("debug", "Cleaning on signal")
 
 		cmd := fmt.Sprintf("timeout 2 docker inspect -f '{{.State.Running}}' %s 2>&1", runID)
 
 		stdout, stderr, exitStatus := d.ShellService.RunGetOutput(cmd)
 		if strings.Contains(stdout, "No such object") {
-			Log("info", fmt.Sprintf("Cleaning not needed, the container was not created: %s", runID))
+			d.Logger.Log("info", fmt.Sprintf("Cleaning not needed, the container was not created: %s", runID))
 		} else if exitStatus != 0 {
 			// unexpected error case
 			cmdInfo := cmdInfoToString(cmd, stdout, stderr, exitStatus)
-			Log("info", fmt.Sprintf("Not cleaning. Unexpected non-0 exit status.\n%s", cmdInfo))
+			d.Logger.Log("info", fmt.Sprintf("Not cleaning. Unexpected non-0 exit status.\n%s", cmdInfo))
 		} else {
 			// Container is either:
 			// * created and not running
@@ -147,11 +152,11 @@ func (d DockerDriver) HandleSignal(mergedConfig Config, runID string) int {
 			// It still may be removed by docker.
 			containerRemoved := d.waitForContainerRemoval(cmd)
 			if !containerRemoved {
-				Log("info", fmt.Sprintf("Stopping container: %s", runID))
+				d.Logger.Log("info", fmt.Sprintf("Stopping container: %s", runID))
 				stdout, stderr, exitStatus := d.ShellService.RunGetOutput(fmt.Sprintf("docker stop %s 2>&1", runID))
 				if exitStatus != 0 {
 					cmdInfo := cmdInfoToString(cmd, stdout, stderr, exitStatus)
-					Log("error", cmdInfo)
+					d.Logger.Log("error", cmdInfo)
 					return exitStatus
 				}
 				// no need to remove the container, if it was started with "docker run --rm", it will be removed
@@ -162,25 +167,25 @@ func (d DockerDriver) HandleSignal(mergedConfig Config, runID string) int {
 		// if container was removed by docker, the env file may be already removed too,
 		// so let's ignore error on removal here
 		d.FileService.RemoveGeneratedFileIgnoreError(mergedConfig.RemoveContainers, envFile, true)
-		Log("info", "Cleanup finished")
+		d.Logger.Log("info", "Cleanup finished")
 	}
 	return 0
 }
 
 func (d DockerDriver) HandleMultipleSignal(mergedConfig Config, runID string) int {
 	if mergedConfig.RemoveContainers != "false" {
-		Log("debug", "Multiple signals caught, running docker kill and immediate exit")
+		d.Logger.Log("debug", "Multiple signals caught, running docker kill and immediate exit")
 		if !d.FileService.FileExists(getEnvFilePath(runID, mergedConfig.Test)) {
-			Log("debug", "Environment file does not exist, either containers not created or already cleaned")
+			d.Logger.Log("debug", "Environment file does not exist, either containers not created or already cleaned")
 			return 0
 		}
 		cmd := fmt.Sprintf("docker kill %s", runID)
 		stdout, stderr, exitStatus := d.ShellService.RunGetOutput(fmt.Sprintf("docker kill %s", runID))
 		if exitStatus != 0 {
 			cmdInfo := cmdInfoToString(cmd, stdout, stderr, exitStatus)
-			Log("debug", cmdInfo)
+			d.Logger.Log("debug", cmdInfo)
 		} else {
-			Log("debug", "docker kill was successful")
+			d.Logger.Log("debug", "docker kill was successful")
 		}
 		return exitStatus
 	}
