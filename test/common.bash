@@ -9,6 +9,7 @@ function testEnvFileIsRemoved(){
 }
 
 function cleanUpDockerContainer() {
+  docker ps -a -q --filter "name=testdojorunid" | xargs --no-run-if-empty docker stop
   docker ps -a -q --filter "name=testdojorunid" | xargs --no-run-if-empty docker rm
 }
 

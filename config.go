@@ -26,6 +26,7 @@ type Config struct {
 	DockerOptions string
 	DockerComposeFile string
 	DockerComposeOptions string
+	ExitBehavior string
 	Test string
 }
 
@@ -46,6 +47,7 @@ func (c Config) String() string {
 	str += fmt.Sprintf("{ DockerOptions: %s }", c.DockerOptions)
 	str += fmt.Sprintf("{ DockerComposeFile: %s }", c.DockerComposeFile)
 	str += fmt.Sprintf("{ DockerComposeOptions: %s }", c.DockerComposeOptions)
+	str += fmt.Sprintf("{ ExitBehavior: %s }", c.ExitBehavior)
 	str += fmt.Sprintf("{ Test: %s }", c.Test)
 	return str
 }
@@ -126,6 +128,10 @@ func getCLIConfig() Config {
 	flagSet.StringVar(&dockerComposeFile, "docker-compose-file", "", usageDCFile)
 	flagSet.StringVar(&dockerComposeFile, "dcf", "", usageDCFile+" (shorthand)")
 
+	var exitBehavior string
+	const usageExitBehavior         = "How to react when a container (not the default one) exits. Possible values: ignore, abort (default), restart. Only for driver: docker-compose"
+	flagSet.StringVar(&exitBehavior, "exit-behavior", "", usageExitBehavior)
+
 	var test string
 	const usageTest         = "Set this to true when integration testing. This turns writing env files to a test directory"
 	flagSet.StringVar(&test, "test", "", usageTest)
@@ -162,6 +168,7 @@ func getCLIConfig() Config {
 		DockerImage:        image,
 		DockerOptions:      dockerOptions,
 		DockerComposeFile:  dockerComposeFile,
+		ExitBehavior: 		exitBehavior,
 		Test: 				test,
 	}
 }
@@ -211,6 +218,7 @@ func MapToConfig(configMap map[string]string) Config {
 	config.DockerOptions = configMap["dockerOptions"]
 	config.DockerComposeFile = configMap["dockerComposeFile"]
 	config.DockerComposeOptions = configMap["dockerComposeOptions"]
+	config.ExitBehavior = configMap["exitBehavior"]
 	config.Test = configMap["test"]
 	return config
 }
@@ -231,6 +239,7 @@ func ConfigToMap(config Config) map[string]string {
 	configMap["dockerOptions"] = config.DockerOptions
 	configMap["dockerComposeFile"] = config.DockerComposeFile
 	configMap["dockerComposeOptions"] = config.DockerComposeOptions
+	configMap["exitBehavior"] = config.ExitBehavior
 	configMap["test"] = config.Test
 	return configMap
 }
@@ -272,6 +281,8 @@ func getFileConfig(logger *Logger, filePath string) Config {
 					config.WorkDirInner = value
 				case "DOJO_IDENTITY_OUTER":
 					config.IdentityDirOuter = value
+				case "DOJO_EXIT_BEHAVIOR":
+					config.ExitBehavior = value
 				case "DOJO_BLACKLIST_VARIABLES":
 					config.BlacklistVariables = value
 				case "DOJO_LOG_LEVEL":
@@ -309,6 +320,7 @@ func getDefaultConfig(configFile string) Config {
 		IdentityDirOuter:   currentUser.HomeDir,
 		BlacklistVariables: "BASH*,HOME,USERNAME,USER,LOGNAME,PATH,TERM,SHELL,MAIL,SUDO_*,WINDOWID,SSH_*,SESSION_*,GEM_HOME,GEM_PATH,GEM_ROOT,HOSTNAME,HOSTTYPE,IFS,PPID,PWD,OLDPWD,LC*",
 		DockerComposeFile:  "docker-compose.yml",
+		ExitBehavior:       "abort",
 	}
 	return defaultConfig
 }
@@ -371,6 +383,11 @@ func verifyConfig(logger *Logger, config *Config) error {
 		dcFile := config.DockerComposeFile
 		if _, err := os.Stat(dcFile); err != nil {
 			return fmt.Errorf("docker-compose config file: %s does not exist", dcFile)
+		}
+		if config.ExitBehavior != "abort" && config.ExitBehavior != "ignore" && config.ExitBehavior != "restart" {
+			return fmt.Errorf(
+				"Invalid configuration, ExitBehavior supported values are: abort, ignore, restart. It was set to: %s",
+				config.ExitBehavior)
 		}
 	}
 	return nil

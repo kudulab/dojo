@@ -88,10 +88,12 @@ test_value "${test_process_exit_status}" "2"
 output_test_exit_status=$?
 this_test_exit_status=$((this_test_exit_status+output_test_exit_status))
 string_contains "${output}" "Caught signal: terminated"
-# the signal was not preserved to the container, because sh does not preserves signals
-string_contains "${output}" "Container not removed after"
-string_contains "${output}" "Stopping container: testdojorunid"
-string_contains "${output}" "Finished after 1 signal"
+# docker stop will take 10s, because sh does not preserves signals (from docker stop cli command to the docker container)
+string_contains "${output}" "Stopping on signal"
+string_contains "${output}" "docker stop testdojorunid"
+string_contains "${output}" "Exit status from main work: 137"
+string_contains "${output}" "Exit status from cleaning: 0"
+string_contains "${output}" "Exit status from signals: 2"
 output_test_exit_status=$?
 this_test_exit_status=$((this_test_exit_status+output_test_exit_status))
 echo "This test status: ${this_test_exit_status}"

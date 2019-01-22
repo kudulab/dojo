@@ -15,8 +15,10 @@ function testDCDojoFileIsRemoved(){
 }
 
 function cleanUpDCContainers() {
-  docker rm testdojorunid_default_run_1 || true
-  docker rm testdojorunid_abc_1 || true
+  docker stop testdojorunid_default_run_1 >/dev/null 2>&1 || true
+  docker stop testdojorunid_abc_1 >/dev/null 2>&1 || true
+  docker rm testdojorunid_default_run_1 >/dev/null 2>&1 || true
+  docker rm testdojorunid_abc_1 >/dev/null 2>&1 || true
 }
 
 function testDCContainersAreRemoved() {
@@ -44,6 +46,7 @@ function testDCNetworkIsRemoved() {
   assert_output --partial "Dojo version"
   assert_output --partial "root"
   assert_output --partial "whoami"
+  assert_output --partial "Exit status from run command: 0"
   refute_output --partial "WARN"
   refute_output --partial "warn"
   refute_output --partial "ERROR"
@@ -62,10 +65,13 @@ function testDCNetworkIsRemoved() {
   run ${DOJO_PATH} --driver=docker-compose --dcf=./test/test-files/itest-dc.yaml --debug=true --test=true --image=alpine:3.8 notexistentcommand
   assert_output --partial "Dojo version"
   assert_output --partial "Current shell is interactive: false"
-  assert_output --partial "executable file not found"
+  # this is the error, if we don't use "init: true" in docker-compose file
+  # assert_output --partial "executable file not found"
+  assert_output --partial "exec notexistentcommand failed: No such file or directory"
+  assert_output --partial "Exit status from run command: 127"
   refute_output --partial "WARN"
   refute_output --partial "warn"
-  assert_equal "$status" 1
+  assert_equal "$status" 127
   testEnvFileIsRemoved
   testDCDojoFileIsRemoved
   testDCContainersAreRemoved
@@ -98,6 +104,7 @@ function testDCNetworkIsRemoved() {
   assert_output --partial "Dojo version"
   assert_output --partial "root"
   assert_output --partial "whoami"
+  assert_output --partial "Exit status from run command: 0"
   refute_output --partial "WARN"
   refute_output --partial "warn"
   refute_output --partial "ERROR"
@@ -116,6 +123,7 @@ function testDCNetworkIsRemoved() {
   run ${DOJO_PATH} --driver=docker-compose --dcf=./test/test-files/itest-dc.yaml --debug=true --test=true --image=alpine:3.8 sh -c "echo hello"
   assert_output --partial "Dojo version"
   assert_output --partial "sh -c \"echo hello\""
+  assert_output --partial "Exit status from run command: 0"
   refute_output --partial "WARN"
   refute_output --partial "warn"
   refute_output --partial "ERROR"

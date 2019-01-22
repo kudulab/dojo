@@ -13,6 +13,8 @@ type DockerComposeDriver struct {
 	ShellService ShellServiceInterface
 	FileService  FileServiceInterface
 	Logger *Logger
+	// This channel is closed when the stop action is started
+	Stopping 	 chan bool
 }
 
 func NewDockerComposeDriver(shellService ShellServiceInterface, fs FileServiceInterface, logger *Logger) DockerComposeDriver {
@@ -25,10 +27,12 @@ func NewDockerComposeDriver(shellService ShellServiceInterface, fs FileServiceIn
 	if logger == nil {
 		panic(errors.New("logger was nil"))
 	}
+	stopping := make(chan bool)
 	return DockerComposeDriver{
 		ShellService: shellService,
 		FileService: fs,
 		Logger: logger,
+		Stopping: stopping,
 	}
 }
 
@@ -63,17 +67,17 @@ func (dc DockerComposeDriver) verifyDCFile(fileContents string, filePath string)
 	return version, nil
 }
 
-func (dc DockerComposeDriver) handleDCFilesForRun(mergedConfig Config, envFile string) (string, error) {
+func (dc DockerComposeDriver) handleDCFilesForRun(mergedConfig Config, envFile string) (error) {
 	fileContents := dc.FileService.ReadDockerComposeFile(mergedConfig.DockerComposeFile)
 	version, err := dc.verifyDCFile(fileContents, mergedConfig.DockerComposeFile)
 	if err != nil {
 		dc.Logger.Log("error", fmt.Sprintf("Docker-compose file %s is not correct: %s", mergedConfig.DockerComposeFile, err.Error()))
-		return "", err
+		return err
 	}
 	dojoDCFileContents := dc.generateDCFileContentsForRun(mergedConfig, version, envFile)
 	dojoDCFileName := dc.getDCGeneratedFilePath(mergedConfig.DockerComposeFile)
 	dc.FileService.WriteToFile(dojoDCFileName, dojoDCFileContents, "info")
-	return dojoDCFileName, nil
+	return nil
 }
 
 func (dc DockerComposeDriver) getDCGeneratedFilePath(dcfilePath string) string {
@@ -154,14 +158,9 @@ func (dc DockerComposeDriver) ConstructDockerComposeCommandStop(config Config, p
 	cmd += " stop"
 	return cmd
 }
-func (dc DockerComposeDriver) ConstructDockerComposeCommandRm(config Config, projectName string) string {
-	cmd := dc.ConstructDockerComposeCommandPart1(config, projectName)
-	cmd += " rm -f"
-	return cmd
-}
 func (dc DockerComposeDriver) ConstructDockerComposeCommandPs(config Config, projectName string) string {
 	cmd := dc.ConstructDockerComposeCommandPart1(config, projectName)
-	cmd += " ps -q"
+	cmd += " ps"
 	return cmd
 }
 func (dc DockerComposeDriver) ConstructDockerComposeCommandDown(config Config, projectName string) string {
@@ -169,72 +168,238 @@ func (dc DockerComposeDriver) ConstructDockerComposeCommandDown(config Config, p
 	cmd += " down"
 	return cmd
 }
-func (dc DockerComposeDriver) GetExpDockerNetwork(runID string) string {
-	// remove dashes and underscores and add "_default" (we always demand docker container named: "default")
-	runIDPrim := strings.Replace(runID, "/","", -1)
-	runIDPrim = strings.Replace(runIDPrim, "_","", -1)
-	runIDPrim = strings.Replace(runIDPrim, "-","", -1)
-	network := fmt.Sprintf("%s_default", runIDPrim)
-	return network
+
+// A method to check whether or not a channel is closed if you can make sure no values were ever sent to the channel.
+// https://go101.org/article/channel-closing.html
+func isChannelClosed(ch <-chan bool) bool {
+	select {
+	case <- ch:
+		return true
+	default:
+	}
+	return false
 }
+
+func (dc DockerComposeDriver) checkAllContainersRunning(containerIDs []string) (bool) {
+	for _, id := range containerIDs {
+		running := dc.checkContainerIsRunning(id)
+		if !running {
+			return false
+		}
+	}
+	return true
+}
+
+func (dc DockerComposeDriver) checkContainerIsRunning(containerID string) (bool) {
+	containerInfo, err := getContainerInfo(dc.ShellService, containerID)
+	if err != nil {
+		panic(err)
+	}
+	if !containerInfo.Exists {
+		dc.Logger.Log("debug",
+			fmt.Sprintf("Expected container: %s to be running, but it does not exist", containerID))
+		return false
+	}
+	if containerInfo.Status != "running" {
+		dc.Logger.Log("debug",
+			fmt.Sprintf("Expected container: %s to be running, but was: %s", containerID, containerInfo.Status))
+		return false
+	}
+	return true
+}
+
+func (dc DockerComposeDriver) getExpectedContainersCount(mergedConfig Config, runID string) int {
+	cmd := dc.ConstructDockerComposeCommandPart1(mergedConfig, runID)
+	cmd += " config --services"
+	stdout, stderr, es, _ := dc.ShellService.RunGetOutput(cmd, true)
+	if es != 0 || stderr != "" || stdout == "" {
+		cmdInfo := cmdInfoToString(cmd, stdout, stderr, es)
+		panic(fmt.Errorf("Unexpected error: %s", cmdInfo))
+	}
+
+	stdout = strings.TrimSuffix(stdout, "\n")
+	lines := strings.Split(stdout, "\n")
+	return len(lines)
+}
+
+// Run the docker-compose ps command until it returns some output - containers IDs and
+// then run docker inspect on each container. Return if all the containers are running.
+func (dc DockerComposeDriver) waitForContainersToBeRunning(mergedConfig Config, runID string) ([]string) {
+	dc.Logger.Log("debug", fmt.Sprintf("Start waiting for containers to be initally running, %s", runID))
+
+	// When docker-compose containers start, docker-compose ps may return not all the containers, because some of them
+	// may be not created yet. Thus, always check the number of containers specified in docker-compose config file.
+	expContainersCount := dc.getExpectedContainersCount(mergedConfig, runID)
+
+	for {
+		if isChannelClosed(dc.Stopping) {
+			dc.Logger.Log("debug", fmt.Sprintf("Not waiting anymore for containers %s", runID))
+			return []string{}
+		}
+		containersNames := dc.getDCContainersNames(mergedConfig, runID)
+		if len(containersNames) == 0 {
+			dc.Logger.Log("debug", fmt.Sprintf("Containers not yet created: %s", runID))
+			time.Sleep(time.Second)
+			continue
+		} else if len(containersNames) != expContainersCount {
+			dc.Logger.Log("debug", fmt.Sprintf(
+				"Not all the containers created: %s. Want: %v, have: %v", runID, expContainersCount, len(containersNames)))
+			time.Sleep(time.Second)
+			continue
+		} else {
+			dc.Logger.Log("debug",
+				fmt.Sprintf("Containers created. Waiting for them to be initially running: %v", containersNames))
+			allRunning := dc.checkAllContainersRunning(containersNames)
+			if allRunning {
+				dc.Logger.Log("debug", "Containers are initially running")
+				return containersNames
+			} else {
+				time.Sleep(time.Second)
+				continue
+			}
+		}
+	}
+}
+
+func (dc DockerComposeDriver) watchContainers(mergedConfig Config, runID string) {
+	if mergedConfig.ExitBehavior == "ignore" {
+		return
+	}
+	dc.Logger.Log("debug", fmt.Sprintf(
+		"Start watching docker-compose containers %s in a forever loop, exitBehavior is: %s",
+		runID, mergedConfig.ExitBehavior))
+
+	names := dc.waitForContainersToBeRunning(mergedConfig, runID)
+	for {
+		if isChannelClosed(dc.Stopping) {
+			dc.Logger.Log("debug", fmt.Sprintf("Stop watching docker-compose containers %s", runID))
+			return
+		}
+
+		for _, name := range names {
+			if isChannelClosed(dc.Stopping) {
+				dc.Logger.Log("debug", fmt.Sprintf("Stop watching docker-compose containers %s", runID))
+				return
+			}
+			running := dc.checkContainerIsRunning(name)
+			if !running {
+				if mergedConfig.ExitBehavior == "restart" {
+					dc.Logger.Log("info", fmt.Sprintf("Container: %s stopped by itself. Starting...", name))
+					cmd := fmt.Sprintf("docker start %s", name)
+					stdout, stderr, exitStatus, _ := dc.ShellService.RunGetOutput(cmd, false)
+					ci := cmdInfoToString(cmd, stdout, stderr, exitStatus)
+					dc.Logger.Log("info", fmt.Sprintf("Started: %s\n  %s", name, ci))
+				} else if mergedConfig.ExitBehavior == "abort" {
+					if strings.Contains(name, "_default_") {
+						dc.Logger.Log("debug", "Stop watching containers. Default container stopped.")
+						return
+					}
+					dc.Logger.Log("info", fmt.Sprintf("Container: %s stopped by itself. Stopping the default container...", name))
+					defaultCont := dc.getDefaultContainerID(names)
+					if defaultCont == "" {
+						dc.Logger.Log("debug", "Stop watching containers. Default container already removed")
+						return
+					}
+					cmd := fmt.Sprintf("docker stop %s", defaultCont)
+					stdout, stderr, exitStatus, _ := dc.ShellService.RunGetOutput(cmd, false)
+					ci := cmdInfoToString(cmd, stdout, stderr, exitStatus)
+					dc.Logger.Log("info", fmt.Sprintf("Stopped: %s.\n%s", defaultCont, ci))
+				}
+			}
+		}
+		time.Sleep(time.Second)
+	}
+}
+
+func safelyCloseChannel(ch chan bool) (justClosed bool) {
+	defer func() {
+		if recover() != nil {
+			// The return result can be altered
+			// in a defer function call.
+			justClosed = false
+		}
+	}()
+
+	// assume ch != nil here.
+	close(ch)   // panic if ch is closed
+	return true // <=> justClosed = true; return
+}
+
 func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envService EnvServiceInterface) int {
 	if envService.IsCurrentUserRoot() {
 		dc.Logger.Log("warn", "Current user is root, which is not recommended")
 	}
+
 	envFile := getEnvFilePath(runID, mergedConfig.Test)
 	saveEnvToFile(dc.FileService, envFile, mergedConfig.BlacklistVariables, envService.Variables())
-	// this file might have already been removed by one of HandleSignal() functions
-	// so let's ignore error on removal here
-	defer dc.FileService.RemoveGeneratedFileIgnoreError(mergedConfig.RemoveContainers, envFile, true)
-
-	dojoDCGeneratedFile, err := dc.handleDCFilesForRun(mergedConfig, envFile)
+	err := dc.handleDCFilesForRun(mergedConfig, envFile)
 	if err != nil {
 		return 1
 	}
-	// this file might have already been removed by one of HandleSignal() functions
-	// so let's ignore error on removal here
-	defer dc.FileService.RemoveGeneratedFileIgnoreError(mergedConfig.RemoveContainers, dojoDCGeneratedFile, true)
-
 	cmd := dc.ConstructDockerComposeCommandRun(mergedConfig, runID)
+	if isChannelClosed(dc.Stopping) {
+		dc.Logger.Log("info", "Aborting containers start")
+		return 0
+	}
+
 	dc.Logger.Log("info", green(fmt.Sprintf("docker-compose run command will be:\n %v", cmd)))
-	cmdStop := dc.ConstructDockerComposeCommandStop(mergedConfig, runID)
-	dc.Logger.Log("debug", fmt.Sprintf("docker-compose stop command will be:\n %v", cmdStop))
-	cmdRm := dc.ConstructDockerComposeCommandRm(mergedConfig, runID)
-	dc.Logger.Log("debug", fmt.Sprintf("docker-compose rm command will be:\n %v", cmdRm))
-
-	expectedDockerNetwork := dc.GetExpDockerNetwork(runID)
-	dc.Logger.Log("debug", fmt.Sprintf("expected docker-compose network will be:\n %v", expectedDockerNetwork))
-
-	exitStatus := dc.ShellService.RunInteractive(cmd)
+	go dc.watchContainers(mergedConfig, runID)
+	exitStatus, _ := dc.ShellService.RunInteractive(cmd, true)
 	dc.Logger.Log("debug", fmt.Sprintf("Exit status from run command: %v", exitStatus))
+	// Here:
+	// * either "docker-compose run" finished by itself, we expect the default container to be stopped/removed. Let's stop the
+	//   other containers.
+	// * or it was stopped by a handle signal function, we expect all containers to be stopped (default container
+	// may be removed)
+	dc.stop(mergedConfig, runID, "")
+	return exitStatus
 
-	dc.Logger.Log("debug", "Stopping containers")
-	exitStatusStop := dc.ShellService.RunInteractive(cmdStop)
-	dc.Logger.Log("debug", fmt.Sprintf("Exit status from stop command: %v", exitStatusStop))
+	// do not clean now, containers may be being stopped in other goroutines
+}
 
-	dc.Logger.Log("debug", "Removing containers")
-	exitStatusRm := dc.ShellService.RunInteractive(cmdRm)
-	dc.Logger.Log("debug", fmt.Sprintf("Exit status from rm command: %v", exitStatusRm))
+func (dc DockerComposeDriver) CleanAfterRun(mergedConfig Config, runID string) int {
+	if mergedConfig.RemoveContainers == "true" {
+		dc.Logger.Log("info", "Cleaning, because RemoveContainers is set to true")
+		envFile := getEnvFilePath(runID, mergedConfig.Test)
+		defer dc.FileService.RemoveGeneratedFile(mergedConfig.RemoveContainers, envFile)
+		dojoDCGeneratedFile := dc.getDCGeneratedFilePath(mergedConfig.DockerComposeFile)
+		defer dc.FileService.RemoveGeneratedFile(mergedConfig.RemoveContainers, dojoDCGeneratedFile)
 
-	_, _, networkExists := dc.ShellService.RunGetOutput(fmt.Sprintf("docker network inspect %s", expectedDockerNetwork))
-	if networkExists == 0 {
-		dc.Logger.Log("debug", fmt.Sprintf("Removing docker network: %s", expectedDockerNetwork))
-		cmdDockerNetRm := fmt.Sprintf("docker network rm %s", expectedDockerNetwork)
-		stdout, stderr, es := dc.ShellService.RunGetOutput(cmdDockerNetRm)
-		if es != 0 {
-			cmdInfo := cmdInfoToString(cmdDockerNetRm, stdout, stderr, es)
-			dc.Logger.Log("error", cmdInfo)
-			exitStatus = 1
-		}
+		// Let's use docker-compose down instead of docker-compose rm command, because down also removes networks.
+		cmd := dc.ConstructDockerComposeCommandDown(mergedConfig, runID)
+		dc.Logger.Log("info", fmt.Sprintf("Removing containers with command: \n%v", cmd))
+		exitStatus, _ := dc.ShellService.RunInteractive(cmd, true)
+		return exitStatus
 	} else {
-		dc.Logger.Log("debug", fmt.Sprintf("Not removing docker network: %s, it does not exist", expectedDockerNetwork))
+		dc.Logger.Log("info", "Not cleaning, because RemoveContainers is not set to true")
+		return 0
 	}
-	if exitStatusStop != 0 {
-		exitStatus = exitStatusStop
+}
+
+func (dc DockerComposeDriver) stop(mergedConfig Config, runID string, defaultContainerID string) int {
+	if isChannelClosed(dc.Stopping) {
+		// either HandleRun() or HandleSignal() already scheduled stopping
+		dc.Logger.Log("debug", "Containers are already being stopped, nothing more to do")
+		return 0
+	} else {
+		dc.Logger.Log("debug", "Stopping containers")
+		safelyCloseChannel(dc.Stopping)
 	}
-	if exitStatusRm != 0 {
-		exitStatus = exitStatusRm
-	}
+	if defaultContainerID != "" {
+		cmd := fmt.Sprintf("docker stop %s", defaultContainerID)
+		dc.Logger.Log("info", fmt.Sprintf("Stopping default container with command: \n%v", cmd))
+		exitStatus, _ := dc.ShellService.RunInteractive(cmd, false)
+		if exitStatus != 0 {
+			dc.Logger.Log("error", fmt.Sprintf("Unexpected exit status: %v from stop command: %s", exitStatus, cmd))
+		}
+	} // else container was stopped & removed already
+
+	// "docker-compose stop" command stops only the non-default containers, thus we stopped the default
+	// container separately above
+	cmd := dc.ConstructDockerComposeCommandStop(mergedConfig, runID)
+	dc.Logger.Log("info", fmt.Sprintf("Stopping containers with command: \n%v", cmd))
+	exitStatus, _ := dc.ShellService.RunInteractive(cmd, false)
+	dc.Logger.Log("debug", fmt.Sprintf("Exit status from stop command: %v", exitStatus))
 	return exitStatus
 }
 
@@ -267,91 +432,124 @@ func (dc DockerComposeDriver) HandlePull(mergedConfig Config) int {
 
 	cmd := dc.ConstructDockerComposeCommandPull(mergedConfig, dojoDCGeneratedFile)
 	dc.Logger.Log("info", green(fmt.Sprintf("docker-compose pull command will be:\n %v", cmd)))
-	exitStatus := dc.ShellService.RunInteractive(cmd)
+	exitStatus, _ := dc.ShellService.RunInteractive(cmd, false)
 	dc.Logger.Log("debug", fmt.Sprintf("Exit status from pull command: %v", exitStatus))
 	return exitStatus
 }
 
-func (dc DockerComposeDriver) checkContainersRemoved(cmd string) bool {
-	stdout, _, es := dc.ShellService.RunGetOutput(cmd)
-	if stdout == "" && es == 0 {
-		dc.Logger.Log("info", "Containers removed by docker-compose")
-		return true
-	}
-	dc.Logger.Log("info", "Containers not removed")
-	return false
-}
-
+// Stop the containers if stoppinng was not already started (channel closed).
 func (dc DockerComposeDriver) HandleSignal(mergedConfig Config, runID string) int {
-	if mergedConfig.RemoveContainers != "false" {
-		dc.Logger.Log("debug", "Cleaning on signal")
-		fileRemoved := dc.waitForEnvFileRemoval(getEnvFilePath(runID, mergedConfig.Test))
-		if fileRemoved {
-			// cleaned up without additional help
-			return 0
-		}
-
-		cmd := dc.ConstructDockerComposeCommandPs(mergedConfig, runID)
-
-		stdout, stderr, exitStatus := dc.ShellService.RunGetOutput(cmd)
-		if stdout == "" && exitStatus == 0 {
-			dc.Logger.Log("info", fmt.Sprintf("Cleaning not needed, the containers were not created: %s", runID))
-		} else if exitStatus != 0 {
-			// unexpected error case
-			dc.Logger.Log("info", "Not cleaning")
-			dc.Logger.Log("info", cmdInfoToString(cmd, stdout, stderr, exitStatus))
-		} else {
-			// Containers are either:
-			// * created and not running
-			// * or running
-			// They still may be removed by docker-compose.
-			containersRemoved := dc.checkContainersRemoved(cmd)
-			if !containersRemoved {
-				dc.Logger.Log("info", fmt.Sprintf("Stopping docker-compose project: %s", runID))
-				// docker-compose stop does not wait until containers are stopped, thus use this instead:
-				// do not use "rm --force --stop", because "down" also removes networks
-				stopCmd := dc.ConstructDockerComposeCommandDown(mergedConfig, runID)
-				stdout, stderr, exitStatus := dc.ShellService.RunGetOutput(stopCmd)
-				if exitStatus != 0 {
-					dc.Logger.Log("error", cmdInfoToString(stopCmd, stdout, stderr, exitStatus))
-					return exitStatus
-				}
-			}
-		}
-
-		envFile := getEnvFilePath(runID, mergedConfig.Test)
-		// if containers were removed by docker-compose, the env file may be already removed too,
-		// so let's ignore error on removal here
-		dc.FileService.RemoveGeneratedFileIgnoreError(mergedConfig.RemoveContainers, envFile, true)
-		dc.Logger.Log("info", "Cleanup finished")
-	}
-	return 0
-}
-
-func (dc DockerComposeDriver) waitForEnvFileRemoval(envFile string) bool {
-	// 12 is too little
-	timeout := 20
-	dc.Logger.Log("info", fmt.Sprintf("Waiting max %vs for environment file to be removed", timeout))
-	for i:=0; i<timeout; i++ {
-		if !dc.FileService.FileExists(envFile) {
-			dc.Logger.Log("info", "Containers removed by docker-compose")
-			return true
-		}
-		dc.Logger.Log("info", fmt.Sprintf("Trial: %v", i))
-		time.Sleep(time.Second)
-	}
-	dc.Logger.Log("info", fmt.Sprintf("Environment file not removed after %vs", timeout))
-	return false
-}
-
-func (dc DockerComposeDriver) HandleMultipleSignal(mergedConfig Config, runID string) int {
-	dc.Logger.Log("debug", "Multiple signals caught")
-	// On two Ctrl+C signals docker-compose reacts and stops and removes (kills?) the docker containers.
-	// We shall not perform any additional cleanup
-	// So let's just wait for the environment file to be removed
-	fileRemoved := dc.waitForEnvFileRemoval(getEnvFilePath(runID, mergedConfig.Test))
-	if fileRemoved {
+	dc.Logger.Log("info", "Stopping on signal")
+	if isChannelClosed(dc.Stopping) {
+		dc.Logger.Log("info", "Containers are already being stopped, will not react on this signal")
 		return 0
 	}
-	return 1
+
+	names := dc.getDCContainersNames(mergedConfig, runID)
+	if len(names) == 0 {
+		dc.Logger.Log("info", fmt.Sprintf("Stopping not needed, the containers were not created: %s", runID))
+		return 0
+	}
+
+	defaultContainerID := dc.getDefaultContainerID(names)
+	es := dc.stop(mergedConfig, runID, defaultContainerID)
+	dc.Logger.Log("info", "Stopping on signal finished")
+	return es
+}
+
+func (dc DockerComposeDriver) ConstructDockerComposeCommandKill(mergedConfig Config, runID string) string {
+	cmd := dc.ConstructDockerComposeCommandPart1(mergedConfig, runID)
+	cmd += " kill"
+	return cmd
+}
+
+func (dc DockerComposeDriver) kill(mergedConfig Config, runID string, defaultContainerID string) int {
+	if defaultContainerID != "" {
+		cmd := fmt.Sprintf("docker kill %s", defaultContainerID)
+		exitStatus, _ := dc.ShellService.RunInteractive(cmd, true)
+		if exitStatus != 0 {
+			dc.Logger.Log("error", fmt.Sprintf("Exit status from stop command: %v", exitStatus))
+		}
+	} // else container was killed & removed already
+
+	// "docker-compose kill" command stops only the non-default containers, thus we killed the default
+	// container separately above
+	cmd := dc.ConstructDockerComposeCommandKill(mergedConfig, runID)
+	dc.Logger.Log("debug", fmt.Sprintf("Stopping containers with command: \n%v", cmd))
+	exitStatus, _ := dc.ShellService.RunInteractive(cmd, true)
+	dc.Logger.Log("debug", fmt.Sprintf("Exit status from stop command: %v", exitStatus))
+	return exitStatus
+}
+
+// Kill the containers.
+func (dc DockerComposeDriver) HandleMultipleSignal(mergedConfig Config, runID string) int {
+	dc.Logger.Log("info", "Stopping on multiple signals")
+
+	names := dc.getDCContainersNames(mergedConfig, runID)
+	if len(names) == 0 {
+		dc.Logger.Log("info", fmt.Sprintf("Stopping not needed, the containers were not created: %s", runID))
+		return 0
+	}
+
+	defaultContainerID := dc.getDefaultContainerID(names)
+	es := dc.kill(mergedConfig, runID, defaultContainerID)
+	dc.Logger.Log("info", "Stopping on multiple signals finished")
+	return es
+}
+
+
+func (dc DockerComposeDriver) getDefaultContainerID(containersNames []string) string {
+	for _, containerName := range containersNames {
+		if strings.Contains(containerName, "_default_") {
+			contanerInfo, err := getContainerInfo(dc.ShellService, containerName)
+			if !contanerInfo.Exists {
+				return ""
+			}
+			if err != nil {
+				panic(err)
+			}
+			dc.Logger.Log("debug", fmt.Sprintf("Found default container ID: %s", contanerInfo.ID))
+			return contanerInfo.ID
+		}
+	}
+	panic(fmt.Errorf("default container not found. Were the containers created?"))
+}
+
+// example output of docker-compose ps:
+//Name                        Command               State   Ports
+//------------------------------------------------------------------------
+//edudocker_abc_1           /bin/sh -c while true; do  ...   Up
+//edudocker_def_1           /bin/sh -c while true; do  ...   Up
+//edudocker_default_run_1   sh -c echo 'will sleep' && ...   Up
+// Returns: container names, error
+func (dc DockerComposeDriver) getDCContainersNames(mergedConfig Config, projectName string) ([]string) {
+	if projectName == "" {
+		panic("projectName was empty")
+	}
+	cmd := dc.ConstructDockerComposeCommandPs(mergedConfig, projectName)
+	stdout, stderr, exitStatus, _ := dc.ShellService.RunGetOutput(cmd, true)
+	if exitStatus != 0 {
+		cmdInfo := cmdInfoToString(cmd, stdout, stderr, exitStatus)
+		panic(fmt.Errorf("Unexpected exit status:\n%s", cmdInfo))
+	}
+	stdout = strings.TrimSuffix(stdout, "\n")
+	if stdout == "" {
+		// this happens only in unit tests, when I forget to mock docker-compose ps command
+		cmdInfo := cmdInfoToString(cmd, stdout, stderr, exitStatus)
+		panic(fmt.Errorf("Unexpected empty stdout: %s", cmdInfo))
+	}
+	lines := strings.Split(stdout,"\n")
+	if strings.Contains(lines[len(lines)-1], "-----") {
+		// the last line of output is the one with -----
+		dc.Logger.Log("debug", "Containers were not yet created")
+		return []string{}
+	}
+	containerLines := lines[2:]
+	containersNames := make([]string, 0)
+	for _, line := range containerLines {
+		split := strings.Split(line, " ")
+		containerName := split[0]
+		containersNames = append(containersNames, containerName)
+	}
+	return containersNames
 }

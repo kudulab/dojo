@@ -1,3 +1,8 @@
+### 0.2.0 (Unreleased)
+
+* feature: support configurable exit behavior for docker-compose driver if a non-default container stops #17197
+* fix: better react on signals, do not depend on how docker and docker-compose react
+
 ### 0.1.0 (2019-Jan-16)
 
 Initial release. Features #17138:

@@ -10,8 +10,14 @@ import (
 )
 
 type ShellServiceInterface interface {
-	RunInteractive(cmdString string) int
-	RunGetOutput(cmdString string) (string, string, int)
+	// Returns: exitStatus int and signaled bool.
+	// Set separatePGroup to true in order to ignore signals. Then, you should never
+	// process the signaled return value.
+	RunInteractive(cmdString string, separatePGroup bool) (int, bool)
+	// Returns: stdout string, stderr string, exitStatus int and signaled bool.
+	// Set separatePGroup to true in order to ignore signals. Then, you should never
+	// process the signaled return value.
+	RunGetOutput(cmdString string, separatePGroup bool) (string, string, int, bool)
 	CheckIfInteractive() bool
 }
 
@@ -25,9 +31,16 @@ type BashShellService struct {
 	Logger *Logger
 }
 
-
-func (bs BashShellService) RunInteractive(cmdString string) int {
+func (bs BashShellService) RunInteractive(cmdString string, separatePGroup bool) (int, bool) {
 	cmd := exec.Command("bash", "-c", cmdString)
+	if separatePGroup {
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			// Run in a separate process group, so that signals are not preserved. In theory
+			// Setpgid: true should work, but it does not. Maybe this is because we run in "bash -c" ?
+			// https://stackoverflow.com/questions/43364958/start-command-with-new-process-group-id-golang
+			Setsid: true,
+		}
+	}
 	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
@@ -38,17 +51,25 @@ func (bs BashShellService) RunInteractive(cmdString string) int {
 	exitStatus := status.ExitStatus()
 	signaled := status.Signaled()
 	signal := status.Signal()
-	if err != nil && exitStatus ==0 {
-		panic("unexpected: err not nil, exitStatus was 0")
+	if err != nil && exitStatus == 0 {
+		panic(fmt.Sprintf("unexpected: err not nil, exitStatus was 0, while running: %s", cmdString))
 	}
 	if signaled {
-		bs.Logger.Log("debug", fmt.Sprintf("Signal: %v", signal))
+		bs.Logger.Log("debug", fmt.Sprintf("Signal: %v, while running: %s", signal, cmdString))
 	}
-	return exitStatus
+	return exitStatus, signaled
 }
 
-func (bs BashShellService) RunGetOutput(cmdString string) (string, string, int) {
+func (bs BashShellService) RunGetOutput(cmdString string, separatePGroup bool) (string, string, int, bool) {
 	cmd := exec.Command("bash", "-c", cmdString)
+	if separatePGroup {
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			// Run in a separate process group, so that signals are not preserved. In theory
+			// Setpgid: true should work, but it does not. Maybe this is because we run in "bash -c" ?
+			// https://stackoverflow.com/questions/43364958/start-command-with-new-process-group-id-golang
+			Setsid: true,
+		}
+	}
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -60,13 +81,13 @@ func (bs BashShellService) RunGetOutput(cmdString string) (string, string, int) 
 	exitStatus := status.ExitStatus()
 	signaled := status.Signaled()
 	signal := status.Signal()
-	if err != nil && exitStatus ==0 {
-		panic("unexpected: err not nil, exitStatus was 0")
+	if err != nil && exitStatus == 0 {
+		panic(fmt.Sprintf("unexpected: err not nil, exitStatus was 0, while running: %s", cmdString))
 	}
 	if signaled {
-		bs.Logger.Log("debug", fmt.Sprintf("Signal: %v", signal))
+		bs.Logger.Log("debug", fmt.Sprintf("Signal: %v, while running: %s", signal, cmdString))
 	}
-	return stdout.String(), stderr.String(), exitStatus
+	return stdout.String(), stderr.String(), exitStatus, signaled
 }
 
 func (bs BashShellService) CheckIfInteractive() bool {

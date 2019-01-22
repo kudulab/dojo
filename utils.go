@@ -106,9 +106,53 @@ func getRunID(test string) string {
 }
 
 func cmdInfoToString(cmd string, stdout string, stderr string, exitStatus int) string {
+	if stdout == "" {
+		stdout = "<empty string>"
+	} else {
+		stdout = strings.TrimSuffix(stdout, "\n")
+	}
+	if stderr == "" {
+		stderr = "<empty string>"
+	} else {
+		stderr = strings.TrimSuffix(stderr, "\n")
+	}
 	return fmt.Sprintf(`Command: %s
-exit status: %v
-stdout: %s
-stderr: %s`,
+  Exit status: %v
+  StdOut: %s
+  StdErr: %s
+`,
 		cmd, exitStatus, stdout, stderr)
+}
+
+func removeWhiteSpaces(str string) string {
+	return strings.Join(strings.Fields(str), "")
+}
+
+type ContainerInfo struct {
+	ID     string
+	Status string
+	Exists bool
+}
+
+// Returns: container ID, status , whether or not a container exists, error
+func getContainerInfo(shellService ShellServiceInterface, containerNameOrID string) (ContainerInfo, error) {
+	if containerNameOrID == "" {
+		panic("containerNameOrID was empty")
+	}
+	cmd := fmt.Sprintf("docker inspect --format='{{.Id}} {{.State.Status}}' %s", containerNameOrID)
+	stdout, stderr, exitStatus, _ := shellService.RunGetOutput(cmd, true)
+	if exitStatus != 0 {
+		if strings.Contains(stdout, "No such object") || strings.Contains(stderr, "No such object") {
+			return ContainerInfo{Exists: false}, nil
+		}
+		cmdInfo := cmdInfoToString(cmd, stdout, stderr, exitStatus)
+		return ContainerInfo{}, fmt.Errorf("Unexpected exit status:\n%s", cmdInfo)
+	}
+	status := strings.TrimSuffix(stdout, "\n")
+	outputArr := strings.Split(status, " ")
+	return ContainerInfo{
+		ID:     outputArr[0],
+		Status: outputArr[1],
+		Exists: true,
+	}, nil
 }

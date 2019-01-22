@@ -13,8 +13,8 @@ run integration tests in environment with Bats installed:
 ```
 
 ### How to test that Dojo reacts on signals
-Dojo gets notified of signals: SIGINT (Ctrl+C) and SIGTERM. It respects multiple notifications (2). This means: you can
- press e.g. Ctrl+C two times.
+Dojo reacts on signals: SIGINT (Ctrl+C) and SIGTERM. Dojo recognizes if 1 or 2 signals were sent. This means: you can
+ press e.g. Ctrl+C two times to speed up containers stopping.
 
 #### Container's PID 1 process **not** preserving signals
 Run this
@@ -51,3 +51,18 @@ services:
     init: true
 ```
 Minimal versions that support this feature: version `2.2` of docker-compose file and version `1.7.1` of docker-compose application.
+
+#### Implementation
+| event | driver | what to do |
+| --- | --- | --- |
+| one signal | docker | docker stop that 1 container |
+| one signal | docker-compose | docker stop default container, then docker-compose stop to gracefully stop all the other containers (there may be order by which the rest of containers should be stopped) |
+| 2 signals | docker | docker kill that 1 container |
+| 2 signals | docker-compose | docker kill default container, then docker-compose kill to immediately stop all the other containers (there may be order by which the rest of containers should be stopped) |
+| >2 signals | all | ignored |
+
+Signals are not preserved: the processes `docker run` and `docker-compose run` are started with a separate process group ID.
+`docker-compose stop` and `docker-compose kill` do not stop the default container, created with `docker-compose run default CMD`,
+thus we first stop the default container.
+After goroutines that handle signals are finished, cleanup is performed (remove docker containers, network, environment file
+ and `docker-compose.yml.dojo` file).

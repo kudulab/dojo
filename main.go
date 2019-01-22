@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 )
 
@@ -83,63 +84,91 @@ func main() {
 		exitstatus := driver.HandlePull(mergedConfig)
 		os.Exit(exitstatus)
 	}
+
 	// action is run
 
 	// This variable is needed to perform cleanup on any signal.
 	// In order to avoid race conditions, let's write to this variable before
 	// using multiple goroutines. And let's never write to it again.
 	runID := getRunID(mergedConfig.Test)
-
-	signalChannel := make(chan os.Signal, 1)
-	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
 	doneChannel := make(chan int, 1)
+	signalChannel := registerSignalChannel()
 
+	// main work goroutine
 	go func(){
 		envService := EnvService{}
+		// run and stop the containers
 		exitstatus := driver.HandleRun(mergedConfig, runID, envService)
 		doneChannel <- exitstatus
 	}()
 
-	select {
-	case signalCaught := <-signalChannel:
-		logger.Log("error", fmt.Sprintf("Caught signal: %s", signalCaught.String()))
-		exitStatus := 1
-		switch signalCaught {
-		// kill -SIGINT XXXX or Ctrl+c
-		case syscall.SIGINT:
-			exitStatus = 130
-			// kill -SIGTERM XXXX, GoCD uses it to cancel tasks
-		case syscall.SIGTERM:
-			exitStatus = 2
-		}
-
-		multipleSignalChannel := make(chan os.Signal, 1)
-		signal.Notify(multipleSignalChannel, os.Interrupt, syscall.SIGTERM)
-		doneAfterOneSignalChannel := make(chan int, 1)
-		go func() {
-			exitStatusFromCleanup := handleSignal(logger, mergedConfig, runID, driver, false)
-			if exitStatusFromCleanup != 0 {
-				exitStatus = exitStatusFromCleanup
-			}
-			doneAfterOneSignalChannel <- exitStatus
-		}()
+	signalsCaughtCount := 0
+	signalExitStatus := 0
+	var wg sync.WaitGroup
+	for {
 		select {
-		case multipleSignalCaught := <-multipleSignalChannel:
-			logger.Log("error", fmt.Sprintf("Caught another signal: %s", multipleSignalCaught.String()))
-			exitStatus = 3
-			exitStatusFromCleanup := handleSignal(logger, mergedConfig, runID, driver, true)
-			if exitStatusFromCleanup != 0 {
-				exitStatus = exitStatusFromCleanup
+		case signal := <-signalChannel:
+			signalsCaughtCount++
+			logger.Log("error", fmt.Sprintf("Caught signal %v: %s", signalsCaughtCount, signal.String()))
+			if signalsCaughtCount == 1 {
+				signalExitStatus = signalToExitStatus(signal)
+				wg.Add(1)
+				go func() {
+					// the job here is to gracefully stop the main work
+					handleSignal(logger, mergedConfig, runID, driver, false)
+					wg.Done()
+				}()
+			} else if signalsCaughtCount == 2 {
+				signalExitStatus = 3
+				wg.Add(1)
+				go func() {
+					// the job here is to immediately stop the main work
+					handleSignal(logger, mergedConfig, runID, driver, true)
+					wg.Done()
+				}()
+			} else {
+				logger.Log("debug", fmt.Sprintf("Ignoring signal %v: %s", signalsCaughtCount, signal.String()))
 			}
-			logger.Log("debug", "Finished after multiple signals")
-			os.Exit(exitStatus)
+		case done := <-doneChannel:
+			logger.Log("debug", fmt.Sprintf("Finished main work"))
+			exitStatus := done
+			logger.Log("debug", fmt.Sprintf("Exit status from main work: %v", exitStatus))
 
-		case doneAfter1Signal := <- doneAfterOneSignalChannel:
-			logger.Log("debug", "Finished after 1 signal")
-			os.Exit(doneAfter1Signal)
+			logger.Log("debug", fmt.Sprintf("Waiting for logic that handles signals"))
+			wg.Wait()
+			logger.Log("debug", fmt.Sprintf("Done waiting for logic that handles signals"))
+
+			cleaningExitStatus := driver.CleanAfterRun(mergedConfig, runID)
+			logger.Log("debug", fmt.Sprintf("Exit status from cleaning: %v", cleaningExitStatus))
+			logger.Log("debug", fmt.Sprintf("Exit status from signals: %v", signalExitStatus))
+			if cleaningExitStatus != 0 {
+				exitStatus = cleaningExitStatus
+			}
+			if signalExitStatus != 0 {
+				exitStatus = signalExitStatus
+			}
+			// we always have to wait for the main work to be finished, so
+			// we exit only in this case
+			os.Exit(exitStatus)
 		}
-	case done := <-doneChannel:
-		logger.Log("debug", "Finished, normal way")
-		os.Exit(done)
+	}
+}
+
+func registerSignalChannel() chan os.Signal {
+	signalChannel := make(chan os.Signal, 1)
+	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
+	return signalChannel
+}
+
+func signalToExitStatus(signal os.Signal) int {
+	switch signal {
+	// kill -SIGINT XXXX or Ctrl+c
+	case syscall.SIGINT:
+		return 130
+		// kill -SIGTERM XXXX, GoCD uses it to cancel tasks
+	case syscall.SIGTERM:
+		return 2
+	default:
+		return 99
 	}
 }

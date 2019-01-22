@@ -249,6 +249,7 @@ func Test_verifyConfig_driverShorthandDC(t *testing.T) {
 		RemoveContainers: "true",
 		DockerImage: "bla",
 		DockerComposeFile: dcFile,
+		ExitBehavior: "ignore",
 	}
 	os.Create(dcFile)
 	logger := NewLogger("debug")
@@ -275,6 +276,7 @@ func Test_mapToConfig(t *testing.T) {
 	mymap["dockerOptions"] = "-v sth:sth"
 	mymap["dockerComposeFile"] = "aaa"
 	mymap["dockerComposeOptions"] = "--some-option"
+	mymap["exitBehavior"] = "ignore"
 	mymap["test"] = "false"
 	config := MapToConfig(mymap)
 	assert.Equal(t, "mydriver", config.Driver)

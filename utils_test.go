@@ -113,3 +113,40 @@ func getTestConfig() Config {
 	config.IdentityDirOuter = "/tmp/myidentity"
 	return config
 }
+
+func Test_removeWhiteSpaces(t *testing.T) {
+	str := `
+aaa
+
+bb
+`
+	actual := removeWhiteSpaces(str)
+	assert.Equal(t, "aaabb", actual)
+}
+
+func Test_getContainerInfo(t *testing.T) {
+	logger := NewLogger("debug")
+	commandsReactions := make(map[string]interface{}, 0)
+	fakeOutput := `1234 running`
+	commandsReactions["docker inspect --format='{{.Id}} {{.State.Status}}' 1234"] =
+		[]string{fakeOutput, "", "0" }
+	shell := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
+	info, err := getContainerInfo(shell, "1234")
+	assert.Equal(t, "1234", info.ID)
+	assert.Equal(t, "running", info.Status)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, true, info.Exists)
+}
+
+func Test_getContainerInfo_NoSuchObject(t *testing.T) {
+	logger := NewLogger("debug")
+	commandsReactions := make(map[string]interface{}, 0)
+	commandsReactions["docker inspect --format='{{.Id}} {{.State.Status}}' 1234"] =
+		[]string{"", "Error: No such object: 1234", "1" }
+	shell := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
+	info, err := getContainerInfo(shell, "1234")
+	assert.Equal(t, "", info.ID)
+	assert.Equal(t, "", info.Status)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, false, info.Exists)
+}

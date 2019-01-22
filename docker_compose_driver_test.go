@@ -217,14 +217,14 @@ func Test_ConstructDockerComposeCommandStop(t *testing.T){
 	}
 }
 
-func Test_ConstructDockerComposeCommandRm(t *testing.T){
+func Test_ConstructDockerComposeCommandDown(t *testing.T){
 	type mytestStruct struct {
 		userCommandConfig string
 		expOutput string
 	}
 	mytests := []mytestStruct{
 		mytestStruct{ userCommandConfig: "",
-			expOutput: "docker-compose -f /tmp/dummy.yml -f /tmp/dummy.yml.dojo -p 1234 rm -f"},
+			expOutput: "docker-compose -f /tmp/dummy.yml -f /tmp/dummy.yml.dojo -p 1234 down"},
 	}
 	logger := NewLogger("debug")
 	dc := NewDockerComposeDriver(NewMockedShellServiceNotInteractive(logger), NewMockedFileService(logger), logger)
@@ -233,25 +233,8 @@ func Test_ConstructDockerComposeCommandRm(t *testing.T){
 		config.RunCommand = v.userCommandConfig
 		config.DockerComposeOptions = "--some-opt"
 		config.DockerComposeFile = "/tmp/dummy.yml"
-		cmd := dc.ConstructDockerComposeCommandRm(config, "1234")
+		cmd := dc.ConstructDockerComposeCommandDown(config, "1234")
 		assert.Equal(t, v.expOutput, cmd, fmt.Sprintf("userCommandConfig: %v", v.userCommandConfig))
-	}
-}
-
-func TestDockerComposeDriver_GetExpDockerNetwork(t *testing.T){
-	type mytestStruct struct {
-		runID string
-		expOutput string
-	}
-	mytests := []mytestStruct{
-		mytestStruct{ runID: "dojo-myproject-2019-01-09_10-39-06-98498093",
-			expOutput: "dojomyproject2019010910390698498093_default"},
-	}
-	logger := NewLogger("debug")
-	dc := NewDockerComposeDriver(NewMockedShellServiceNotInteractive(logger), NewMockedFileService(logger), logger)
-	for _,v := range mytests {
-		expNet := dc.GetExpDockerNetwork(v.runID)
-		assert.Equal(t, v.expOutput, expNet, v.runID)
 	}
 }
 
@@ -271,7 +254,14 @@ func removeDCFile(dcFilePath string, fs FileServiceInterface)  {
 func TestDockerComposeDriver_HandleRun_Unit(t *testing.T) {
 	logger := NewLogger("debug")
 	fs := NewMockedFileService(logger)
-	shellS := NewMockedShellServiceNotInteractive(logger)
+	fakePSOutput := getFakeDockerComposePSStdout()
+	commandsReactions := make(map[string]interface{}, 0)
+	commandsReactions["docker-compose -f docker-compose.yml -f docker-compose.yml.dojo -p 1234 ps"] =
+		[]string{fakePSOutput, "", "0" }
+	commandsReactions["docker-compose -f docker-compose.yml -f docker-compose.yml.dojo -p 1234 config --services"] =
+		[]string{"container1", "", "0" }
+
+	shellS := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
 	driver := NewDockerComposeDriver(shellS, fs, logger)
 
 	config := getTestConfig()
@@ -280,23 +270,33 @@ func TestDockerComposeDriver_HandleRun_Unit(t *testing.T) {
 	runID := "1234"
 	exitstatus := driver.HandleRun(config, runID, MockedEnvService{})
 	assert.Equal(t, 0, exitstatus)
-	assert.False(t, fileExists("/tmp/dojo-environment-1234"))
 	assert.Equal(t, 2, len(fs.FilesWrittenTo))
 	assert.Equal(t, "ABC=123\n", fs.FilesWrittenTo["/tmp/dojo-environment-1234"])
 	assert.Contains(t, fs.FilesWrittenTo["docker-compose.yml.dojo"], "version: '2.2'")
+
+	exitstatus = driver.CleanAfterRun(config, runID)
+	assert.Equal(t, 0, exitstatus)
 	assert.Equal(t, 3, len(fs.FilesRemovals))
 	assert.Equal(t, "/tmp/dojo-environment-1234", fs.FilesRemovals[0])
 	assert.Equal(t, "docker-compose.yml.dojo", fs.FilesRemovals[1])
 	assert.Equal(t, "/tmp/dojo-environment-1234", fs.FilesRemovals[2])
+	assert.False(t, fileExists("/tmp/dojo-environment-1234"))
 }
 
 func TestDockerComposeDriver_HandleRun_RealFileService(t *testing.T) {
 	logger := NewLogger("debug")
 	fs := NewMockedFileService(logger)
-	shellS := NewMockedShellServiceNotInteractive(logger)
+	dcFilePath := "test-docker-compose.yml"
+	fakePSOutput := getFakeDockerComposePSStdout()
+	commandsReactions := make(map[string]interface{}, 0)
+	commandsReactions["docker-compose -f test-docker-compose.yml -f test-docker-compose.yml.dojo -p 1234 ps"] =
+		[]string{fakePSOutput, "", "0" }
+	commandsReactions["docker-compose -f test-docker-compose.yml -f test-docker-compose.yml.dojo -p 1234 config --services"] =
+		[]string{"container1", "", "0" }
+
+	shellS := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
 	driver := NewDockerComposeDriver(shellS, fs, logger)
 
-	dcFilePath := "test-docker-compose.yml"
 	createDCFile(t, dcFilePath, fs)
 	config := getTestConfig()
 	config.Driver = "docker-compose"
@@ -306,14 +306,33 @@ func TestDockerComposeDriver_HandleRun_RealFileService(t *testing.T) {
 	runID := "1234"
 	exitstatus := driver.HandleRun(config, runID, MockedEnvService{})
 	assert.Equal(t, 0, exitstatus)
+	exitstatus = driver.CleanAfterRun(config, runID)
+	assert.Equal(t, 0, exitstatus)
 	removeDCFile(dcFilePath, fs)
 	removeDCFile(dcFilePath+".dojo", fs)
+	fs.RemoveFile("/tmp/dojo-environment-1234", true)
+}
+
+func getFakeDockerComposePSStdout() string {
+	return `Name                        Command               State   Ports
+------------------------------------------------------------------------
+edudocker_abc_1           /bin/sh -c while true; do  ...   Up
+edudocker_def_1           /bin/sh -c while true; do  ...   Up
+edudocker_default_run_1   sh -c echo 'will sleep' && ...   Up
+`
 }
 
 func TestDockerComposeDriver_HandleRun_RealEnvService(t *testing.T) {
 	logger := NewLogger("debug")
 	fs := NewMockedFileService(logger)
-	shellS := NewMockedShellServiceNotInteractive(logger)
+	fakePSOutput := getFakeDockerComposePSStdout()
+	commandsReactions := make(map[string]interface{}, 0)
+	commandsReactions["docker-compose -f docker-compose.yml -f docker-compose.yml.dojo -p 1234 ps"] =
+		[]string{fakePSOutput, "", "0" }
+	commandsReactions["docker-compose -f docker-compose.yml -f docker-compose.yml.dojo -p 1234 config --services"] =
+		[]string{"container1", "", "0" }
+
+	shellS := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
 	driver := NewDockerComposeDriver(shellS, fs, logger)
 
 	config := getTestConfig()
@@ -323,4 +342,142 @@ func TestDockerComposeDriver_HandleRun_RealEnvService(t *testing.T) {
 	runID := "1234"
 	exitstatus := driver.HandleRun(config, runID, EnvService{})
 	assert.Equal(t, 0, exitstatus)
+	exitstatus = driver.CleanAfterRun(config, runID)
+	assert.Equal(t, 0, exitstatus)
+}
+
+func Test_getDCContainersNames(t *testing.T) {
+	logger := NewLogger("debug")
+	fs := NewMockedFileService(logger)
+	fakePSOutput := getFakeDockerComposePSStdout()
+	commandsReactions := make(map[string]interface{}, 0)
+	commandsReactions["docker-compose -f docker-compose.yml -f docker-compose.yml.dojo -p 1234 ps"] =
+		[]string{fakePSOutput, "", "0" }
+
+	shellS := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
+	driver := NewDockerComposeDriver(shellS, fs, logger)
+
+	names := driver.getDCContainersNames(getTestConfig(), "1234")
+	assert.Equal(t, 3, len(names))
+	assert.Equal(t, "edudocker_abc_1", names[0])
+	assert.Equal(t, "edudocker_def_1", names[1])
+	assert.Equal(t, "edudocker_default_run_1", names[2])
+}
+
+func Test_getDefaultContainerID(t *testing.T) {
+	logger := NewLogger("debug")
+	fs := NewMockedFileService(logger)
+
+	commandsReactions := make(map[string]interface{}, 0)
+	commandsReactions["docker inspect --format='{{.Id}} {{.State.Status}}' edudocker_default_run_1"] =
+		[]string{"dummy-id running", "", "0" }
+	shellS := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
+	driver := NewDockerComposeDriver(shellS, fs, logger)
+
+	names := []string{"edudocker_abc_1", "edudocker_def_1", "edudocker_default_run_1"}
+	id := driver.getDefaultContainerID(names)
+	assert.Equal(t, "dummy-id", id)
+}
+
+func Test_getDefaultContainerID_notCreated(t *testing.T) {
+	logger := NewLogger("debug")
+	fs := NewMockedFileService(logger)
+
+	shellS := NewMockedShellServiceNotInteractive(logger)
+	driver := NewDockerComposeDriver(shellS, fs, logger)
+
+	defer func() {
+		r := recover()
+		assert.Contains(t, r.(error).Error(), "default container not found. Were the containers created?")
+	}()
+
+	names := []string{}
+	id := driver.getDefaultContainerID(names)
+	assert.Equal(t, "", id)
+	t.Fatal("Expected panic")
+}
+
+func Test_checkContainerIsRunning(t *testing.T) {
+	logger := NewLogger("debug")
+	fs := NewMockedFileService(logger)
+
+	commandsReactions := make(map[string]interface{}, 0)
+	commandsReactions["docker inspect --format='{{.Id}} {{.State.Status}}' id1"] =	[]string{"id1 running", "", "0" }
+	shellS := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
+	driver := NewDockerComposeDriver(shellS, fs, logger)
+
+	running := driver.checkContainerIsRunning("id1")
+	assert.Equal(t, true, running)
+}
+
+func Test_waitForContainersToBeRunning(t *testing.T) {
+	logger := NewLogger("debug")
+	fs := NewMockedFileService(logger)
+	fakePSOutput := getFakeDockerComposePSStdout()
+	commandsReactions := make(map[string]interface{}, 0)
+	commandsReactions["docker-compose -f docker-compose.yml -f docker-compose.yml.dojo -p 1234 ps"] =
+		[]string{fakePSOutput, "", "0" }
+	commandsReactions["docker inspect --format='{{.Id}} {{.State.Status}}' edudocker_abc_1"] =
+		[]string{"id1 running", "", "0" }
+	commandsReactions["docker inspect --format='{{.Id}} {{.State.Status}}' edudocker_def_1"] =
+		[]string{"id2 running", "", "0" }
+	commandsReactions["docker inspect --format='{{.Id}} {{.State.Status}}' edudocker_default_run_1"] =
+		[]string{"id3 running", "", "0" }
+	fakeContainers := `abc
+cde
+efd
+`
+	commandsReactions["docker-compose -f docker-compose.yml -f docker-compose.yml.dojo -p 1234 config --services"] =
+		[]string{fakeContainers, "", "0" }
+	shellS := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
+	driver := NewDockerComposeDriver(shellS, fs, logger)
+
+	ids := driver.waitForContainersToBeRunning(getTestConfig(), "1234")
+	assert.Equal(t, []string{"edudocker_abc_1", "edudocker_def_1", "edudocker_default_run_1"}, ids)
+}
+
+func Test_getExpectedContainersCount(t *testing.T) {
+	type mytests struct {
+		fakeOutput string
+		fakeExitStatus int
+		expectedCount int
+		expectedError string
+	}
+	output1 := `abc
+default
+`
+	output2 := `abc
+default`
+	mytestsObj := []mytests {
+		mytests{output1,0, 2, ""},
+		mytests{output2, 0, 2, ""},
+		mytests{"", 1, 0, "Exit status: 1"},
+	}
+
+	logger := NewLogger("debug")
+	fs := NewMockedFileService(logger)
+
+	for _, tt := range mytestsObj {
+		commandsReactions := make(map[string]interface{}, 0)
+		commandsReactions["docker-compose -f docker-compose.yml -f docker-compose.yml.dojo -p 1234 config --services"] =
+			[]string{tt.fakeOutput, "", fmt.Sprintf("%v",tt.fakeExitStatus) }
+		shellS := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
+		driver := NewDockerComposeDriver(shellS, fs, logger)
+
+		if tt.expectedError == "" {
+			count := driver.getExpectedContainersCount(getTestConfig(), "1234")
+			assert.Equal(t, tt.expectedCount, count)
+		} else {
+			defer func() {
+				if r := recover(); r!= nil {
+					errMsg := r.(error).Error()
+					assert.Contains(t, errMsg, tt.expectedError)
+				} else {
+					t.Fatalf("Expected panic")
+				}
+			}()
+			driver.getExpectedContainersCount(getTestConfig(), "1234")
+			t.Fatalf("Expected panic")
+		}
+	}
 }
