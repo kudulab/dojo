@@ -152,7 +152,7 @@ func (d DockerDriver) HandleMultipleSignal(mergedConfig Config, runID string) in
 
 func (d DockerDriver) CleanAfterRun(mergedConfig Config, runID string) int {
 	if mergedConfig.RemoveContainers == "true" {
-		d.Logger.Log("info", "Cleaning, because RemoveContainers is set to true")
+		d.Logger.Log("debug", "Cleaning, because RemoveContainers is set to true")
 		envFile := getEnvFilePath(runID, mergedConfig.Test)
 		d.FileService.RemoveGeneratedFile(mergedConfig.RemoveContainers, envFile)
 
@@ -160,8 +160,7 @@ func (d DockerDriver) CleanAfterRun(mergedConfig Config, runID string) int {
 
 		return 0
 	} else {
-		d.Logger.Log("info", "Not cleaning, because RemoveContainers is not set to true")
+		d.Logger.Log("debug", "Not cleaning, because RemoveContainers is not set to true")
 		return 0
 	}
 }
-

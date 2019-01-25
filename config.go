@@ -112,7 +112,7 @@ func getCLIConfig() Config {
 	flagSet.StringVar(&workDirOuter, "work-dir-outer", "", usageWworkDirOuter)
 
 	var identityDirOuter string
-	const usageIdentityDirOuter = "Directory on host, to be mounted into a docker contaienr to /dojo/identity. Default: $HOME"
+	const usageIdentityDirOuter = "Directory on host, to be mounted into a docker container to /dojo/identity. Default: $HOME"
 	flagSet.StringVar(&identityDirOuter, "identity-dir-outer", "", usageIdentityDirOuter)
 
 	var blacklistVariables string

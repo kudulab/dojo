@@ -359,7 +359,7 @@ func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envSe
 
 func (dc DockerComposeDriver) CleanAfterRun(mergedConfig Config, runID string) int {
 	if mergedConfig.RemoveContainers == "true" {
-		dc.Logger.Log("info", "Cleaning, because RemoveContainers is set to true")
+		dc.Logger.Log("debug", "Cleaning, because RemoveContainers is set to true")
 		envFile := getEnvFilePath(runID, mergedConfig.Test)
 		defer dc.FileService.RemoveGeneratedFile(mergedConfig.RemoveContainers, envFile)
 		dojoDCGeneratedFile := dc.getDCGeneratedFilePath(mergedConfig.DockerComposeFile)
@@ -371,7 +371,7 @@ func (dc DockerComposeDriver) CleanAfterRun(mergedConfig Config, runID string) i
 		exitStatus, _ := dc.ShellService.RunInteractive(cmd, true)
 		return exitStatus
 	} else {
-		dc.Logger.Log("info", "Not cleaning, because RemoveContainers is not set to true")
+		dc.Logger.Log("debug", "Not cleaning, because RemoveContainers is not set to true")
 		return 0
 	}
 }
