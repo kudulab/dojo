@@ -1,5 +1,23 @@
 # Dojo
 
+## Install
+### Dependencies
+* [Docker](https://docs.docker.com/)
+* [Docker-Compose](https://github.com/docker/compose) (only if using Dojo driver: docker-compose) >=1.7.1
+* Bash shell
+
+
+### The binary
+There is only 1 binary file to install:
+```
+version="0.2.0"
+wget -O=/tmp/dojo https://github.com/ai-traders/dojo/releases/download/${version}/dojo
+chmod +x /tmp/dojo
+mv /tmp/dojo /usr/bin/dojo
+```
+
+Alternatively, you can build the binary file yourself, see [Development](#Development).
+
 ## Development
 Run those command in `ide`:
 ```
