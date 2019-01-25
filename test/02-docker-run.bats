@@ -23,6 +23,26 @@ DOJO_PATH=$(readlink -f "./bin/dojo")
   testEnvFileIsRemoved
   testDockerContainerIsRemoved
 }
+
+@test "driver: docker, action: run, command output can be saved into a variable" {
+  cleanUpDockerContainer
+  cleanUpEnvFiles
+  rm -f stderr_file.txt
+  # "What you cannot do is capture stdout in one variable, and stderr in another, using only FD redirections. You must use a temporary file (or a named pipe) to achieve that one."
+  # http://mywiki.wooledge.org/BashFAQ/002
+  my_stdout=$(${DOJO_PATH} --debug=true --test=true --image=alpine:3.8 sh -c "printenv HOME" 2>stderr_file.txt)
+  status=$?
+  my_stderr=$(cat stderr_file.txt)
+  assert_equal "$status" 0
+  assert_equal "${my_stdout}" "/root"
+  echo "${my_stderr}" | grep "Exit status from run command: 0"
+  echo "${my_stderr}" | grep "Exit status from cleaning: 0"
+  echo "${my_stderr}" | grep "Exit status from signals: 0"
+  echo "${my_stderr}" | grep "Dojo version"
+  rm -f stderr_file.txt
+  testEnvFileIsRemoved
+  testDockerContainerIsRemoved
+}
 @test "driver: docker, action: run, exit status: not 0" {
   cleanUpDockerContainer
   cleanUpEnvFiles
