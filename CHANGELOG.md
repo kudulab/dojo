@@ -1,3 +1,5 @@
+* fix: resolve relative paths in config object
+
 ### 0.2.0 (2019-Jan-25)
 
 * feature: support configurable exit behavior for docker-compose driver if a non-default container stops #17197

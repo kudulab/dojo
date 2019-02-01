@@ -1,0 +1,2 @@
+DOJO_DRIVER=docker
+DOJO_WORK_OUTER="./test/test-files/custom-relative"

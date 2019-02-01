@@ -35,6 +35,46 @@ func Test_smartJoinCommandArgs(t *testing.T){
 	}
 }
 
+func Test_getAbsPathOrPanic(t *testing.T) {
+	currentDirectory, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	var mytests = []struct {
+		input          string
+		expectedOutput string
+	}{
+		{"", ""},
+		{"/tmp/123", "/tmp/123"},
+		{"123", currentDirectory+"/123"},
+		{"./123", currentDirectory+"/123"},
+	}
+	for _,v := range mytests {
+		outputCmd := getAbsPathOrPanic(v.input)
+		assert.Equal(t, v.expectedOutput, outputCmd)
+	}
+}
+
+func Test_ensureNoOuterQuotes(t *testing.T) {
+	var mytests = []struct {
+		input          string
+		expectedOutput string
+	}{
+		{"", ""},
+		{"/tmp/123", "/tmp/123"},
+		{"\"/tmp/123\"", "/tmp/123"},
+		{"'/tmp/123'", "/tmp/123"},
+		{"\"/tmp/123", "\"/tmp/123"},
+		{"/tmp/123\"", "/tmp/123\""},
+		{"'/tmp/123", "'/tmp/123"},
+		{"/tmp/123'", "/tmp/123'"},
+	}
+	for _,v := range mytests {
+		outputCmd := ensureNoOuterQuotes(v.input)
+		assert.Equal(t, v.expectedOutput, outputCmd, v.input)
+	}
+}
+
 func Test_getCLIConfig(t *testing.T) {
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
@@ -137,8 +177,10 @@ func Test_getFileConfig(t *testing.T) {
 	fmt.Fprintf(file, "DOJO_DRIVER=somedriver\n")
 	fmt.Fprintf(file, "DOJO_DOCKER_OPTIONS=-v /tmp/bla:/home/dojo/bla:ro -e ABC=123\n")
 	fmt.Fprintf(file, "DOJO_DOCKER_COMPOSE_FILE=docker-compose.yml\n")
+	// absolute path
 	fmt.Fprintf(file, "DOJO_WORK_OUTER=/tmp/123\n")
-	fmt.Fprintf(file, "DOJO_WORK_INNER=/tmp/inner\n")
+	// relative path
+	fmt.Fprintf(file, "DOJO_WORK_INNER=inner\n")
 	fmt.Fprintf(file, "DOJO_IDENTITY_OUTER=/tmp/outer\n")
 	fmt.Fprintf(file, "DOJO_BLACKLIST_VARIABLES=VAR1,VAR2,ABC\n")
 	fmt.Fprintf(file, "DOJO_LOG_LEVEL=info\n")
@@ -152,7 +194,6 @@ func Test_getFileConfig(t *testing.T) {
 		DockerOptions:      "-v /tmp/bla:/home/dojo/bla:ro -e ABC=123",
 		DockerComposeFile:  "docker-compose.yml",
 		WorkDirOuter:       "/tmp/123",
-		WorkDirInner:       "/tmp/inner",
 		IdentityDirOuter:   "/tmp/outer",
 		BlacklistVariables: "VAR1,VAR2,ABC",
 		Debug:              "false",
@@ -164,7 +205,8 @@ func Test_getFileConfig(t *testing.T) {
 	assert.Equal(t, expectedConfig.DockerOptions, config.DockerOptions)
 	assert.Equal(t, expectedConfig.DockerComposeFile, config.DockerComposeFile)
 	assert.Equal(t, expectedConfig.WorkDirOuter, config.WorkDirOuter)
-	assert.Equal(t, expectedConfig.WorkDirInner, config.WorkDirInner)
+	// relative path got saved as absolute path
+	assert.Contains(t, config.WorkDirInner, "/inner")
 	assert.Equal(t, expectedConfig.IdentityDirOuter, config.IdentityDirOuter)
 	assert.Equal(t, expectedConfig.BlacklistVariables, config.BlacklistVariables)
 	assert.Equal(t, expectedConfig.Debug, config.Debug)

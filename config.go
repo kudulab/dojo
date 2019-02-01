@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/user"
 	"strings"
+	"path/filepath"
 )
 
 type Config struct {
@@ -152,7 +153,9 @@ func getCLIConfig() Config {
 		// version is returned as the first log message
 		os.Exit(0)
 	}
-
+	workDirInnerAbs := getAbsPathOrPanic(workDirInner)
+	workDirOuterAbs := getAbsPathOrPanic(workDirOuter)
+	identityDirOuterAbs := getAbsPathOrPanic(identityDirOuter)
 	return Config{
 		Action:             action,
 		ConfigFile:         config,
@@ -160,9 +163,9 @@ func getCLIConfig() Config {
 		Debug:              debug,
 		Interactive:        interactive,
 		RemoveContainers:   removeContainers,
-		WorkDirInner:       workDirInner,
-		WorkDirOuter:       workDirOuter,
-		IdentityDirOuter:   identityDirOuter,
+		WorkDirInner:       workDirInnerAbs,
+		WorkDirOuter:       workDirOuterAbs,
+		IdentityDirOuter:   identityDirOuterAbs,
 		BlacklistVariables: blacklistVariables,
 		RunCommand:         runCommand,
 		DockerImage:        image,
@@ -170,6 +173,18 @@ func getCLIConfig() Config {
 		DockerComposeFile:  dockerComposeFile,
 		ExitBehavior: 		exitBehavior,
 		Test: 				test,
+	}
+}
+
+func getAbsPathOrPanic(path string) string {
+	if path == "" {
+		return path
+	} else {
+		absPath, err := filepath.Abs(path)
+		if err != nil {
+			panic(err)
+		}
+		return absPath
 	}
 }
 
@@ -244,12 +259,26 @@ func ConfigToMap(config Config) map[string]string {
 	return configMap
 }
 
+func ensureNoOuterQuotes(input string) string {
+	if strings.HasPrefix(input, "\"") && strings.HasSuffix(input, "\"") {
+		output := strings.TrimPrefix(input, "\"")
+		output = strings.TrimSuffix(output, "\"")
+		return output
+	}
+	if strings.HasPrefix(input, "'") && strings.HasSuffix(input, "'") {
+		output := strings.TrimPrefix(input, "'")
+		output = strings.TrimSuffix(output, "'")
+		return output
+	}
+	return input
+}
+
 // getFileConfig never returns error. If config file does not exist,
 // it returns Config object with default values.
-func getFileConfig(logger *Logger, filePath string) Config {
+func getFileConfig(logger *Logger, pathToFile string) Config {
 	config := Config{}
-	if _, err := os.Stat(filePath); err == nil {
-		contents, err := ioutil.ReadFile(filePath)
+	if _, err := os.Stat(pathToFile); err == nil {
+		contents, err := ioutil.ReadFile(pathToFile)
 		if err != nil {
 			panic(err)
 		}
@@ -263,6 +292,7 @@ func getFileConfig(logger *Logger, filePath string) Config {
 				kv := strings.SplitN(line, "=", 2)
 				key := kv[0]
 				value := kv[1]
+				value = ensureNoOuterQuotes(value)
 
 				switch key {
 				case "DOJO_DRIVER":
@@ -276,11 +306,14 @@ func getFileConfig(logger *Logger, filePath string) Config {
 				case "DOJO_DOCKER_COMPOSE_OPTIONS":
 					config.DockerComposeOptions = value
 				case "DOJO_WORK_OUTER":
-					config.WorkDirOuter = value
+					dir := getAbsPathOrPanic(value)
+					config.WorkDirOuter = dir
 				case "DOJO_WORK_INNER":
-					config.WorkDirInner = value
+					dir := getAbsPathOrPanic(value)
+					config.WorkDirInner = dir
 				case "DOJO_IDENTITY_OUTER":
-					config.IdentityDirOuter = value
+					dir := getAbsPathOrPanic(value)
+					config.IdentityDirOuter = dir
 				case "DOJO_EXIT_BEHAVIOR":
 					config.ExitBehavior = value
 				case "DOJO_BLACKLIST_VARIABLES":
@@ -295,7 +328,7 @@ func getFileConfig(logger *Logger, filePath string) Config {
 			}
 		}
 	} else {
-		logger.Log("debug", fmt.Sprintf("Config file does not exist: %s", filePath))
+		logger.Log("debug", fmt.Sprintf("Config file does not exist: %s", pathToFile))
 	}
 	return config
 }
