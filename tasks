@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -Ee
 
 if [[ ! -f ./releaser ]];then
   timeout 2 wget -O releaser http://http.archive.ai-traders.com/releaser/1.0.8/releaser || { echo "Cannot download releaser, ignoring"; rm -f ./releaser; }
@@ -61,6 +61,29 @@ const DojoVersion = \"${next_version}\"
         version="$(get_last_version_from_changelog ${changelog_file})"
         git tag "${version}"
         git push origin "${version}"
+        ;;
+    release_gh)
+        if [ -z "$GITHUB_TOKEN" ]; then echo "GITHUB_TOKEN is unset"; exit 1; fi
+        ide "./tasks build"
+        ide --idefile Idefile.nodejs "sudo npm install --global release-it && release-it --verbose"
+        ;;
+    generate_release_notes)
+        version=${2?version not set}
+        changelog="CHANGELOG.md"
+        start_line_number=$(awk "/${version}/{ print NR; exit }" ${changelog})
+        # now let's read the file, line by line, starting from start_line_number+1
+        # up to "###" or the end of file
+        line_read=0
+        while read line; do
+            line_read=$((line_read+1))
+            if [ "${line_read}" -gt "${start_line_number}" ]; then
+              if [[ "${line}" == "### "* ]]; then
+                  # stop reading
+                  exit 0
+              fi
+              echo "${line}"
+            fi
+        done < "${changelog}"
         ;;
     *)
         echo "Invalid command: '${command}'"

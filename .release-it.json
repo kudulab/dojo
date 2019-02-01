@@ -1,0 +1,19 @@
+{
+  "git": {
+    "commit": false,
+    "tag": false,
+    "push": false,
+    "pushRepo": "upstream"
+  },
+  "npm": {
+    "publish": false
+  },
+  "github": {
+    "release": true,
+    "releaseName": "Dojo ${version}",
+    "releaseNotes": "./tasks generate_release_notes ${version}",
+    "preRelease": true,
+    "tokenRef": "GITHUB_TOKEN",
+    "assets": ["bin/dojo"]
+  }
+}
