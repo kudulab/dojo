@@ -1,4 +1,5 @@
 * fix: resolve relative paths in config object
+* fix: allow docker and docker-compose run if WorkDirOuter or IdentityDirOuter does not exist
 
 ### 0.2.0 (2019-Jan-25)
 

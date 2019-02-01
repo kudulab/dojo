@@ -326,10 +326,7 @@ func safelyCloseChannel(ch chan bool) (justClosed bool) {
 }
 
 func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envService EnvServiceInterface) int {
-	if envService.IsCurrentUserRoot() {
-		dc.Logger.Log("warn", "Current user is root, which is not recommended")
-	}
-
+	warnGeneral(dc.FileService, mergedConfig, envService, dc.Logger)
 	envFile := getEnvFilePath(runID, mergedConfig.Test)
 	saveEnvToFile(dc.FileService, envFile, mergedConfig.BlacklistVariables, envService.Variables())
 	err := dc.handleDCFilesForRun(mergedConfig, envFile)

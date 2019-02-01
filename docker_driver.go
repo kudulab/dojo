@@ -40,9 +40,6 @@ func (d DockerDriver) ConstructDockerRunCmd(config Config, envFilePath string, c
 	if config.RemoveContainers == "true" {
 		cmd += " --rm"
 	}
-	if d.FileService.GetFileUid(config.WorkDirOuter) == 0 {
-		d.Logger.Log("warn", fmt.Sprintf("WorkDirOuter: %s is owned by root, which is not recommended", config.WorkDirOuter))
-	}
 	cmd += fmt.Sprintf(" -v %s:%s -v %s:/dojo/identity:ro", config.WorkDirOuter, config.WorkDirInner, config.IdentityDirOuter)
 	cmd += fmt.Sprintf(" --env-file=%s", envFilePath)
 	if os.Getenv("DISPLAY") != "" {
@@ -69,9 +66,7 @@ func (d DockerDriver) ConstructDockerRunCmd(config Config, envFilePath string, c
 }
 
 func (d DockerDriver) HandleRun(mergedConfig Config, runID string, envService EnvServiceInterface) int {
-	if envService.IsCurrentUserRoot() {
-		d.Logger.Log("warn", "Current user is root, which is not recommended")
-	}
+	warnGeneral(d.FileService, mergedConfig, envService, d.Logger)
 	envFile := getEnvFilePath(runID, mergedConfig.Test)
 	saveEnvToFile(d.FileService, envFile, mergedConfig.BlacklistVariables, envService.Variables())
 

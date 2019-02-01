@@ -155,6 +155,26 @@ DOJO_PATH=$(readlink -f "./bin/dojo")
   testEnvFileIsRemoved
   testDockerContainerIsRemoved
 }
+@test "driver: docker, action: run; custom, relative work directory - does not exist" {
+  cleanUpDockerContainer
+  cleanUpEnvFiles
+  rm -rf ./test/test-files/not-existent
+  run ${DOJO_PATH} -c test/test-files/Dojofile.work_not_exists --debug=true --test=true --image=alpine:3.8 whoami
+  assert_output --partial "Dojo version"
+  assert_output --partial "root"
+  assert_output --partial "alpine:3.8 whoami"
+  assert_output --partial "Exit status from run command: 0"
+  assert_output --partial "Exit status from cleaning: 0"
+  assert_output --partial "Exit status from signals: 0"
+  assert_output --partial "test/test-files/not-existent does not exist"
+  assert_output --partial "WARN"
+  refute_output --partial "ERROR"
+  refute_output --partial "error"
+  assert_equal "$status" 0
+  rm -rf ./test/test-files/not-existent
+  testEnvFileIsRemoved
+  testDockerContainerIsRemoved
+}
 @test "driver: docker, action: run, --rm=false" {
   cleanUpDockerContainer
   cleanUpEnvFiles
