@@ -1,3 +1,5 @@
+### 0.2.1 (2019-Feb-01)
+
 * fix: resolve relative paths in config object
 * fix: allow docker and docker-compose run if WorkDirOuter or IdentityDirOuter does not exist
 * make github release happen on CI
