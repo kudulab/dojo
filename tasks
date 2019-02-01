@@ -31,7 +31,7 @@ case "${command}" in
         if [[ -n "$2" ]]; then
             next_version="$2"
         else
-            last_version="$(get_last_version_from_changelog ${changelog_file})"
+            last_version="$(get_last_version_from_whole_changelog ${changelog_file})"
             next_version="$(bump_patch_version ${last_version})"
         fi
         set_version_in_changelog "${changelog_file}" "${next_version}"
@@ -41,7 +41,7 @@ const DojoVersion = \"${next_version}\"
         releaser_log_info "Set version: ${next_version}"
         ;;
     verify_version)
-        version="$(get_last_version_from_changelog ${changelog_file})"
+        version="$(get_last_version_from_whole_changelog ${changelog_file})"
         if git tag | grep "${version}"; then
             releaser_log_error "The version: ${version} was already git tagged"
             exit 1
@@ -58,14 +58,18 @@ const DojoVersion = \"${next_version}\"
         releaser_log_info "Version: ${version} verified successfully"
         ;;
     release)
-        version="$(get_last_version_from_changelog ${changelog_file})"
+        version="$(get_last_version_from_whole_changelog ${changelog_file})"
         git tag "${version}"
         git push origin "${version}"
         ;;
     release_gh)
+        if [ ! -f bin/dojo ]; then echo "dojo binary does not exist"; exit 1; fi
         if [ -z "$GITHUB_TOKEN" ]; then echo "GITHUB_TOKEN is unset"; exit 1; fi
-        ide "./tasks build"
-        ide --idefile Idefile.nodejs "sudo npm install --global release-it && release-it --verbose"
+        version="$(get_last_version_from_whole_changelog ${changelog_file})"
+        git remote add upstream git@github.com:ai-traders/dojo.git
+        git pull upstream master
+        git push --tags upstream master
+        ide --idefile Idefile.nodejs "sudo npm install --global release-it && release-it --verbose --increment=${version} --non-interactive"
         ;;
     generate_release_notes)
         version=${2?version not set}

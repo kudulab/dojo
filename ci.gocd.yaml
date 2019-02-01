@@ -93,6 +93,8 @@ pipelines:
                         - cd image_scripts && ./tasks e2e
       - release:
           clean_workspace: true
+          secure_variables:
+            GITHUB_TOKEN: "AES:9mQGklAskrmLBczL1b/UXQ==:u/Kt5dVTpXlDIOTN7ndS6SId01ryLQK+8OorJS7ZA8EECQvc04daQkLA+gRuzHNg"
           approval:
             type: manual
           jobs:
@@ -109,3 +111,14 @@ pipelines:
                     arguments:
                       - -c
                       - ./tasks release
+                - fetch:
+                    stage: build_unit
+                    job: build_unit
+                    is_file: yes
+                    source: dojo
+                    destination: bin
+                - exec:
+                    command: bash
+                    arguments:
+                    - -c
+                    - ./tasks release_gh
