@@ -1,3 +1,7 @@
+### 0.3.1 (2019-Feb-04)
+
+* fix: while saving the environment variable: DISPLAY a new line was missing
+
 ### 0.3.0 (2019-Feb-04)
 
 Change default behavior that preserved current environment (by the means of environment file) only to the default

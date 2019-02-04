@@ -39,14 +39,14 @@ func Test_generateVariablesString(t *testing.T) {
 	// MYVAR is not blacklisted, is not set with DOJO_ prefix
 	// DOJO_VAR1 is not blacklisted, is set with DOJO_ prefix
 	// DISPLAY is always set to the same value
-	allVariables := []string{"USER=dojo", "BASH_123=123", "DOJO_USER=555", "MYVAR=999", "DOJO_VAR1=11", "USER1=1", "DOJO_USER1=2", "DISPLAY=aaa"}
+	allVariables := []string{"USER=dojo", "BASH_123=123", "DOJO_USER=555", "MYVAR=999", "DOJO_VAR1=11", "USER1=1", "DISPLAY=aaa", "DOJO_USER1=2"}
 	genStr := generateVariablesString(blacklisted, allVariables)
-	assert.Contains(t, genStr, "DOJO_USER=555")
-	assert.Contains(t, genStr, "DOJO_BASH_123=123")
-	assert.Contains(t, genStr, "MYVAR=999")
-	assert.Contains(t, genStr, "DOJO_VAR1=11")
-	assert.Contains(t, genStr, "DOJO_USER1=2")
-	assert.Contains(t, genStr, "DISPLAY=unix:0.0")
+	assert.Contains(t, genStr, "DOJO_USER=555\n")
+	assert.Contains(t, genStr, "DOJO_BASH_123=123\n")
+	assert.Contains(t, genStr, "MYVAR=999\n")
+	assert.Contains(t, genStr, "DOJO_VAR1=11\n")
+	assert.Contains(t, genStr, "DOJO_USER1=2\n")
+	assert.Contains(t, genStr, "DISPLAY=unix:0.0\n")
 	assert.NotContains(t, genStr, "DOJO_USER=dojo")
 	assert.NotContains(t, genStr, "USER1=1")
 	assert.NotContains(t, genStr, "DISPLAY=aaa")

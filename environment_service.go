@@ -56,7 +56,7 @@ func generateVariablesString(blacklistedVarsNames string, allVariables []string)
 		value := arr[1]
 		if key == "DISPLAY" {
 			// this is highly opinionated
-			generatedString += "DISPLAY=unix:0.0"
+			generatedString += "DISPLAY=unix:0.0\n"
 		} else if existsVariableWithDOJOPrefix(key, allVariables) {
 			// ignore this key, we will deal with DOJO_${key}
 			continue
