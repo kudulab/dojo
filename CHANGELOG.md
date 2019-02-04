@@ -1,3 +1,11 @@
+Change default behavior that preserved current environment (by the means of environment file) only to the default
+container (driver: docker-compose). Now, by default we preserve to all the containers. Still the old behavior can
+be set by:
+```
+dojo --preserve-env-to-all=false
+```
+
+
 ### 0.2.1 (2019-Feb-01)
 
 * fix: resolve relative paths in config object

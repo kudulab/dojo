@@ -27,6 +27,7 @@ type Config struct {
 	DockerOptions string
 	DockerComposeFile string
 	DockerComposeOptions string
+	PreserveEnvironmentToAllContainers string
 	ExitBehavior string
 	Test string
 }
@@ -48,6 +49,7 @@ func (c Config) String() string {
 	str += fmt.Sprintf("{ DockerOptions: %s }", c.DockerOptions)
 	str += fmt.Sprintf("{ DockerComposeFile: %s }", c.DockerComposeFile)
 	str += fmt.Sprintf("{ DockerComposeOptions: %s }", c.DockerComposeOptions)
+	str += fmt.Sprintf("{ PreserveEnvironmentToAllContainers: %s }", c.PreserveEnvironmentToAllContainers)
 	str += fmt.Sprintf("{ ExitBehavior: %s }", c.ExitBehavior)
 	str += fmt.Sprintf("{ Test: %s }", c.Test)
 	return str
@@ -124,6 +126,10 @@ func getCLIConfig() Config {
 	const usageDockerOptions         = "Options to the docker run command. E.g. \"--init\""
 	flagSet.StringVar(&dockerOptions, "docker-options", "", usageDockerOptions)
 
+	var preserveEnvToAllContainers string
+	const preserveEnvToAll         = "Set to false, if you want to preserve current environment only to default container. Default: true (preserves to all containers)."
+	flagSet.StringVar(&dockerOptions, "preserve-env-to-all", "", preserveEnvToAllContainers)
+
 	var dockerComposeFile string
 	const usageDCFile         = "Docker-compose file. Default: ./docker-compose.yml. Only for driver: docker-compose"
 	flagSet.StringVar(&dockerComposeFile, "docker-compose-file", "", usageDCFile)
@@ -170,6 +176,7 @@ func getCLIConfig() Config {
 		RunCommand:         runCommand,
 		DockerImage:        image,
 		DockerOptions:      dockerOptions,
+		PreserveEnvironmentToAllContainers: preserveEnvToAllContainers,
 		DockerComposeFile:  dockerComposeFile,
 		ExitBehavior: 		exitBehavior,
 		Test: 				test,
@@ -233,6 +240,7 @@ func MapToConfig(configMap map[string]string) Config {
 	config.DockerOptions = configMap["dockerOptions"]
 	config.DockerComposeFile = configMap["dockerComposeFile"]
 	config.DockerComposeOptions = configMap["dockerComposeOptions"]
+	config.PreserveEnvironmentToAllContainers = configMap["preserveEnvironmentToAllContainers"]
 	config.ExitBehavior = configMap["exitBehavior"]
 	config.Test = configMap["test"]
 	return config
@@ -254,6 +262,7 @@ func ConfigToMap(config Config) map[string]string {
 	configMap["dockerOptions"] = config.DockerOptions
 	configMap["dockerComposeFile"] = config.DockerComposeFile
 	configMap["dockerComposeOptions"] = config.DockerComposeOptions
+	configMap["preserveEnvironmentToAllContainers"] = config.PreserveEnvironmentToAllContainers
 	configMap["exitBehavior"] = config.ExitBehavior
 	configMap["test"] = config.Test
 	return configMap
@@ -305,6 +314,8 @@ func getFileConfig(logger *Logger, pathToFile string) Config {
 					config.DockerComposeFile = value
 				case "DOJO_DOCKER_COMPOSE_OPTIONS":
 					config.DockerComposeOptions = value
+				case "DOJO_PRESERVE_ENV_TO_ALL_CONTAINERS":
+					config.PreserveEnvironmentToAllContainers = value
 				case "DOJO_WORK_OUTER":
 					dir := getAbsPathOrPanic(value)
 					config.WorkDirOuter = dir
@@ -354,6 +365,7 @@ func getDefaultConfig(configFile string) Config {
 		BlacklistVariables: "BASH*,HOME,USERNAME,USER,LOGNAME,PATH,TERM,SHELL,MAIL,SUDO_*,WINDOWID,SSH_*,SESSION_*,GEM_HOME,GEM_PATH,GEM_ROOT,HOSTNAME,HOSTTYPE,IFS,PPID,PWD,OLDPWD,LC*",
 		DockerComposeFile:  "docker-compose.yml",
 		ExitBehavior:       "abort",
+		PreserveEnvironmentToAllContainers: "true",
 	}
 	return defaultConfig
 }
@@ -405,6 +417,9 @@ func verifyConfig(logger *Logger, config *Config) error {
 	}
 	if config.Interactive != "true" && config.Interactive != "false" && config.Interactive != "" {
 		return fmt.Errorf("Invalid configuration, unsupported Interactive: %s. Supported: true, false, empty string", config.Interactive)
+	}
+	if config.PreserveEnvironmentToAllContainers != "true" && config.PreserveEnvironmentToAllContainers != "false" {
+		return fmt.Errorf("Invalid configuration, unsupported PreserveEnvironmentToAllContainers: %s. Supported: true, false", config.PreserveEnvironmentToAllContainers)
 	}
 	if config.DockerImage == "" {
 		return fmt.Errorf("Invalid configuration, DockerImage is unset")

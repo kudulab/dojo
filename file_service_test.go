@@ -55,6 +55,14 @@ func (f *MockedFileService) WriteToFile(filePath string, contents string, logLev
 	return
 }
 
+func  (f *MockedFileService) AppendContents(filePath string, contents string, logLevel string) {
+	oldContents := f.FilesWrittenTo[filePath]
+	contentsMerged := fmt.Sprintf("%s\n%s", oldContents, contents)
+	f.FilesWrittenTo[filePath] = contentsMerged
+	f.Logger.Log(logLevel, fmt.Sprintf("Pretending to append to file %s, contents:\n %s", filePath, contentsMerged))
+	return
+}
+
 func (f *MockedFileService) GetCurrentDir() string {
 	return "/tmp/"
 }

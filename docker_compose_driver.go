@@ -67,36 +67,17 @@ func (dc DockerComposeDriver) verifyDCFile(fileContents string, filePath string)
 	return version, nil
 }
 
-func (dc DockerComposeDriver) handleDCFilesForRun(mergedConfig Config, envFile string) (error) {
-	fileContents := dc.FileService.ReadDockerComposeFile(mergedConfig.DockerComposeFile)
-	version, err := dc.verifyDCFile(fileContents, mergedConfig.DockerComposeFile)
-	if err != nil {
-		dc.Logger.Log("error", fmt.Sprintf("Docker-compose file %s is not correct: %s", mergedConfig.DockerComposeFile, err.Error()))
-		return err
-	}
-	dojoDCFileContents := dc.generateDCFileContentsForRun(mergedConfig, version, envFile)
-	dojoDCFileName := dc.getDCGeneratedFilePath(mergedConfig.DockerComposeFile)
-	dc.FileService.WriteToFile(dojoDCFileName, dojoDCFileContents, "info")
-	return nil
-}
 
 func (dc DockerComposeDriver) getDCGeneratedFilePath(dcfilePath string) string {
 	return dcfilePath + ".dojo"
 }
 
-func (dc DockerComposeDriver) generateDCFileContentsForRun(config Config, version float64, envFile string) string {
-	if dc.FileService.GetFileUid(config.WorkDirOuter) == 0 {
-		dc.Logger.Log("warn", fmt.Sprintf("WorkDirOuter: %s is owned by root, which is not recommended", config.WorkDirOuter))
-	}
+func (dc DockerComposeDriver) generateDCFileContentsWithEnv(expContainers []string,	config Config, envFile string) string {
 	contents := fmt.Sprintf(
-		`version: '%v'
-services:
-  default:
-    image: %s
-    volumes:
+		`    volumes:
       - %s:%s:ro
       - %s:%s
-`, version, config.DockerImage, config.IdentityDirOuter, "/dojo/identity", config.WorkDirOuter, config.WorkDirInner)
+`, config.IdentityDirOuter, "/dojo/identity", config.WorkDirOuter, config.WorkDirInner)
 	if os.Getenv("DISPLAY") != "" {
 		// DISPLAY is set, enable running in graphical mode (opinionated)
 		contents += "      - /tmp/.X11-unix:/tmp/.X11-unix\n"
@@ -104,16 +85,29 @@ services:
 	contents += fmt.Sprintf(`    env_file:
       - %s
 `, envFile)
+
+	if config.PreserveEnvironmentToAllContainers == "true" {
+		// set the env_file for each container
+		for _, name := range expContainers {
+			if name == "default" {
+				// handled above
+				continue
+			}
+			contents += fmt.Sprintf(`  %s:
+    env_file:
+      - %s
+`, name, envFile)
+		}
+	}
 	return contents
 }
 
-func (dc DockerComposeDriver) generateDCFileContentsForPull(config Config, version float64) string {
+func (dc DockerComposeDriver) generateInitialDCFile(config Config, version float64) string {
 	contents := fmt.Sprintf(
 		`version: '%v'
 services:
   default:
-    image: %s
-`, version, config.DockerImage)
+    image: %s`, version, config.DockerImage)
 	return contents
 }
 
@@ -208,7 +202,7 @@ func (dc DockerComposeDriver) checkContainerIsRunning(containerID string) (bool)
 	return true
 }
 
-func (dc DockerComposeDriver) getExpectedContainersCount(mergedConfig Config, runID string) int {
+func (dc DockerComposeDriver) getExpectedContainers(mergedConfig Config, runID string) []string {
 	cmd := dc.ConstructDockerComposeCommandPart1(mergedConfig, runID)
 	cmd += " config --services"
 	stdout, stderr, es, _ := dc.ShellService.RunGetOutput(cmd, true)
@@ -219,17 +213,16 @@ func (dc DockerComposeDriver) getExpectedContainersCount(mergedConfig Config, ru
 
 	stdout = strings.TrimSuffix(stdout, "\n")
 	lines := strings.Split(stdout, "\n")
-	return len(lines)
+	return lines
 }
 
 // Run the docker-compose ps command until it returns some output - containers IDs and
 // then run docker inspect on each container. Return if all the containers are running.
-func (dc DockerComposeDriver) waitForContainersToBeRunning(mergedConfig Config, runID string) ([]string) {
+//
+// When docker-compose containers start, docker-compose ps may return not all the containers, because some of them
+// may be not created yet. Thus, we have to know the number of containers specified in docker-compose config file - expContainersCount.
+func (dc DockerComposeDriver) waitForContainersToBeRunning(mergedConfig Config, runID string, expContainersCount int) ([]string) {
 	dc.Logger.Log("debug", fmt.Sprintf("Start waiting for containers to be initally running, %s", runID))
-
-	// When docker-compose containers start, docker-compose ps may return not all the containers, because some of them
-	// may be not created yet. Thus, always check the number of containers specified in docker-compose config file.
-	expContainersCount := dc.getExpectedContainersCount(mergedConfig, runID)
 
 	for {
 		if isChannelClosed(dc.Stopping) {
@@ -261,7 +254,7 @@ func (dc DockerComposeDriver) waitForContainersToBeRunning(mergedConfig Config, 
 	}
 }
 
-func (dc DockerComposeDriver) watchContainers(mergedConfig Config, runID string) {
+func (dc DockerComposeDriver) watchContainers(mergedConfig Config, runID string, expContainersCount int) {
 	if mergedConfig.ExitBehavior == "ignore" {
 		return
 	}
@@ -269,7 +262,7 @@ func (dc DockerComposeDriver) watchContainers(mergedConfig Config, runID string)
 		"Start watching docker-compose containers %s in a forever loop, exitBehavior is: %s",
 		runID, mergedConfig.ExitBehavior))
 
-	names := dc.waitForContainersToBeRunning(mergedConfig, runID)
+	names := dc.waitForContainersToBeRunning(mergedConfig, runID, expContainersCount)
 	for {
 		if isChannelClosed(dc.Stopping) {
 			dc.Logger.Log("debug", fmt.Sprintf("Stop watching docker-compose containers %s", runID))
@@ -329,10 +322,14 @@ func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envSe
 	warnGeneral(dc.FileService, mergedConfig, envService, dc.Logger)
 	envFile := getEnvFilePath(runID, mergedConfig.Test)
 	saveEnvToFile(dc.FileService, envFile, mergedConfig.BlacklistVariables, envService.Variables())
-	err := dc.handleDCFilesForRun(mergedConfig, envFile)
+	dojoDCGeneratedFile, err := dc.handleDCFiles(mergedConfig)
 	if err != nil {
 		return 1
 	}
+	expContainers := dc.getExpectedContainers(mergedConfig, runID)
+	additionalContents := dc.generateDCFileContentsWithEnv(expContainers, mergedConfig, envFile)
+	dc.FileService.AppendContents(dojoDCGeneratedFile, additionalContents, "debug")
+
 	cmd := dc.ConstructDockerComposeCommandRun(mergedConfig, runID)
 	if isChannelClosed(dc.Stopping) {
 		dc.Logger.Log("info", "Aborting containers start")
@@ -340,7 +337,7 @@ func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envSe
 	}
 
 	dc.Logger.Log("info", green(fmt.Sprintf("docker-compose run command will be:\n %v", cmd)))
-	go dc.watchContainers(mergedConfig, runID)
+	go dc.watchContainers(mergedConfig, runID, len(expContainers))
 	exitStatus, _ := dc.ShellService.RunInteractive(cmd, true)
 	dc.Logger.Log("debug", fmt.Sprintf("Exit status from run command: %v", exitStatus))
 	// Here:
@@ -400,16 +397,16 @@ func (dc DockerComposeDriver) stop(mergedConfig Config, runID string, defaultCon
 	return exitStatus
 }
 
-func (dc DockerComposeDriver) handleDCFilesForPull(mergedConfig Config) (string, error) {
+func (dc DockerComposeDriver) handleDCFiles(mergedConfig Config) (string, error) {
 	fileContents := dc.FileService.ReadDockerComposeFile(mergedConfig.DockerComposeFile)
 	version, err := dc.verifyDCFile(fileContents, mergedConfig.DockerComposeFile)
 	if err != nil {
 		dc.Logger.Log("error", fmt.Sprintf("Docker-compose file %s is not correct: %s", mergedConfig.DockerComposeFile, err.Error()))
 		return "", err
 	}
-	dojoDCFileContents := dc.generateDCFileContentsForPull(mergedConfig, version)
+	dojoDCFileContents := dc.generateInitialDCFile(mergedConfig, version)
 	dojoDCFileName := mergedConfig.DockerComposeFile + ".dojo"
-	dc.FileService.WriteToFile(dojoDCFileName, dojoDCFileContents, "info")
+	dc.FileService.WriteToFile(dojoDCFileName, dojoDCFileContents, "debug")
 	return dojoDCFileName, nil
 }
 
@@ -421,7 +418,7 @@ func (dc DockerComposeDriver) ConstructDockerComposeCommandPull(config Config, d
 }
 
 func (dc DockerComposeDriver) HandlePull(mergedConfig Config) int {
-	dojoDCGeneratedFile, err := dc.handleDCFilesForPull(mergedConfig)
+	dojoDCGeneratedFile, err := dc.handleDCFiles(mergedConfig)
 	if err != nil {
 		return 1
 	}

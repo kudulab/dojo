@@ -184,6 +184,7 @@ func Test_getFileConfig(t *testing.T) {
 	fmt.Fprintf(file, "DOJO_IDENTITY_OUTER=/tmp/outer\n")
 	fmt.Fprintf(file, "DOJO_BLACKLIST_VARIABLES=VAR1,VAR2,ABC\n")
 	fmt.Fprintf(file, "DOJO_LOG_LEVEL=info\n")
+	fmt.Fprintf(file, "DOJO_PRESERVE_ENV_TO_ALL_CONTAINERS=false\n")
 
 	logger := NewLogger("debug")
 	config := getFileConfig(logger, configFile)
@@ -192,6 +193,7 @@ func Test_getFileConfig(t *testing.T) {
 		DockerImage:        "docker-registry.example.com/dojo:1.3.2",
 		Driver:             "somedriver",
 		DockerOptions:      "-v /tmp/bla:/home/dojo/bla:ro -e ABC=123",
+		PreserveEnvironmentToAllContainers: "false",
 		DockerComposeFile:  "docker-compose.yml",
 		WorkDirOuter:       "/tmp/123",
 		IdentityDirOuter:   "/tmp/outer",
@@ -209,6 +211,7 @@ func Test_getFileConfig(t *testing.T) {
 	assert.Contains(t, config.WorkDirInner, "/inner")
 	assert.Equal(t, expectedConfig.IdentityDirOuter, config.IdentityDirOuter)
 	assert.Equal(t, expectedConfig.BlacklistVariables, config.BlacklistVariables)
+	assert.Equal(t, expectedConfig.PreserveEnvironmentToAllContainers, config.PreserveEnvironmentToAllContainers)
 	assert.Equal(t, expectedConfig.Debug, config.Debug)
 }
 func Test_getFileConfig_debug(t *testing.T) {
@@ -291,6 +294,7 @@ func Test_verifyConfig_driverShorthandDC(t *testing.T) {
 		RemoveContainers: "true",
 		DockerImage: "bla",
 		DockerComposeFile: dcFile,
+		PreserveEnvironmentToAllContainers: "true",
 		ExitBehavior: "ignore",
 	}
 	os.Create(dcFile)
@@ -318,6 +322,7 @@ func Test_mapToConfig(t *testing.T) {
 	mymap["dockerOptions"] = "-v sth:sth"
 	mymap["dockerComposeFile"] = "aaa"
 	mymap["dockerComposeOptions"] = "--some-option"
+	mymap["preserveEnvironmentToAllContainers"] = "false"
 	mymap["exitBehavior"] = "ignore"
 	mymap["test"] = "false"
 	config := MapToConfig(mymap)

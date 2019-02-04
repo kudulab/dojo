@@ -14,6 +14,7 @@ type FileServiceInterface interface {
 	ReadFile(filePath string) string
 	ReadDockerComposeFile(filePath string) string
 	WriteToFile(filePath string, contents string, logLevel string)
+	AppendContents(filePath string, contents string, logLevel string)
 	GetCurrentDir() string
 	RemoveGeneratedFile(removeContainers string, filePath string)
 	RemoveGeneratedFileIgnoreError(removeContainers string, filePath string, ignoreNoSuchFileError bool)
@@ -94,6 +95,11 @@ func (f FileService) WriteToFile(filePath string, contents string, logLevel stri
 		panic(err)
 	}
 	f.Logger.Log(logLevel, fmt.Sprintf("Written file %s, contents:\n %s", filePath, contents))
+}
+func  (f FileService) AppendContents(filePath string, contents string, logLevel string) {
+	oldContents := f.ReadFile(filePath)
+	contentsMerged := fmt.Sprintf("%s\n%s", oldContents, contents)
+	f.WriteToFile(filePath, contentsMerged, logLevel)
 }
 
 func (f FileService) GetCurrentDir() string {

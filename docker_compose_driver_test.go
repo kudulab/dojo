@@ -76,7 +76,7 @@ services:
 	}
 }
 
-func Test_generateDCFileContents(t *testing.T) {
+func Test_generateDCFileContentsWithEnv(t *testing.T){
 	type mytests struct {
 		displaySet bool
 	}
@@ -85,6 +85,7 @@ func Test_generateDCFileContents(t *testing.T) {
 		mytests{false},
 	}
 	logger := NewLogger("debug")
+	expectedServices := []string{"abc", "def", "default"}
 	dc := NewDockerComposeDriver(NewMockedShellServiceNotInteractive(logger), NewMockedFileService(logger), logger)
 	for _,v := range mytestsObj {
 		config := getTestConfig()
@@ -94,23 +95,40 @@ func Test_generateDCFileContents(t *testing.T) {
 		} else {
 			setTestEnv()
 		}
-		contents := dc.generateDCFileContentsForRun(config, 2.1, "/tmp/env-file.txt")
-		assert.Contains(t, contents, "version: '2.1'")
-		assert.Contains(t, contents, "  default:")
-		assert.Contains(t, contents, "    image: img:1.2.3")
-		assert.Contains(t, contents, "    volumes:")
-		assert.Contains(t, contents, "      - /tmp/myidentity:/dojo/identity:ro")
-		assert.Contains(t, contents, "      - /tmp/bla:/dojo/work")
-		assert.Contains(t, contents, "    env_file:")
-		assert.Contains(t, contents, "    volumes:")
-		assert.Contains(t, contents, "      - /tmp/env-file.txt")
+		contents := dc.generateDCFileContentsWithEnv(expectedServices, config, "/tmp/env-file.txt")
+
 		if v.displaySet {
-			assert.Contains(t, contents, "/tmp/.X11-unix")
+			assert.Equal(t,  `    volumes:
+      - /tmp/myidentity:/dojo/identity:ro
+      - /tmp/bla:/dojo/work
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    env_file:
+      - /tmp/env-file.txt
+  abc:
+    env_file:
+      - /tmp/env-file.txt
+  def:
+    env_file:
+      - /tmp/env-file.txt
+`, contents)
 		} else {
-			assert.NotContains(t, contents, "/tmp/.X11-unix")
+			assert.Equal(t,  `    volumes:
+      - /tmp/myidentity:/dojo/identity:ro
+      - /tmp/bla:/dojo/work
+    env_file:
+      - /tmp/env-file.txt
+  abc:
+    env_file:
+      - /tmp/env-file.txt
+  def:
+    env_file:
+      - /tmp/env-file.txt
+`, contents)
 		}
 	}
+
 }
+
 func Test_ConstructDockerComposeCommandRun_Interactive(t *testing.T){
 	type mytestStruct struct {
 		shellInteractive bool
@@ -432,15 +450,15 @@ efd
 	shellS := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
 	driver := NewDockerComposeDriver(shellS, fs, logger)
 
-	ids := driver.waitForContainersToBeRunning(getTestConfig(), "1234")
+	ids := driver.waitForContainersToBeRunning(getTestConfig(), "1234", 3)
 	assert.Equal(t, []string{"edudocker_abc_1", "edudocker_def_1", "edudocker_default_run_1"}, ids)
 }
 
-func Test_getExpectedContainersCount(t *testing.T) {
+func Test_getExpectedContainers(t *testing.T) {
 	type mytests struct {
 		fakeOutput string
 		fakeExitStatus int
-		expectedCount int
+		expectedNames []string
 		expectedError string
 	}
 	output1 := `abc
@@ -449,9 +467,9 @@ default
 	output2 := `abc
 default`
 	mytestsObj := []mytests {
-		mytests{output1,0, 2, ""},
-		mytests{output2, 0, 2, ""},
-		mytests{"", 1, 0, "Exit status: 1"},
+		mytests{output1,0, []string{"abc", "default"}, ""},
+		mytests{output2, 0, []string{"abc", "default"}, ""},
+		mytests{"", 1, []string{}, "Exit status: 1"},
 	}
 
 	logger := NewLogger("debug")
@@ -465,8 +483,8 @@ default`
 		driver := NewDockerComposeDriver(shellS, fs, logger)
 
 		if tt.expectedError == "" {
-			count := driver.getExpectedContainersCount(getTestConfig(), "1234")
-			assert.Equal(t, tt.expectedCount, count)
+			containers := driver.getExpectedContainers(getTestConfig(), "1234")
+			assert.Equal(t, tt.expectedNames, containers)
 		} else {
 			defer func() {
 				if r := recover(); r!= nil {
@@ -476,7 +494,7 @@ default`
 					t.Fatalf("Expected panic")
 				}
 			}()
-			driver.getExpectedContainersCount(getTestConfig(), "1234")
+			driver.getExpectedContainers(getTestConfig(), "1234")
 			t.Fatalf("Expected panic")
 		}
 	}
