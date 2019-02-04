@@ -1,3 +1,5 @@
+### 0.3.0 (2019-Feb-04)
+
 Change default behavior that preserved current environment (by the means of environment file) only to the default
 container (driver: docker-compose). Now, by default we preserve to all the containers. Still the old behavior can
 be set by:
