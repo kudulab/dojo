@@ -2,11 +2,10 @@
 set -Ee
 
 if [[ ! -f ./releaser ]];then
-  timeout 2 wget -O releaser http://http.archive.ai-traders.com/releaser/1.0.8/releaser || { echo "Cannot download releaser, ignoring"; rm -f ./releaser; }
+  timeout 2 wget -O releaser http://http.archive.ai-traders.com/releaser/1.1.0/releaser || { echo "Cannot download releaser, ignoring"; rm -f ./releaser; }
 fi
 if [[ -f ./releaser ]];then
   source ./releaser
-  releaser_init
 fi
 
 command="$1"
@@ -31,17 +30,17 @@ case "${command}" in
         if [[ -n "$2" ]]; then
             next_version="$2"
         else
-            last_version="$(get_last_version_from_whole_changelog ${changelog_file})"
-            next_version="$(bump_patch_version ${last_version})"
+            last_version="$(releaser::get_last_version_from_whole_changelog ${changelog_file})"
+            next_version="$(releaser::bump_patch_version ${last_version})"
         fi
-        set_version_in_changelog "${changelog_file}" "${next_version}"
+        releaser::set_version_in_changelog "${changelog_file}" "${next_version}"
         echo "package main
 const DojoVersion = \"${next_version}\"
 " > "./version.go"
-        releaser_log_info "Set version: ${next_version}"
+        releaser::log_info "Set version: ${next_version}"
         ;;
     verify_version)
-        version="$(get_last_version_from_whole_changelog ${changelog_file})"
+        version="$(releaser::get_last_version_from_whole_changelog ${changelog_file})"
         if git tag | grep "${version}"; then
             releaser_log_error "The version: ${version} was already git tagged"
             exit 1
@@ -55,10 +54,10 @@ const DojoVersion = \"${next_version}\"
             releaser_log_error "The file version.go does not contain: ${version}"
             exit 1
         fi
-        releaser_log_info "Version: ${version} verified successfully"
+        releaser::log_info "Version: ${version} verified successfully"
         ;;
     release)
-        version="$(get_last_version_from_whole_changelog ${changelog_file})"
+        version="$(releaser::get_last_version_from_whole_changelog ${changelog_file})"
         git tag "${version}"
         git push origin "${version}"
         ;;
