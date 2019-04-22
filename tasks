@@ -15,7 +15,14 @@ case "${command}" in
         ;;
     build)
         rm -rf bin/dojo
-        (set -x; CGO_ENABLED=0 go install ./; )
+        # disable the use of cgo with: CGO_ENABLED=0
+        (set -x; GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -o bin/dojo_darwin_amd64 ./; )
+        (set -x; GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bin/dojo_linux_amd64 ./; )
+        # to get a list supported golang platforms: go tool dist list
+
+        # this binary is used in e2e tests
+        rm -f bin/dojo
+        ln -s dojo_linux_amd64 ./bin/dojo
         ;;
     unit)
         (set -x; go test -v -race ./...; )

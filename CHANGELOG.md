@@ -1,3 +1,5 @@
+* cross compile on Linux and Darwin
+
 ### 0.3.1 (2019-Feb-04)
 
 * fix: while saving the environment variable: DISPLAY a new line was missing

@@ -17,6 +17,12 @@ pipelines:
               elastic_profile_id: w.c1.m1024.e5
               artifacts:
                 - build:
+                    source: bin/dojo_linux_amd64
+                    destination:
+                - build:
+                    source: bin/dojo_darwin_amd64
+                    destination:
+                - build:
                     source: bin/dojo
                     destination:
               tasks:
@@ -38,6 +44,18 @@ pipelines:
             e2e:
               elastic_profile_id: w.c1.m1024.e5
               tasks:
+                - fetch:
+                    stage: build_unit
+                    job: build_unit
+                    is_file: yes
+                    source: dojo_linux_amd64
+                    destination: bin
+                - fetch:
+                    stage: build_unit
+                    job: build_unit
+                    is_file: yes
+                    source: dojo_darwin_amd64
+                    destination: bin
                 - fetch:
                     stage: build_unit
                     job: build_unit
@@ -65,6 +83,18 @@ pipelines:
             test_images:
               elastic_profile_id: w.c1.m1024.e5
               tasks:
+                - fetch:
+                    stage: build_unit
+                    job: build_unit
+                    is_file: yes
+                    source: dojo_linux_amd64
+                    destination: bin
+                - fetch:
+                    stage: build_unit
+                    job: build_unit
+                    is_file: yes
+                    source: dojo_darwin_amd64
+                    destination: bin
                 - fetch:
                     stage: build_unit
                     job: build_unit
@@ -111,6 +141,18 @@ pipelines:
                     arguments:
                       - -c
                       - ./tasks release
+                - fetch:
+                    stage: build_unit
+                    job: build_unit
+                    is_file: yes
+                    source: dojo_linux_amd64
+                    destination: bin
+                - fetch:
+                    stage: build_unit
+                    job: build_unit
+                    is_file: yes
+                    source: dojo_darwin_amd64
+                    destination: bin
                 - fetch:
                     stage: build_unit
                     job: build_unit
