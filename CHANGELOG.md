@@ -1,3 +1,5 @@
+### 0.3.2 (2019-Apr-22)
+
 * cross compile on Linux and Darwin
 * add Darwin support for verification if shell is interactive, thanks to [#2](https://github.com/ai-traders/dojo/pull/2), [@Eiffel-Alpine](https://github.com/Eiffel-Alpine)
 * from now on release two binaries: one for Linux amd64 and one for Darwin amd64
