@@ -14,6 +14,6 @@
     "releaseNotes": "./tasks generate_release_notes ${version}",
     "preRelease": true,
     "tokenRef": "GITHUB_TOKEN",
-    "assets": ["bin/dojo"]
+    "assets": ["bin/dojo_linux_amd64", "bin/dojo_darwin_amd64"]
   }
 }
