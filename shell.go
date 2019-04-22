@@ -93,10 +93,9 @@ func (bs BashShellService) RunGetOutput(cmdString string, separatePGroup bool) (
 func (bs BashShellService) CheckIfInteractive() bool {
 	// stolen from: https://github.com/mattn/go-isatty/blob/master/isatty_linux.go
 	fd := os.Stdout.Fd()
-	const ioctlReadTermios = syscall.TCGETS
 
 	var termios syscall.Termios
-	_, _, err := syscall.Syscall6(syscall.SYS_IOCTL, fd, ioctlReadTermios, uintptr(unsafe.Pointer(&termios)), 0, 0, 0)
+	_, _, err := syscall.Syscall6(syscall.SYS_IOCTL, fd, uintptr(ioctlReadTermios), uintptr(unsafe.Pointer(&termios)), 0, 0, 0)
 	interactive := (err == 0)
 	bs.Logger.Log("debug", fmt.Sprintf("Current shell is interactive: %v", interactive))
 	return interactive

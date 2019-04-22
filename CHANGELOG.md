@@ -1,4 +1,5 @@
 * cross compile on Linux and Darwin
+* add Darwin support for verification if shell is interactive, thanks to [#2](https://github.com/ai-traders/dojo/pull/2), [@Eiffel-Alpine](https://github.com/Eiffel-Alpine)
 
 ### 0.3.1 (2019-Feb-04)
 
