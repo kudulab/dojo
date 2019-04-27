@@ -1,5 +1,8 @@
-### 0.3.3 (2019-Apr-27)
+### 0.4.0 (2019-Apr-27)
 
+* added e2e tests on alpine and ubuntu18, executed in `inception-dojo` image
+* ported tests to pytest, dropped bats which does not work on alpine
+* export `DOJO_WORK_*` variables for all started processes \#17391
 * added script to image_scripts which always setups `/run/user/<ID>`
 
 ### 0.3.2 (2019-Apr-22)
