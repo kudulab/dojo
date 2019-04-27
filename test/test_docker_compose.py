@@ -128,3 +128,24 @@ def test_docker_compose_pull():
     assert "Exit status from pull command: 0" in result.stderr
     assert_no_warnings_or_errors(result.stderr)
     assert_no_warnings_or_errors(result.stdout)
+
+def test_docker_compose_dojo_work_variables():
+    cleanUpDCContainers()
+    cleanUpDCNetwork()
+    cleanUpDCDojoFile()
+    os.makedirs(os.path.join(project_root, 'test/test-files/custom-dir-env-var'), exist_ok=True)
+    with open(os.path.join(project_root, 'test/test-files/custom-dir-env-var/file1.txt'), 'w') as f:
+        f.write('123')
+    result = run_dojo(['--driver=docker-compose', '--dcf=./test/test-files/itest-dc-env-var.yaml',
+                       '--debug=true', '--test=true', '--image=alpine:3.8', '--', 'sh',
+                       '-c', "cat /dojo/work/custom-dir/file1.txt"])
+    assert "Dojo version" in result.stderr
+    assert not "DOJO_WORK_OUTER variable is not set" in result.stderr
+    assert not "DOJO_WORK_INNER variable is not set" in result.stderr
+    assert '123' in result.stdout
+    assert_no_warnings_or_errors(result.stderr)
+    assert_no_warnings_or_errors(result.stdout)
+    assert result.returncode == 0
+    testDCDojoFileIsRemoved()
+    testDCContainersAreRemoved()
+    testDCNetworkIsRemoved()

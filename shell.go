@@ -19,16 +19,33 @@ type ShellServiceInterface interface {
 	// process the signaled return value.
 	RunGetOutput(cmdString string, separatePGroup bool) (string, string, int, bool)
 	CheckIfInteractive() bool
+	// set environment variables
+	SetEnvironment(currentVariables []string, additionalVariables []string)
 }
 
-func NewBashShellService(logger *Logger) BashShellService {
-	return BashShellService{
+func NewBashShellService(logger *Logger) *BashShellService {
+	return &BashShellService{
 		Logger: logger,
+		Environment: make([]string, 0),
 	}
 }
 
 type BashShellService struct {
 	Logger *Logger
+	// collection of environment variables,
+	// which are supposed to be preserved when running
+	// a command with this struct
+	Environment []string
+}
+
+func (bs *BashShellService) SetEnvironment(currentVariables []string, additionalVariables []string) {
+	bs.Environment = make([]string, 0)
+	for _, value := range currentVariables {
+		bs.Environment = append(bs.Environment, value)
+	}
+	for _, value := range additionalVariables {
+		bs.Environment = append(bs.Environment, value)
+	}
 }
 
 func (bs BashShellService) RunInteractive(cmdString string, separatePGroup bool) (int, bool) {
@@ -44,6 +61,7 @@ func (bs BashShellService) RunInteractive(cmdString string, separatePGroup bool)
 	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
+	cmd.Env = bs.Environment
 
 	err := cmd.Run()
 
@@ -74,6 +92,7 @@ func (bs BashShellService) RunGetOutput(cmdString string, separatePGroup bool) (
 	var stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
+	cmd.Env = bs.Environment
 
 	err := cmd.Run()
 
