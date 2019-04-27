@@ -72,16 +72,16 @@ const DojoVersion = \"${next_version}\"
     verify_version)
         version="$(releaser::get_last_version_from_whole_changelog ${changelog_file})"
         if git tag | grep "${version}"; then
-            releaser_log_error "The version: ${version} was already git tagged"
+            releaser::log_error "The version: ${version} was already git tagged"
             exit 1
         fi
         changelog_first_line=$(cat ${changelog_file} | head -1)
         if [[ "${changelog_first_line}" == "#"*"Unreleased"* ]] || [[ "${changelog_first_line}" == "#"*"unreleased"* ]] || [[ "${changelog_first_line}" == "#"*"UNRELEASED"* ]];then
-            releaser_log_error "Top of changelog has 'Unreleased' flag"
+            releaser::log_error "Top of changelog has 'Unreleased' flag"
             exit 1
         fi
         if ! grep "${version}" ./version.go >/dev/null; then
-            releaser_log_error "The file version.go does not contain: ${version}"
+            releaser::log_error "The file version.go does not contain: ${version}"
             exit 1
         fi
         releaser::log_info "Version: ${version} verified successfully"
