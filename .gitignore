@@ -4,3 +4,4 @@ vendor/*
 *.dojo
 */Dojofile.to_be_tested*
 releaser
+test/test-files/custom-dir-env-var

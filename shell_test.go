@@ -12,10 +12,16 @@ type MockedShellServiceNotInteractive struct {
 	ShellBinary string
 	Logger *Logger
 	CommandsReactions map[string]interface{}
+	Environment []string
 }
-func NewMockedShellServiceNotInteractive(logger *Logger) MockedShellServiceNotInteractive {
-	return MockedShellServiceNotInteractive{
+func NewMockedShellServiceNotInteractive(logger *Logger) *MockedShellServiceNotInteractive {
+	return &MockedShellServiceNotInteractive{
 		Logger: logger,
+	}
+}
+func (bs MockedShellServiceNotInteractive) SetEnvironment(currentVariables []string, additionalVariables []string) {
+	for _, value := range additionalVariables {
+		bs.Environment = append(currentVariables, value)
 	}
 }
 func NewMockedShellServiceNotInteractive2(logger *Logger, commandsReactions map[string]interface{}) MockedShellServiceNotInteractive {
@@ -53,9 +59,15 @@ func (bs MockedShellServiceNotInteractive) CheckIfInteractive() bool {
 type MockedShellServiceInteractive struct {
 	ShellBinary string
 	Logger *Logger
+	Environment []string
 }
-func NewMockedShellServiceInteractive(logger *Logger) MockedShellServiceInteractive {
-	return MockedShellServiceInteractive{
+func (bs MockedShellServiceInteractive) SetEnvironment(currentVariables []string, additionalVariables []string) {
+	for _, value := range additionalVariables {
+		bs.Environment = append(currentVariables, value)
+	}
+}
+func NewMockedShellServiceInteractive(logger *Logger) *MockedShellServiceInteractive {
+	return &MockedShellServiceInteractive{
 		Logger: logger,
 	}
 }
@@ -98,4 +110,13 @@ func TestBashShellService_RunGetOutput(t *testing.T) {
 	assert.Equal(t, "", sterr)
 	assert.Equal(t, 0, exitstatus)
 	assert.Equal(t, false, signaled)
+}
+func TestBashShellService_SetEnv(t *testing.T) {
+	logger := NewLogger("debug")
+	shell := NewBashShellService(logger)
+	currEnv := []string{"ABC=123", "DEF=444"}
+	additionalEnv := []string{"ZZZ=999", "YYY=666"}
+	shell.SetEnvironment(currEnv, additionalEnv)
+	assert.Equal(t, 4, len(shell.Environment))
+	assert.Equal(t, "ABC=123", shell.Environment[0])
 }

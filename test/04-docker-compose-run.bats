@@ -174,3 +174,29 @@ function testDCNetworkIsRemoved() {
   testDCContainersAreRemoved
   testDCNetworkIsRemoved
 }
+@test "driver: docker-compose, action: run, can use env var: DOJO_WORK on host" {
+  cleanUpDCContainers
+  cleanUpDCNetwork
+  cleanUpEnvFiles
+  cleanUpDCDojoFile
+  rm -rf test/test-files/custom-dir-env-var
+  mkdir -p test/test-files/custom-dir-env-var
+  echo "123" > test/test-files/custom-dir-env-var/file1.txt
+  run ${DOJO_PATH} --driver=docker-compose --dcf=./test/test-files/itest-dc-env-var.yaml --debug=true --test=true --image=alpine:3.8 -- sh -c "cat /dojo/work/custom-dir/file1.txt"
+  [[ "$output" =~ "Dojo version" ]]
+  [[ "$output" =~ "root" ]]
+  [[ "$output" =~ "whoami" ]]
+  [[ "$output" =~ "Exit status from run command: 0" ]]
+  [[ ! "$output" =~ "WARN" ]]
+  [[ ! "$output" =~ "warn" ]]
+  [[ ! "$output" =~ "ERROR" ]]
+  [[ ! "$output" =~ "error" ]]
+  [[ ! "$output" =~ "DOJO_WORK_OUTER variable is not set" ]]
+  [[ ! "$output" =~ "DOJO_WORK_INNER variable is not set" ]]
+  [ "$status" -eq 0 ]
+  rm -rf test/test-files/custom-dir-env-var
+  testEnvFileIsRemoved
+  testDCDojoFileIsRemoved
+  testDCContainersAreRemoved
+  testDCNetworkIsRemoved
+}

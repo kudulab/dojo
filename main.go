@@ -80,6 +80,12 @@ func main() {
 		driver = NewDockerComposeDriver(shellService, fileService, logger)
 	}
 
+	envService := EnvService{}
+	newVariables := []string{
+		fmt.Sprintf("DOJO_WORK_INNER=%s", mergedConfig.WorkDirInner),
+		fmt.Sprintf("DOJO_WORK_OUTER=%s", mergedConfig.WorkDirOuter)}
+	shellService.SetEnvironment(envService.Variables(), newVariables)
+
 	if mergedConfig.Action == "pull" {
 		exitstatus := driver.HandlePull(mergedConfig)
 		os.Exit(exitstatus)
@@ -96,7 +102,6 @@ func main() {
 
 	// main work goroutine
 	go func(){
-		envService := EnvService{}
 		// run and stop the containers
 		exitstatus := driver.HandleRun(mergedConfig, runID, envService)
 		doneChannel <- exitstatus
