@@ -1,3 +1,4 @@
+format_version: 3
 pipelines:
   dojo:
     group: dojo
@@ -38,10 +39,10 @@ pipelines:
                     command: ide
                     arguments:
                       - ./tasks unit
-      - test:
+      - e2e:
           clean_workspace: true
           jobs:
-            e2e:
+            alpine:
               elastic_profile_id: w.c1.m1024.e5
               tasks:
                 - fetch:
@@ -50,33 +51,45 @@ pipelines:
                     is_file: yes
                     source: dojo_linux_amd64
                     destination: bin
+                - exec:
+                    command: bash
+                    arguments:
+                    - -c
+                    - ./tasks symlink linux
+                - exec:
+                    command: bash
+                    arguments:
+                    - -c
+                    - ./tasks e2e alpine
+                - exec:
+                    command: bash
+                    arguments:
+                    - -c
+                    - ./tasks test_signals alpine
+            ubuntu18:
+              elastic_profile_id: w.c1.m1024.e5
+              tasks:
                 - fetch:
                     stage: build_unit
                     job: build_unit
                     is_file: yes
-                    source: dojo_darwin_amd64
-                    destination: bin
-                - fetch:
-                    stage: build_unit
-                    job: build_unit
-                    is_file: yes
-                    source: dojo
+                    source: dojo_linux_amd64
                     destination: bin
                 - exec:
                     command: bash
                     arguments:
                     - -c
-                    - chmod +x bin/dojo
+                    - ./tasks symlink linux
                 - exec:
                     command: bash
                     arguments:
                     - -c
-                    - ./tasks e2e
+                    - ./tasks e2e ubuntu18
                 - exec:
                     command: bash
                     arguments:
                     - -c
-                    - ./tasks test_signals
+                    - ./tasks test_signals ubuntu18
       - test_images:
           clean_workspace: true
           jobs:
@@ -136,11 +149,6 @@ pipelines:
                     arguments:
                       - -c
                       - ./tasks verify_version
-                - exec:
-                    command: bash
-                    arguments:
-                      - -c
-                      - ./tasks release
                 - fetch:
                     stage: build_unit
                     job: build_unit
@@ -153,12 +161,11 @@ pipelines:
                     is_file: yes
                     source: dojo_darwin_amd64
                     destination: bin
-                - fetch:
-                    stage: build_unit
-                    job: build_unit
-                    is_file: yes
-                    source: dojo
-                    destination: bin
+                - exec:
+                    command: bash
+                    arguments:
+                      - -c
+                      - ./tasks release
                 - exec:
                     command: bash
                     arguments:
