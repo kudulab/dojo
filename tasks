@@ -8,10 +8,21 @@ if [[ -f ./releaser ]];then
   source ./releaser
 fi
 
+function check_flavor {
+  if [ -z "$1" ]; then
+    echo "Must specify flavor: alpine or ubuntu18"
+    exit 2
+  fi
+}
+
 command="$1"
 case "${command}" in
     deps)
         glide install
+        ;;
+    build_alpine)
+        cd test/alpine
+        docker build -t dojo-tester:alpine .
         ;;
     build)
         rm -rf bin/dojo
@@ -19,19 +30,29 @@ case "${command}" in
         (set -x; GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -o bin/dojo_darwin_amd64 ./; )
         (set -x; GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bin/dojo_linux_amd64 ./; )
         # to get a list supported golang platforms: go tool dist list
-
+        ;;
+    symlink)
+        if [[ -n "$2" ]]; then
+          os_suffix=$2
+        else
+          echo "Please provide OS prefix: linux or darwin"
+          exit 5;
+        fi
         # this binary is used in e2e tests
         rm -f bin/dojo
-        ln -s dojo_linux_amd64 ./bin/dojo
+        ln -s dojo_${os_suffix}_amd64 ./bin/dojo
+        chmod +x ./bin/dojo
         ;;
     unit)
         (set -x; go test -v -race ./...; )
         ;;
     e2e)
-        (set -x; bats ./test; )
+        check_flavor $2
+        dojo -c Dojofile.e2e-$2 "bats -t --pretty test"
         ;;
     test_signals)
-        (set -x; ./test/signal/signals-tests.sh; )
+        check_flavor $2
+        dojo -c Dojofile.e2e-$2 ./test/signal/signals-tests.sh
         ;;
     set_version)
         if [[ -n "$2" ]]; then

@@ -1,0 +1,2 @@
+DOJO_DOCKER_IMAGE="kudulab/bats-core-dojo:alpine-dind-0.2.0"
+DOJO_DOCKER_OPTIONS=--privileged

@@ -1,5 +1,3 @@
-load '/opt/bats-support/load.bash'
-load '/opt/bats-assert/load.bash'
 load 'common'
 
 # make absolute path out of relative
@@ -11,7 +9,7 @@ function cleanUpDCDojoFile() {
 
 function testDCDojoFileIsRemoved(){
   run test -f test/test-files/itest-dc.yaml.dojo
-  assert_equal "$status" 1
+  [ "$status" -eq 1 ]
 }
 
 function cleanUpDCContainers() {
@@ -23,8 +21,8 @@ function cleanUpDCContainers() {
 
 function testDCContainersAreRemoved() {
   run docker ps -a --filter "name=testdojorunid"
-  refute_output --partial "testdojorunid"
-  assert_equal "$status" 0
+  [[ ! "$output" =~ "testdojorunid" ]]
+  [ "$status" -eq 0 ]
 }
 
 function cleanUpDCNetwork() {
@@ -33,8 +31,8 @@ function cleanUpDCNetwork() {
 
 function testDCNetworkIsRemoved() {
   run docker network ls --filter "name=testdojorunid"
-  refute_output --partial "testdojorunid"
-  assert_equal "$status" 0
+  [[ ! "$output" =~ "testdojorunid" ]]
+  [ "$status" -eq 0 ]
 }
 
 @test "driver: docker-compose, action: run, exit status: 0" {
@@ -43,15 +41,15 @@ function testDCNetworkIsRemoved() {
   cleanUpEnvFiles
   cleanUpDCDojoFile
   run ${DOJO_PATH} --driver=docker-compose --dcf=./test/test-files/itest-dc.yaml --debug=true --test=true --image=alpine:3.8 whoami
-  assert_output --partial "Dojo version"
-  assert_output --partial "root"
-  assert_output --partial "whoami"
-  assert_output --partial "Exit status from run command: 0"
-  refute_output --partial "WARN"
-  refute_output --partial "warn"
-  refute_output --partial "ERROR"
-  refute_output --partial "error"
-  assert_equal "$status" 0
+  [[ "$output" =~ "Dojo version" ]]
+  [[ "$output" =~ "root" ]]
+  [[ "$output" =~ "whoami" ]]
+  [[ "$output" =~ "Exit status from run command: 0" ]]
+  [[ ! "$output" =~ "WARN" ]]
+  [[ ! "$output" =~ "warn" ]]
+  [[ ! "$output" =~ "ERROR" ]]
+  [[ ! "$output" =~ "error" ]]
+  [ "$status" -eq 0 ]
   testEnvFileIsRemoved
   testDCDojoFileIsRemoved
   testDCContainersAreRemoved
@@ -69,7 +67,7 @@ function testDCNetworkIsRemoved() {
   my_stdout=$(${DOJO_PATH} --driver=docker-compose --dcf=./test/test-files/itest-dc.yaml --debug=true --test=true --image=alpine:3.8 sh -c "printenv HOME" 2>stderr_file.txt)
   status=$?
   my_stderr=$(cat stderr_file.txt)
-  assert_equal "$status" 0
+  [ "$status" -eq 0 ]
   assert_equal "${my_stdout}" "/root"
   echo "${my_stderr}" | grep "Exit status from run command: 0"
   echo "${my_stderr}" | grep "Exit status from cleaning: 0"
@@ -88,14 +86,14 @@ function testDCNetworkIsRemoved() {
   cleanUpEnvFiles
   cleanUpDCDojoFile
   run ${DOJO_PATH} --driver=docker-compose --dcf=./test/test-files/itest-dc.yaml --debug=true --test=true --image=alpine:3.8 notexistentcommand
-  assert_output --partial "Dojo version"
-  assert_output --partial "Current shell is interactive: false"
+  [[ "$output" =~ "Dojo version" ]]
+  [[ "$output" =~ "Current shell is interactive: false" ]]
   # this is the error, if we don't use "init: true" in docker-compose file
-  # assert_output --partial "executable file not found"
-  assert_output --partial "exec notexistentcommand failed: No such file or directory"
-  assert_output --partial "Exit status from run command: 127"
-  refute_output --partial "WARN"
-  refute_output --partial "warn"
+  # [[ "$output" =~ "executable file not found"
+  [[ "$output" =~ "exec notexistentcommand failed: No such file or directory" ]]
+  [[ "$output" =~ "Exit status from run command: 127" ]]
+  [[ ! "$output" =~ "WARN" ]]
+  [[ ! "$output" =~ "warn" ]]
   assert_equal "$status" 127
   testEnvFileIsRemoved
   testDCDojoFileIsRemoved
@@ -109,12 +107,12 @@ function testDCNetworkIsRemoved() {
 #   cleanUpEnvFiles
 #   cleanUpDCDojoFile
 #   run ${DOJO_PATH} --driver=docker-compose --dcf=./test/test-files/itest-dc.yaml --debug=true --test=true -i=false --image=alpine:3.8
-#   assert_output --partial "Dojo version"
-#   refute_output --partial "WARN"
-#   refute_output --partial "warn"
-#   refute_output --partial "ERROR"
-#   refute_output --partial "error"
-#   assert_equal "$status" 0
+#   [[ "$output" =~ "Dojo version"
+#   [[ ! "$output" =~ "WARN"
+#   [[ ! "$output" =~ "warn"
+#   [[ ! "$output" =~ "ERROR"
+#   [[ ! "$output" =~ "error"
+#   [ "$status" -eq 0 ]
 #   testEnvFileIsRemoved
 #   testDCDojoFileIsRemoved
 #   testDCContainersAreRemoved
@@ -126,15 +124,15 @@ function testDCNetworkIsRemoved() {
   cleanUpEnvFiles
   cleanUpDCDojoFile
   run ${DOJO_PATH} --driver=docker-compose --dcf=./test/test-files/itest-dc.yaml --debug=true --test=true --image=alpine:3.8 -- whoami
-  assert_output --partial "Dojo version"
-  assert_output --partial "root"
-  assert_output --partial "whoami"
-  assert_output --partial "Exit status from run command: 0"
-  refute_output --partial "WARN"
-  refute_output --partial "warn"
-  refute_output --partial "ERROR"
-  refute_output --partial "error"
-  assert_equal "$status" 0
+  [[ "$output" =~ "Dojo version" ]]
+  [[ "$output" =~ "root" ]]
+  [[ "$output" =~ "whoami" ]]
+  [[ "$output" =~ "Exit status from run command: 0" ]]
+  [[ ! "$output" =~ "WARN" ]]
+  [[ ! "$output" =~ "warn" ]]
+  [[ ! "$output" =~ "ERROR" ]]
+  [[ ! "$output" =~ "error" ]]
+  [ "$status" -eq 0 ]
   testEnvFileIsRemoved
   testDCDojoFileIsRemoved
   testDCContainersAreRemoved
@@ -146,14 +144,14 @@ function testDCNetworkIsRemoved() {
   cleanUpEnvFiles
   cleanUpDCDojoFile
   run ${DOJO_PATH} --driver=docker-compose --dcf=./test/test-files/itest-dc.yaml --debug=true --test=true --image=alpine:3.8 sh -c "echo hello"
-  assert_output --partial "Dojo version"
-  assert_output --partial "sh -c \"echo hello\""
-  assert_output --partial "Exit status from run command: 0"
-  refute_output --partial "WARN"
-  refute_output --partial "warn"
-  refute_output --partial "ERROR"
-  refute_output --partial "error"
-  assert_equal "$status" 0
+  [[ "$output" =~ "Dojo version" ]]
+  [[ "$output" =~ "sh -c \"echo hello\"" ]]
+  [[ "$output" =~ "Exit status from run command: 0" ]]
+  [[ ! "$output" =~ "WARN" ]]
+  [[ ! "$output" =~ "warn" ]]
+  [[ ! "$output" =~ "ERROR" ]]
+  [[ ! "$output" =~ "error" ]]
+  [ "$status" -eq 0 ]
   testEnvFileIsRemoved
   testDCDojoFileIsRemoved
   testDCContainersAreRemoved
@@ -165,12 +163,12 @@ function testDCNetworkIsRemoved() {
   cleanUpEnvFiles
   cleanUpDCDojoFile
   run bash -c "export ABC=custom_value ; ${DOJO_PATH} --driver=docker-compose --dcf=./test/test-files/itest-dc.yaml --debug=true --test=true --image=alpine:3.8 sh -c 'env | grep ABC'"
-  assert_output --partial "Dojo version"
-  assert_output --partial "custom_value"
+  [[ "$output" =~ "Dojo version" ]]
+  [[ "$output" =~ "custom_value" ]]
   # set in docker-compose file
-  assert_output --partial "1234"
-  assert_output --partial "Exit status from run command: 0"
-  assert_equal "$status" 0
+  [[ "$output" =~ "1234" ]]
+  [[ "$output" =~ "Exit status from run command: 0" ]]
+  [ "$status" -eq 0 ]
   testEnvFileIsRemoved
   testDCDojoFileIsRemoved
   testDCContainersAreRemoved

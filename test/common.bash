@@ -5,7 +5,7 @@ function cleanUpEnvFiles() {
 
 function testEnvFileIsRemoved(){
   run bash -c "ls -la /tmp/ | grep 'test-dojo'"
-  assert_equal "$status" 1
+  [ "$status" -eq 1 ]
 }
 
 function cleanUpDockerContainer() {
@@ -15,6 +15,13 @@ function cleanUpDockerContainer() {
 
 function testDockerContainerIsRemoved(){
   run docker ps -a --filter "name=testdojorunid"
-  refute_output --partial "testdojorunid"
-  assert_equal "$status" 0
+  [[ ! "$output" =~ 'testdojorunid' ]]
+  [ "$status" -eq 0 ]
+}
+
+function assertNoErrorsOrWarnings {
+  [[ ! "$output" =~ 'WARN' ]]
+  [[ ! "$output" =~ 'warn' ]]
+  [[ ! "$output" =~ 'ERROR' ]]
+  [[ ! "$output" =~ 'error' ]]
 }
