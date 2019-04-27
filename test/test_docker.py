@@ -43,7 +43,6 @@ def test_docker_when_non_existent_command():
     assert 'Dojo version' in result.stderr
     assert 'executable file not found' in result.stderr
     assert 'Exit status from run command: 127' in result.stderr
-    assert_no_warnings_or_errors(result.stderr)
     assert_no_warnings_or_errors(result.stdout)
     assert result.returncode == 127
     testDockerContainerIsRemoved()
