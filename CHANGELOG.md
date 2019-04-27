@@ -1,3 +1,7 @@
+### 0.3.3 (2019-Apr-27)
+
+* added script to image_scripts which always setups `/run/user/<ID>`
+
 ### 0.3.2 (2019-Apr-22)
 
 * cross compile on Linux and Darwin
