@@ -46,6 +46,12 @@ case "${command}" in
     unit)
         (set -x; go test -v -race ./...; )
         ;;
+    e2e_py)
+        virtualenv venv
+        source venv/bin/activate
+        pip3 install -r requirements.txt
+        pytest test
+        ;;
     e2e)
         check_flavor $2
         dojo -c Dojofile.e2e-$2 "bats -t --pretty test"
