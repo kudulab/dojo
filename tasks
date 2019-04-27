@@ -20,10 +20,6 @@ case "${command}" in
     deps)
         glide install
         ;;
-    build_alpine)
-        cd test/alpine
-        docker build -t dojo-tester:alpine .
-        ;;
     build)
         rm -rf bin/dojo
         # disable the use of cgo with: CGO_ENABLED=0
