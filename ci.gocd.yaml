@@ -23,9 +23,6 @@ pipelines:
                 - build:
                     source: bin/dojo_darwin_amd64
                     destination:
-                - build:
-                    source: bin/dojo
-                    destination:
               tasks:
                 - exec:
                     command: ide
