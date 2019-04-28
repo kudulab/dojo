@@ -43,7 +43,7 @@ case "${command}" in
         (set -x; go test -v -race ./...; )
         ;;
     e2e_py)
-        virtualenv venv
+        python3 -m venv venv
         source venv/bin/activate
         pip3 install -r test/requirements.txt
         pytest test
