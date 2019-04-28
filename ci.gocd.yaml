@@ -90,7 +90,7 @@ pipelines:
       - test_images:
           clean_workspace: true
           jobs:
-            test_images:
+            linux:
               elastic_profile_id: w.c1.m1024.e5
               tasks:
                 - fetch:
@@ -99,23 +99,11 @@ pipelines:
                     is_file: yes
                     source: dojo_linux_amd64
                     destination: bin
-                - fetch:
-                    stage: build_unit
-                    job: build_unit
-                    is_file: yes
-                    source: dojo_darwin_amd64
-                    destination: bin
-                - fetch:
-                    stage: build_unit
-                    job: build_unit
-                    is_file: yes
-                    source: dojo
-                    destination: bin
                 - exec:
                     command: bash
                     arguments:
                     - -c
-                    - chmod +x bin/dojo
+                    - ./tasks symlink linux
                 - exec:
                     command: bash
                     arguments:
