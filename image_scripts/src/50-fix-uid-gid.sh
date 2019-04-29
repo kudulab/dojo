@@ -43,9 +43,16 @@ fi
 # but on Alpine, there is no --numeric-uid-gid option
 newuid=$(ls -n -d "${dojo_work}" | awk '{ print $3 }')
 newgid=$(ls -n -d "${dojo_work}" | awk '{ print $4 }')
+olduid=$(ls -n -d ${dojo_home} | awk '{ print $3 }')
+oldgid=$(ls -n -d ${dojo_home} | awk '{ print $4 }')
 
 ( set -x; usermod -u "${newuid}" "${owner_username}"; groupmod -g "${newgid}" "${owner_groupname}"; )
-( set -x; chown ${newuid}:${newgid} -R "${dojo_home}"; )
+
+if [[ "${olduid}" == "${newuid}" ]] && [[ "${oldgid}" == "${newgid}" ]]; then
+    echo "No need to chown ${dojo_home}"
+else
+    ( set -x; chown ${newuid}:${newgid} -R "${dojo_home}"; )
+fi
 
 # do not chown the "$dojo_work" directory, it already has proper uid and gid,
-# besides, when "$dojo_work" is very big, chown would take much time
+# besides, when "$dojo_work" is very big, chown would take long time
