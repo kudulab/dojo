@@ -1,3 +1,6 @@
+### 0.4.1 (2019-Apr-29)
+* do not run chown dojo home dir when uid/gid matches
+
 ### 0.4.0 (2019-Apr-27)
 
 * added e2e tests on alpine and ubuntu18, executed in `inception-dojo` image
