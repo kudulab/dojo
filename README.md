@@ -11,7 +11,7 @@ The Dojo project consists of:
 Docker and containerization has revolutionized application lifecycle by creating a common standard for server applications. Every server software can be released as a docker image.
 Dojo builds a similar standard for development environments, every environment should be versioned and released as a docker image.
 
-Why Dojo exists and what problems does it solve?
+Why Dojo exists and what problems it solves?
  * Dojo was created to **shorten setup time of development environment** to near-zero.
  * Dojo makes **executing builds in docker** much easier than bare `docker run` by taking care of many little details. (See [lower why](#Why-not-just-docker-run))
  * Dojo lets each project define its **development environment as code** and lock it in source control like a dependency. See [Dojofile](#dojofile)
@@ -19,12 +19,12 @@ Why Dojo exists and what problems does it solve?
 Problems solved by Dojo and surrounding practices:
 1. **Works on my machine** - with Dojo, each host (a developer's workstation or a CI agent) gets a **consistent, reproducible** environment delivered by a docker image.
 1. **Configuration management** - with Dojo, any development environment is built from a [Dockerfile](https://docs.docker.com/engine/reference/builder/), which is versioned and released as a docker image.  Therefore the provisioning of the environment is stated in several commands, providing both documentation and a setup script in the single source of truth.
-1. **Tools** on CI agents or developer's laptop over time may **mismatch with project's required setup** - With Dojo the **environment is pulled as docker image** just before the operation to be executed, therefore hosts don't need to be provisined repeatedly to keep up with changing projects.
+1. **Tools** on CI agents or developer's laptop over time may **mismatch with project's required setup** - With Dojo the **environment is pulled as docker image** just before the operation to be executed, therefore hosts don't need to be provisioned repeatedly to keep up with changing projects.
 
 ## Who is it for?
 
 1. **as-code practitioners** - If you like *as-code philosophy* (infrastructure-as-code, pipelines-as-code) then you'll like Dojo, which provides **development and operations environment as code**.
-1. Consultants, DevOps Engineers, **anyone jumping projects and languages often**. With Dojo, getting the *right environment* for a project takes as long as the `docker pull`.
+1. Consultants, DevOps Engineers, **anyone jumping between projects and languages often**. With Dojo, getting the *right environment* for a project takes as long as the `docker pull`.
 1. **Polyglot software houses**, especially where CI agents are shared by a variety of projects.
 1. If you are already running builds with docker, then Dojo will make your scripts shorter and your life easier.
 
@@ -93,7 +93,7 @@ Things to notice:
  * Home directory on host `/home/tomzo` was [mounted](https://docs.docker.com/storage/volumes/) as readonly to `/dojo/identity`
  * After `gradle test jar` has finished, the docker container has exited and was removed. This is because we provided a command to `dojo`.
 
-Every dojo image supports interactive mode. In above example, we can also run `dojo` at the root of the project to get dropped into an interactive shell.
+Every dojo image supports an interactive mode. In the above example, we can also run `dojo` at the root of the project to get dropped into an interactive shell.
 Then we can work in the container for longer time, very much like in a [vagrant VM](#vs-vagrant).
 Thanks to the mounted directory from the host, we can work on the project files using any other tools on our host, while container with java tools shares the same files.
 
@@ -105,7 +105,7 @@ This is a quickstart preview to give you a sense of how you would work with dojo
 
 You must be able to run a local docker daemon that can execute linux docker containers.
 In practice this means Dojo works on **Linux or Mac**.
-Tests are executed only on Linux.
+Dojo is continuously tested only on Linux..
 
 ### Dependencies
 * Bash
@@ -346,7 +346,7 @@ DOJO_DRIVER="docker"
 ```
 Defines which driver to use. Possible values are [docker](#docker-driver) or [docker-compose](#docker-compose-driver). Default is `docker`.
 
-*equivalent CLI option is: `-driver`*
+*equivalent CLI option is: `--driver`*
 
 ##### Image
 
@@ -355,7 +355,7 @@ DOJO_DOCKER_IMAGE="kudulab/dotnet-dojo:3.1.0"
 ```
 Defines which image to use. The value must be a valid docker image reference, same as you would specify in `docker pull`. There is no default, you must specify an image in Dojofile or in CLI arguments.
 
-*equivalent CLI option is: `-image`*
+*equivalent CLI option is: `--image`*
 
 ##### Docker options
 
@@ -364,7 +364,7 @@ DOJO_DOCKER_OPTIONS="-p 9090:80 --privileged"
 ```
 Defines additional arguments for the `docker run` command. Default is empty.
 
-*equivalent CLI option is: `-docker-options`*
+*equivalent CLI option is: `--docker-options`*
 
 ##### Outer working directory
 
@@ -376,7 +376,7 @@ The default is to mount current working directory.
 
 `Dojo` setups following mount `DOJO_WORK_OUTER:DOJO_WORK_INNER`.
 
-*equivalent CLI option is: `-work-dir-outer`*
+*equivalent CLI option is: `--work-dir-outer`*
 
 We do not recommend changing this.
 
@@ -389,7 +389,7 @@ Defines directory inside the docker container, which is mounted from the host. B
 
 `Dojo` setups following mount `DOJO_WORK_OUTER:DOJO_WORK_INNER`.
 
-*equivalent CLI option is: `-work-dir-inner`*
+*equivalent CLI option is: `--work-dir-inner`*
 
 We do not recommend changing this.
 
@@ -403,7 +403,7 @@ The default is to mount current user's home. See more about [identity directory]
 
 `Dojo` setups following mount `DOJO_IDENTITY_OUTER:/dojo/identity`.
 
-*equivalent CLI option is: `-identity-dir-outer`*
+*equivalent CLI option is: `--identity-dir-outer`*
 
 ##### Blacklist variables
 
@@ -413,13 +413,14 @@ DOJO_BLACKLIST_VARIABLES="HOME,USER,MY_PREFIX_*"
 By default dojo will pass environment variables from host to the container.
 `DOJO_BLACKLIST_VARIABLES` can be used to control which variables should not be mapped.
 It is a list of environment variables, split by commas, which should not be transfered from host to the docker container.
+A blacklisted variable name can end with an asterisk, e.g. `BASH*`, which means that all the variables with BASH prefix (like `BASH_123`, `BASHBLA`) will be blacklisted.
 
 The default value is:
 ```
 "BASH*,HOME,USERNAME,USER,LOGNAME,PATH,TERM,SHELL,MAIL,SUDO_*,WINDOWID,SSH_*,SESSION_*,GEM_HOME,GEM_PATH,GEM_ROOT,HOSTNAME,HOSTTYPE,IFS,PPID,PWD,OLDPWD,LC*"
 ```
 
-*equivalent CLI option is: `-blacklist`*
+*equivalent CLI option is: `--blacklist`*
 
 ##### Log level
 
@@ -427,7 +428,7 @@ The default value is:
 DOJO_LOG_LEVEL="info"
 ```
 
-*In CLI use --debug=true or --debug=false*
+*In CLI use `--debug=true` or `--debug=false`*
 
 
 ##### Docker-compose file
@@ -664,7 +665,7 @@ You may be using `docker run` or `docker-compose run` already for your builds. F
 There are several issues which are not solved out of the box by these tools, in fact all of them are reasons why dojo was created:
  * Not running builds as root
  * Interactive vs non-interactive shell problems. E.g. you could not run `docker run -ti` on a CI agent, but you can on interactive terminal.
- * *Selectively* passing environment variables from host the container.
+ * *Selectively* passing environment variables from host to the container.
  * Handling mismatch between UID/GID of the user on the host and UID/GID inside the container. Basically keeping artifacs and project files owned by the same user during the entire time.
  * In docker-compose dealing with containers crashed during the run
  * Capturing and handling signals.
@@ -679,7 +680,7 @@ A single project can use multiple dojo images, therefore multiple `Dojofiles` sh
 We recommend to name your dojofiles with a suffix suggesting the type of environment. E.g. `Dojofile-nodejs` and `Dojofile-python`.
 To point which `Dojofile` should be used, pass `-c` option to `dojo`:
 ```bash
-dojo -c Dojofile.nodejs npm install
+dojo -c Dojofile-nodejs npm install
 ```
 
 ## Comparison to other tools
@@ -705,9 +706,9 @@ Still vagrant is a great tool and irreplaceable if you must use a VM.
 ### vs. dependency managers
 
 A typical dependency manager allows you to commit references to all immediate and transitive dependencies in source control, files such as `Gemfile.lock`, `paket.lock`, `yarn.lock` etc. It is a good practice to do so, because project defines fully, in code, what libraries it depends on.
-If we extend this concept, then we soon realize that the project did not define how the host, where it should be built, should look like. Probably most common situation is that there is a README file listing several tools to install. It is also the least helpful situation.
+If we extend this concept, then we soon realize that the project did not define how the host, where it should be built, should look like. Probably, the most common situation is that there is a README file listing several tools to install. It does not provide a good developer experience.
 In any sensible organization, configuration management is used to provision the CI-agents and developer's workstation building the project. It is one level better than the README, but still the definition of the environment exists outside the project and there is no reference to it.
-The `Dojofile` is the *lock* file which allows to store this reference in source control. When you run `dojo <command>`, then we first fetch the environment, just like a dependency manager would fetch all dependencies of the project.
+The `Dojofile` is the *lock* file which allows to store this reference in source control. When you run `dojo <command>`, then the environment is fetched, just like a dependency manager would fetch all dependencies of the project.
 
 ## Development
 Run these commands in `ide` ([IDE](https://github.com/ai-traders/ide) is predecessor of Dojo):
