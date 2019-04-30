@@ -8,15 +8,33 @@ import (
 )
 
 type EnvServiceInterface interface {
-	Variables() []string
+	AddVariable(keyValue string)
 	IsCurrentUserRoot() bool
+	GetVariables() []string
 }
 
-type EnvService struct {}
-
-func (f EnvService) Variables() []string {
-	return os.Environ()
+type EnvService struct {
+	Variables []string
 }
+
+func (f EnvService) GetVariables() []string {
+	return f.Variables
+}
+
+func NewEnvService() *EnvService {
+	variables := make([]string, 0)
+	for _, value := range os.Environ() {
+		variables = append(variables, value)
+	}
+	return &EnvService{
+		Variables: variables,
+	}
+}
+
+func (f *EnvService) AddVariable(keyValue string){
+	f.Variables = append(f.Variables, keyValue)
+}
+
 func (f EnvService) IsCurrentUserRoot() bool {
 	currentUser, err := user.Current()
 	if err != nil {

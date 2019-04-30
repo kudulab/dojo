@@ -19,9 +19,10 @@ func NewMockedShellServiceNotInteractive(logger *Logger) *MockedShellServiceNotI
 		Logger: logger,
 	}
 }
-func (bs MockedShellServiceNotInteractive) SetEnvironment(currentVariables []string, additionalVariables []string) {
-	for _, value := range additionalVariables {
-		bs.Environment = append(currentVariables, value)
+func (bs MockedShellServiceNotInteractive) SetEnvironment(variables []string) {
+	bs.Environment = make([]string, 0)
+	for _, value := range variables {
+		bs.Environment = append(bs.Environment, value)
 	}
 }
 func NewMockedShellServiceNotInteractive2(logger *Logger, commandsReactions map[string]interface{}) MockedShellServiceNotInteractive {
@@ -61,9 +62,10 @@ type MockedShellServiceInteractive struct {
 	Logger *Logger
 	Environment []string
 }
-func (bs MockedShellServiceInteractive) SetEnvironment(currentVariables []string, additionalVariables []string) {
-	for _, value := range additionalVariables {
-		bs.Environment = append(currentVariables, value)
+func (bs MockedShellServiceInteractive) SetEnvironment(variables []string) {
+	bs.Environment = make([]string, 0)
+	for _, value := range variables {
+		bs.Environment = append(bs.Environment, value)
 	}
 }
 func NewMockedShellServiceInteractive(logger *Logger) *MockedShellServiceInteractive {
@@ -114,9 +116,7 @@ func TestBashShellService_RunGetOutput(t *testing.T) {
 func TestBashShellService_SetEnv(t *testing.T) {
 	logger := NewLogger("debug")
 	shell := NewBashShellService(logger)
-	currEnv := []string{"ABC=123", "DEF=444"}
-	additionalEnv := []string{"ZZZ=999", "YYY=666"}
-	shell.SetEnvironment(currEnv, additionalEnv)
+	shell.SetEnvironment([]string{"ABC=123", "DEF=444", "ZZZ=999", "YYY=666"})
 	assert.Equal(t, 4, len(shell.Environment))
 	assert.Equal(t, "ABC=123", shell.Environment[0])
 }

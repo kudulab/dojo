@@ -286,7 +286,7 @@ func TestDockerComposeDriver_HandleRun_Unit(t *testing.T) {
 	config.Driver = "docker-compose"
 	config.RunCommand = "bla"
 	runID := "1234"
-	exitstatus := driver.HandleRun(config, runID, MockedEnvService{})
+	exitstatus := driver.HandleRun(config, runID, NewMockedEnvService())
 	assert.Equal(t, 0, exitstatus)
 	assert.Equal(t, 2, len(fs.FilesWrittenTo))
 	assert.Equal(t, "ABC=123\n", fs.FilesWrittenTo["/tmp/dojo-environment-1234"])
@@ -322,7 +322,7 @@ func TestDockerComposeDriver_HandleRun_RealFileService(t *testing.T) {
 	config.WorkDirOuter = "/tmp"
 	config.RunCommand = "bla"
 	runID := "1234"
-	exitstatus := driver.HandleRun(config, runID, MockedEnvService{})
+	exitstatus := driver.HandleRun(config, runID, NewMockedEnvService())
 	assert.Equal(t, 0, exitstatus)
 	exitstatus = driver.CleanAfterRun(config, runID)
 	assert.Equal(t, 0, exitstatus)
@@ -358,7 +358,7 @@ func TestDockerComposeDriver_HandleRun_RealEnvService(t *testing.T) {
 	config.WorkDirOuter = "/tmp"
 	config.RunCommand = "bla"
 	runID := "1234"
-	exitstatus := driver.HandleRun(config, runID, EnvService{})
+	exitstatus := driver.HandleRun(config, runID, NewEnvService())
 	assert.Equal(t, 0, exitstatus)
 	exitstatus = driver.CleanAfterRun(config, runID)
 	assert.Equal(t, 0, exitstatus)

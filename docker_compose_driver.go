@@ -321,7 +321,7 @@ func safelyCloseChannel(ch chan bool) (justClosed bool) {
 func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envService EnvServiceInterface) int {
 	warnGeneral(dc.FileService, mergedConfig, envService, dc.Logger)
 	envFile := getEnvFilePath(runID, mergedConfig.Test)
-	saveEnvToFile(dc.FileService, envFile, mergedConfig.BlacklistVariables, envService.Variables())
+	saveEnvToFile(dc.FileService, envFile, mergedConfig.BlacklistVariables, envService.GetVariables())
 	dojoDCGeneratedFile, err := dc.handleDCFiles(mergedConfig)
 	if err != nil {
 		return 1

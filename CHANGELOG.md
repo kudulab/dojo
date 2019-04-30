@@ -1,4 +1,10 @@
+### 0.4.2 (2019-Apr-30)
+
+* use the same environment variables when running a `docker run` or `docker-compose run` command and
+when generating the envFile
+
 ### 0.4.1 (2019-Apr-29)
+
 * do not run chown dojo home dir when uid/gid matches
 
 ### 0.4.0 (2019-Apr-27)

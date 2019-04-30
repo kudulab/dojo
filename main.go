@@ -80,11 +80,11 @@ func main() {
 		driver = NewDockerComposeDriver(shellService, fileService, logger)
 	}
 
-	envService := EnvService{}
-	newVariables := []string{
-		fmt.Sprintf("DOJO_WORK_INNER=%s", mergedConfig.WorkDirInner),
-		fmt.Sprintf("DOJO_WORK_OUTER=%s", mergedConfig.WorkDirOuter)}
-	shellService.SetEnvironment(envService.Variables(), newVariables)
+	envService := NewEnvService()
+	envService.AddVariable(fmt.Sprintf("DOJO_WORK_INNER=%s", mergedConfig.WorkDirInner))
+	envService.AddVariable(fmt.Sprintf("DOJO_WORK_OUTER=%s", mergedConfig.WorkDirOuter))
+
+	shellService.SetEnvironment(envService.GetVariables())
 
 	if mergedConfig.Action == "pull" {
 		exitstatus := driver.HandlePull(mergedConfig)
