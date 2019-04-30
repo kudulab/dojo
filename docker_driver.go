@@ -68,7 +68,7 @@ func (d DockerDriver) ConstructDockerRunCmd(config Config, envFilePath string, c
 func (d DockerDriver) HandleRun(mergedConfig Config, runID string, envService EnvServiceInterface) int {
 	warnGeneral(d.FileService, mergedConfig, envService, d.Logger)
 	envFile := getEnvFilePath(runID, mergedConfig.Test)
-	saveEnvToFile(d.FileService, envFile, mergedConfig.BlacklistVariables, envService.Variables())
+	saveEnvToFile(d.FileService, envFile, mergedConfig.BlacklistVariables, envService.GetVariables())
 
 	cmd := d.ConstructDockerRunCmd(mergedConfig, envFile, runID)
 	d.Logger.Log("info", green(fmt.Sprintf("docker command will be:\n %v", cmd)))

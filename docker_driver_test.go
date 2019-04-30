@@ -105,7 +105,7 @@ func TestDockerDriver_HandleRun_Unit(t *testing.T) {
 	d := NewDockerDriver(NewMockedShellServiceNotInteractive(logger), fs, logger)
 	config := getTestConfig()
 	config.RunCommand = ""
-	es := d.HandleRun(config, "testrunid", MockedEnvService{})
+	es := d.HandleRun(config, "testrunid", NewMockedEnvService())
 	assert.Equal(t, 0, es)
 	assert.False(t, fileExists("/tmp/dojo-environment-testrunid"))
 	assert.Equal(t, 1, len(fs.FilesWrittenTo))
@@ -132,7 +132,7 @@ func TestDockerDriver_HandleRun_RealFileService(t *testing.T) {
 	config.WorkDirOuter = "/tmp"
 	config.RunCommand = ""
 	runID := "testrunid"
-	es := d.HandleRun(config, runID, EnvService{})
+	es := d.HandleRun(config, runID, NewEnvService())
 	assert.Equal(t, 0, es)
 	es = d.CleanAfterRun(config, runID)
 	assert.Equal(t, 0, es)
@@ -145,7 +145,7 @@ func TestDockerDriver_HandleRun_RealEnvService(t *testing.T) {
 	config := getTestConfig()
 	config.RunCommand = ""
 	runID := "testrunid"
-	es := d.HandleRun(config, runID, EnvService{})
+	es := d.HandleRun(config, runID, NewEnvService())
 	assert.Equal(t, 0, es)
 	es = d.CleanAfterRun(config, runID)
 	assert.Equal(t, 0, es)

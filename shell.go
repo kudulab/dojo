@@ -19,8 +19,8 @@ type ShellServiceInterface interface {
 	// process the signaled return value.
 	RunGetOutput(cmdString string, separatePGroup bool) (string, string, int, bool)
 	CheckIfInteractive() bool
-	// set environment variables
-	SetEnvironment(currentVariables []string, additionalVariables []string)
+	// set environment variables, override any existing variables
+	SetEnvironment(variables []string)
 }
 
 func NewBashShellService(logger *Logger) *BashShellService {
@@ -38,12 +38,9 @@ type BashShellService struct {
 	Environment []string
 }
 
-func (bs *BashShellService) SetEnvironment(currentVariables []string, additionalVariables []string) {
+func (bs *BashShellService) SetEnvironment(variables []string) {
 	bs.Environment = make([]string, 0)
-	for _, value := range currentVariables {
-		bs.Environment = append(bs.Environment, value)
-	}
-	for _, value := range additionalVariables {
+	for _, value := range variables {
 		bs.Environment = append(bs.Environment, value)
 	}
 }
