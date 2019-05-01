@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/stretchr/testify/assert"
+	"strings"
 	"testing"
 )
 
@@ -40,14 +41,15 @@ func Test_generateVariablesString(t *testing.T) {
 	// DOJO_VAR1 is not blacklisted, is set with DOJO_ prefix
 	// DISPLAY is always set to the same value
 	allVariables := []string{"USER=dojo", "BASH_123=123", "DOJO_USER=555", "MYVAR=999", "DOJO_VAR1=11", "USER1=1", "DISPLAY=aaa", "DOJO_USER1=2", "DOJO_WORK_INNER=/my/dir"}
-	genStr := generateVariablesString(blacklisted, allVariables)
+	filteredEnvVariables := filterBlacklistedVariables(blacklisted, allVariables)
+	genStr := strings.Join(filteredEnvVariables, "\n")
 	assert.Contains(t, genStr, "DOJO_USER=555\n")
 	assert.Contains(t, genStr, "DOJO_BASH_123=123\n")
 	assert.Contains(t, genStr, "MYVAR=999\n")
 	assert.Contains(t, genStr, "DOJO_VAR1=11\n")
 	assert.Contains(t, genStr, "DOJO_USER1=2\n")
 	assert.Contains(t, genStr, "DISPLAY=unix:0.0\n")
-	assert.Contains(t, genStr, "DOJO_WORK_INNER=/my/dir\n")
+	assert.Contains(t, genStr, "DOJO_WORK_INNER=/my/dir")
 	assert.NotContains(t, genStr, "DOJO_USER=dojo")
 	assert.NotContains(t, genStr, "USER1=1")
 	assert.NotContains(t, genStr, "DISPLAY=aaa")

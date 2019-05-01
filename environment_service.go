@@ -60,33 +60,34 @@ func saveEnvToFile(fileService FileServiceInterface, envFilePath string, blackli
 		panic("fileService was nil")
 	}
 	fileService.RemoveFile(envFilePath, true)
-	fileContents := generateVariablesString(blacklistedVars, currentVariables)
+	filteredEnvVariables := filterBlacklistedVariables(blacklistedVars, currentVariables)
+	fileContents := strings.Join(filteredEnvVariables, "\n")
 	fileService.WriteToFile(envFilePath, fileContents, "debug")
 }
 
 // allVariables is a []string, where each element is of format: VariableName=VariableValue
-func generateVariablesString(blacklistedVarsNames string, allVariables []string) string {
+func filterBlacklistedVariables(blacklistedVarsNames string, allVariables []string) []string {
 	blacklistedVarsArr := strings.Split(blacklistedVarsNames, ",")
-	generatedString := ""
+	envVariables := make([]string, 0)
 	for _,v := range allVariables {
 		arr := strings.SplitN(v,"=", 2)
 		key := arr[0]
 		value := arr[1]
 		if key == "DISPLAY" {
 			// this is highly opinionated
-			generatedString += "DISPLAY=unix:0.0\n"
+			envVariables = append(envVariables, "DISPLAY=unix:0.0")
 		} else if existsVariableWithDOJOPrefix(key, allVariables) {
 			// ignore this key, we will deal with DOJO_${key}
 			continue
 		} else if strings.HasPrefix(key, "DOJO_") {
-			generatedString += fmt.Sprintf("%s=%s\n", key, value)
+			envVariables = append(envVariables, fmt.Sprintf("%s=%s", key, value))
 		} else if isVariableBlacklisted(key, blacklistedVarsArr) {
-			generatedString += fmt.Sprintf("DOJO_%s=%s\n", key, value)
+			envVariables = append(envVariables, fmt.Sprintf("DOJO_%s=%s", key, value))
 		} else {
-			generatedString += fmt.Sprintf("%s=%s\n", key, value)
+			envVariables = append(envVariables, fmt.Sprintf("%s=%s", key, value))
 		}
 	}
-	return generatedString
+	return envVariables
 }
 
 func getEnvFilePath(runID string, test string) string {
