@@ -7,16 +7,16 @@
 ###########################################################################
 
 if [[ -z "${dojo_work}" ]]; then
-    echo "dojo_work not specified"
+    echo "dojo_work not specified" >&2
     exit 1;
 fi
 if [[ ! -d "${dojo_work}" ]]; then
-    echo "$dojo_work does not exist, expected to be mounted as docker volume"
+    echo "$dojo_work does not exist, expected to be mounted as docker volume" >&2
     exit 1;
 fi
 
 if [[ -z "${dojo_home}" ]]; then
-    echo "dojo_home not set"
+    echo "dojo_home not set" >&2
     exit 1;
 fi
 
@@ -25,17 +25,17 @@ if [[ -z "${owner_username}" ]]; then
     exit 1;
 fi
 if [[ -z "${owner_groupname}" ]]; then
-    echo "Groupname not specified"
+    echo "Groupname not specified" >&2
     exit 1;
 fi
 
 if ! getent passwd "${owner_username}" >/dev/null 2>&1; then
-    echo "User ${owner_username} does not exist"
+    echo "User ${owner_username} does not exist" >&2
     exit 1;
 fi
 
 if ! getent passwd "${owner_groupname}" >/dev/null 2>&1; then
-    echo "Group ${owner_groupname} does not exist"
+    echo "Group ${owner_groupname} does not exist" >&2
     exit 1;
 fi
 
@@ -46,11 +46,10 @@ newgid=$(ls -n -d "${dojo_work}" | awk '{ print $4 }')
 olduid=$(ls -n -d ${dojo_home} | awk '{ print $3 }')
 oldgid=$(ls -n -d ${dojo_home} | awk '{ print $4 }')
 
-( set -x; usermod -u "${newuid}" "${owner_username}"; groupmod -g "${newgid}" "${owner_groupname}"; )
-
 if [[ "${olduid}" == "${newuid}" ]] && [[ "${oldgid}" == "${newgid}" ]]; then
-    echo "No need to chown ${dojo_home}"
+    echo "olduid == newuid == ${newuid}, nothing to do" >&2
 else
+    ( set -x; usermod -u "${newuid}" "${owner_username}"; groupmod -g "${newgid}" "${owner_groupname}"; )
     ( set -x; chown ${newuid}:${newgid} -R "${dojo_home}"; )
 fi
 

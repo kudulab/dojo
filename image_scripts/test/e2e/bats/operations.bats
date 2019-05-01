@@ -29,6 +29,15 @@ DOJO_PATH="../bin/dojo"
   assert_line --partial "USER=dojo"
   assert_equal "$status" 0
 }
+@test "dojo user uid is the same as current dir owner's uid on host" {
+  host_user_id=$(stat -c %u .)
+  # use this instead of bats "run", so that we can verify the whole
+  # output that goes to stdoput (and ignore the stderr)
+  myoutput=$(/bin/bash -c "${DOJO_PATH} --config=Dojofile.to_be_tested \"id -u dojo\"")
+  exit_status=$?
+  [[ "${myoutput}" == "${host_user_id}" ]]
+  [[ "${exit_status}" == "0" ]]
+}
 @test "/run/user/<uid> is created" {
   host_user_id=$(stat -c %u .)
   # usually the directory will be" /run/user/1000

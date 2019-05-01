@@ -1,3 +1,3 @@
 #!/bin/bash
 
-echo "Running a script which user forgot to make executable"
+echo "Running a script which user forgot to make executable" >&2
