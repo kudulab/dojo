@@ -1,3 +1,5 @@
+### 0.4.3 (2019-May-01)
+
 * fix: added script to image_scripts which always setups `/run/user/<ID>`;
  add tests
 * image scripts: if olduid == newuid, do not run usermod or groupmod 
