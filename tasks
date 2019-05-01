@@ -46,7 +46,7 @@ case "${command}" in
         python3 -m venv venv
         source venv/bin/activate
         pip3 install -r test/requirements.txt
-        pytest test
+        pytest test --verbose
         ;;
     e2e)
         check_flavor $2
