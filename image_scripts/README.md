@@ -50,7 +50,7 @@ cd dojo_image_scripts
 ./tasks e2e
 ```
 
-Tests run by `./tasks test_configs` do not use the images's entrypoints directly, but instead they test
+Tests run by `./tasks test_scripts` do not use the images's entrypoints directly, but instead they test
  each script separately.
 
 Tests run by `./tasks e2e` use the images' entrypoints directly. They test end user cases. They verify that

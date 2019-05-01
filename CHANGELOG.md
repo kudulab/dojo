@@ -1,3 +1,6 @@
+* fix: added script to image_scripts which always setups `/run/user/<ID>`;
+ add tests
+
 ### 0.4.2 (2019-Apr-30)
 
 * use the same environment variables when running a `docker run` or `docker-compose run` command and

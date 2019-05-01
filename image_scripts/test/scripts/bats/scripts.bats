@@ -24,6 +24,12 @@ DOJO_PATH="../bin/dojo"
     echo "output: $output"
     assert_equal "$status" 0
 }
+@test "/etc/dojo.d/scripts/90-run-user.sh file exists and is executable" {
+    run /bin/bash -c "${DOJO_PATH} --config=Dojofile.to_be_tested_scripts -- -c \"test -x /etc/dojo.d/scripts/90-run-user.sh\""
+    # this is printed on test failure
+    echo "output: $output"
+    assert_equal "$status" 0
+}
 @test "/etc/dojo.d/scripts/29-not-executable-file.sh is NOT executable" {
     run /bin/bash -c "${DOJO_PATH} --config Dojofile.to_be_tested_scripts -- -c \"test -x /etc/dojo.d/scripts/29-not-executable-file.sh\""
     # this is printed on test failure

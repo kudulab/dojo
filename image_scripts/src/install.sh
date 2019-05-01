@@ -20,6 +20,7 @@ mkdir -p /etc/dojo.d/variables
 # 50 is because user may want to do things before and after home and work
 # directories ownership was fixed. Also user may wish to delete/replace this script.
 cp "${script_dir}/50-fix-uid-gid.sh" /etc/dojo.d/scripts/50-fix-uid-gid.sh
+cp "${script_dir}/90-run-user.sh" /etc/dojo.d/scripts/90-run-user.sh
 cp "${script_dir}/variables.sh" /etc/dojo.d/variables/50-variables.sh
 
 # Add dojo user and group

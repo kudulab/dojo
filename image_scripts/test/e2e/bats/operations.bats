@@ -29,3 +29,14 @@ DOJO_PATH="../bin/dojo"
   assert_line --partial "USER=dojo"
   assert_equal "$status" 0
 }
+@test "/run/user/<uid> is created" {
+  host_user_id=$(stat -c %u .)
+  # usually the directory will be" /run/user/1000
+  run /bin/bash -c "${DOJO_PATH} --config=Dojofile.to_be_tested \"stat -c %U /run/user/${host_user_id}\""
+  # this is printed on test failure
+  echo "output: $output"
+  assert_output --partial "dojo"
+  refute_output --partial "No such file or directory"
+  refute_output --partial "root"
+  assert_equal "$status" 0
+}
