@@ -61,33 +61,56 @@ func saveEnvToFile(fileService FileServiceInterface, envFilePath string, blackli
 	}
 	fileService.RemoveFile(envFilePath, true)
 	filteredEnvVariables := filterBlacklistedVariables(blacklistedVars, currentVariables)
-	fileContents := strings.Join(filteredEnvVariables, "\n")
-	fileService.WriteToFile(envFilePath, fileContents, "debug")
+	singleLineVariablesStr := singleLineVariablesToString(filteredEnvVariables)
+	fileService.WriteToFile(envFilePath, singleLineVariablesStr, "debug")
+}
+
+type EnvironmentVariable struct {
+	Key string
+	Value string
+	MultiLine bool
+}
+func (e EnvironmentVariable) String() string {
+	return fmt.Sprintf("%s=%s", e.Key, e.Value)
 }
 
 // allVariables is a []string, where each element is of format: VariableName=VariableValue
-func filterBlacklistedVariables(blacklistedVarsNames string, allVariables []string) []string {
+func filterBlacklistedVariables(blacklistedVarsNames string, allVariables []string) []EnvironmentVariable {
 	blacklistedVarsArr := strings.Split(blacklistedVarsNames, ",")
-	envVariables := make([]string, 0)
+	envVariables := make([]EnvironmentVariable, 0)
 	for _,v := range allVariables {
 		arr := strings.SplitN(v,"=", 2)
 		key := arr[0]
 		value := arr[1]
+		isMultiLine := (len(strings.Split(value, "\n")) > 1)
+		var envVar EnvironmentVariable
 		if key == "DISPLAY" {
 			// this is highly opinionated
-			envVariables = append(envVariables, "DISPLAY=unix:0.0")
+			envVar = EnvironmentVariable{"DISPLAY", "unix:0.0", isMultiLine}
 		} else if existsVariableWithDOJOPrefix(key, allVariables) {
 			// ignore this key, we will deal with DOJO_${key}
 			continue
 		} else if strings.HasPrefix(key, "DOJO_") {
-			envVariables = append(envVariables, fmt.Sprintf("%s=%s", key, value))
+			envVar = EnvironmentVariable{key, value, isMultiLine}
 		} else if isVariableBlacklisted(key, blacklistedVarsArr) {
-			envVariables = append(envVariables, fmt.Sprintf("DOJO_%s=%s", key, value))
+			envVar = EnvironmentVariable{fmt.Sprintf("DOJO_%s", key), value, isMultiLine}
 		} else {
-			envVariables = append(envVariables, fmt.Sprintf("%s=%s", key, value))
+			envVar = EnvironmentVariable{key, value, isMultiLine}
 		}
+		envVariables = append(envVariables, envVar)
 	}
 	return envVariables
+}
+
+func singleLineVariablesToString(variables []EnvironmentVariable) string {
+	singleLineVariablesStr := ""
+	for _, e := range variables {
+		if !e.MultiLine {
+			singleLineVariablesStr += e.String()
+			singleLineVariablesStr += "\n"
+		}
+	}
+	return singleLineVariablesStr
 }
 
 func getEnvFilePath(runID string, test string) string {
