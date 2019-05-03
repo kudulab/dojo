@@ -1,3 +1,5 @@
+### 0.5.0 (2019-May-03)
+
 * support multi-line environment variables [#4](https://github.com/ai-traders/dojo/issues/4).
  From now on, we will pass into --env-file only these environment variables, which value is a single line.
  The variables which values are multi-line, are now saved to another file on docker host and mounted onto
