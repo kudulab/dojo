@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"os/user"
@@ -55,14 +56,20 @@ func (f EnvService) IsCurrentUserRoot() bool {
 // Variables can be also blacklisted with asterisk, e.g. BASH*. This means that
 // any variable starting with BASH will be blacklisted (and prefixed).
 // Variables with DOJO_ prefix cannot be blacklisted.
-func saveEnvToFile(fileService FileServiceInterface, envFilePath string, blacklistedVars string, currentVariables []string)  {
+func saveEnvToFile(fileService FileServiceInterface, envFilePath string, envFilePathMultiLine string,
+		blacklistedVars string, currentVariables []string)  {
 	if fileService == nil {
 		panic("fileService was nil")
 	}
-	fileService.RemoveFile(envFilePath, true)
 	filteredEnvVariables := filterBlacklistedVariables(blacklistedVars, currentVariables)
+
+	fileService.RemoveFile(envFilePath, true)
 	singleLineVariablesStr := singleLineVariablesToString(filteredEnvVariables)
 	fileService.WriteToFile(envFilePath, singleLineVariablesStr, "debug")
+
+	fileService.RemoveFile(envFilePathMultiLine, true)
+	multiLineVariablesStr := multiLineVariablesToString(filteredEnvVariables)
+	fileService.WriteToFile(envFilePathMultiLine, multiLineVariablesStr, "debug")
 }
 
 type EnvironmentVariable struct {
@@ -72,6 +79,12 @@ type EnvironmentVariable struct {
 }
 func (e EnvironmentVariable) String() string {
 	return fmt.Sprintf("%s=%s", e.Key, e.Value)
+}
+
+func (e EnvironmentVariable) encryptValue() string {
+	data := []byte(e.Value)
+	str := base64.StdEncoding.EncodeToString(data)
+	return str
 }
 
 // allVariables is a []string, where each element is of format: VariableName=VariableValue
@@ -113,11 +126,26 @@ func singleLineVariablesToString(variables []EnvironmentVariable) string {
 	return singleLineVariablesStr
 }
 
-func getEnvFilePath(runID string, test string) string {
+// This function constructs such a string for each environment variable,
+// so that when it is saved to a file and sourced (from bash),
+// the variables values are decoded with base64.
+func multiLineVariablesToString(variables []EnvironmentVariable) string {
+	multiLineVariablesStr := ""
+	for _, e := range variables {
+		if e.MultiLine {
+			multiLineVariablesStr += fmt.Sprintf("export %s=$(echo %s | base64 -d)\n", e.Key, e.encryptValue())
+		}
+	}
+	return multiLineVariablesStr
+}
+
+func getEnvFilePaths(runID string, test string) (string,string) {
 	if test == "true" {
-		return fmt.Sprintf("/tmp/test-dojo-environment-%s", runID)
+		return fmt.Sprintf("/tmp/test-dojo-environment-%s", runID),
+			fmt.Sprintf("/tmp/test-dojo-environment-multiline-%s", runID)
 	} else {
-		return fmt.Sprintf("/tmp/dojo-environment-%s", runID)
+		return fmt.Sprintf("/tmp/dojo-environment-%s", runID),
+			fmt.Sprintf("/tmp/dojo-environment-multiline-%s", runID)
 	}
 }
 

@@ -121,6 +121,28 @@ def test_docker_compose_run_preserves_env_vars():
     testDCContainersAreRemoved()
     testDCNetworkIsRemoved()
 
+def test_docker_compose_run_preserves_multiline_env_vars():
+    cleanUpDCContainers()
+    cleanUpDCNetwork()
+    cleanUpDCDojoFile()
+    envs = dict(os.environ)
+    envs['ABC'] = """first line
+second line"""
+    result = run_dojo(['--driver=docker-compose', '--dcf=./test/test-files/itest-dc.yaml', '--debug=true', '--test=true',
+        '--image=alpine:3.8', 'sh', '-c', '"source /etc/dojo.d/variables/00-multiline-vars.sh && env | grep -A 1 ABC"'],
+        env=envs)
+    assert 'Dojo version' in result.stderr
+    assert '/etc/dojo.d/variables/00-multiline-vars.sh' in result.stderr
+    assert_no_warnings_or_errors(result.stderr)
+    assert_no_warnings_or_errors(result.stdout)
+    assert result.returncode == 0
+    assert 'Exit status from run command:' in result.stderr
+    assert """first line
+second line""" in result.stdout
+    testDCDojoFileIsRemoved()
+    testDCContainersAreRemoved()
+    testDCNetworkIsRemoved()
+
 def test_docker_compose_pull():
     result = run_dojo('--driver=docker-compose --dcf=./test/test-files/itest-dc.yaml --debug=true --action=pull --image=alpine:3.8'.split(' '))
     assert 'Dojo version' in result.stderr

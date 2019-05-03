@@ -74,6 +74,38 @@ two`, true},
 	assert.NotContains(t, genStr, "MULTI_LINE")
 }
 
+func Test_EnvVar_encryptValue(t *testing.T) {
+	e := EnvironmentVariable{"DOJO_USER", "555", false}
+	str := e.encryptValue()
+	assert.Equal(t, "NTU1", str)
+}
+
+func Test_EnvVarToString(t *testing.T) {
+	e := EnvironmentVariable{"DOJO_USER", "555", false}
+	str := e.String()
+	assert.Equal(t, "DOJO_USER=555", str)
+}
+
+func Test_multiLineVariablesToString(t *testing.T) {
+	allVariables := []EnvironmentVariable{
+		EnvironmentVariable{"DOJO_USER", "555", false},
+		EnvironmentVariable{"DOJO_WORK_INNER", "/my/dir", false},
+		EnvironmentVariable{"MULTI_LINE", `one
+two`, true},
+		EnvironmentVariable{"MYVAR", "999", false},
+		EnvironmentVariable{"MULTI_LINE2", `one
+two
+three`, true},
+	}
+	genStr := multiLineVariablesToString(allVariables)
+	assert.NotContains(t, genStr, "DOJO_USER")
+	assert.NotContains(t, genStr, "MYVAR")
+	assert.NotContains(t, genStr, "DOJO_WORK_INNER")
+	assert.Contains(t, genStr, "export MULTI_LINE=$(echo b25lCnR3bw== | base64 -d)\n")
+	assert.Contains(t, genStr, "export MULTI_LINE2=$(echo b25lCnR3bwp0aHJlZQ== | base64 -d)\n")
+}
+
+
 func Test_addVariable(t *testing.T) {
 	envService := NewEnvService()
 	envService.AddVariable("ABC=123")
@@ -95,6 +127,6 @@ func (f MockedEnvService) GetVariables() []string {
 func (f MockedEnvService) IsCurrentUserRoot() bool {
 	return false
 }
-func (f MockedEnvService) AddVariable(keyValue string){
+func (f *MockedEnvService) AddVariable(keyValue string){
 	f.Variables = append(f.Variables, keyValue)
 }

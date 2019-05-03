@@ -100,6 +100,23 @@ def test_docker_preserves_env_vars():
     assert_no_warnings_or_errors(result.stdout)
     assert result.returncode == 0
 
+def test_docker_preserves_multiline_env_vars():
+    cleanUpDockerContainer()
+    envs = dict(os.environ)
+    envs['ABC'] = """first line
+second line"""
+    result = run_dojo(
+        ['--debug=true', '--test=true', '--image=alpine:3.8', 'sh', '-c', '"source /etc/dojo.d/variables/00-multiline-vars.sh && env | grep -A 1 ABC"'],
+        env=envs)
+    assert 'Dojo version' in result.stderr
+    assert '/etc/dojo.d/variables/00-multiline-vars.sh' in result.stderr
+    assert_no_warnings_or_errors(result.stderr)
+    assert_no_warnings_or_errors(result.stdout)
+    assert result.returncode == 0
+    assert 'Exit status from run command:' in result.stderr
+    assert """first line
+second line""" in result.stdout
+
 def test_docker_when_custom_relative_directory():
     cleanUpDockerContainer()
     result = run_dojo(['-c', 'test/test-files/Dojofile', '--debug=true', '--test=true', '--image=alpine:3.8', 'whoami'])

@@ -20,18 +20,24 @@ func TestDockerDriver_ConstructDockerRunCmd_Interactive(t *testing.T){
 	}
 	mytests := []mytestStruct{
 		mytestStruct{ shellInteractive: true, userInteractiveConfig: "true",
-			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro --env-file=/tmp/some-env-file -ti --name=name1 img:1.2.3"},
+			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro " +
+			"-v /tmp/some-env-file-multiline:/etc/dojo.d/variables/00-multiline-vars.sh --env-file=/tmp/some-env-file -ti --name=name1 img:1.2.3"},
 		mytestStruct{ shellInteractive: true, userInteractiveConfig: "false",
-			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro --env-file=/tmp/some-env-file --name=name1 img:1.2.3"},
+			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro " +
+			"-v /tmp/some-env-file-multiline:/etc/dojo.d/variables/00-multiline-vars.sh --env-file=/tmp/some-env-file --name=name1 img:1.2.3"},
 		mytestStruct{ shellInteractive: true, userInteractiveConfig: "",
-			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro --env-file=/tmp/some-env-file -ti --name=name1 img:1.2.3"},
+			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro " +
+			"-v /tmp/some-env-file-multiline:/etc/dojo.d/variables/00-multiline-vars.sh --env-file=/tmp/some-env-file -ti --name=name1 img:1.2.3"},
 
 		mytestStruct{ shellInteractive: false, userInteractiveConfig: "true",
-			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro --env-file=/tmp/some-env-file -ti --name=name1 img:1.2.3"},
+			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro " +
+			"-v /tmp/some-env-file-multiline:/etc/dojo.d/variables/00-multiline-vars.sh --env-file=/tmp/some-env-file -ti --name=name1 img:1.2.3"},
 		mytestStruct{ shellInteractive: false, userInteractiveConfig: "false",
-			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro --env-file=/tmp/some-env-file --name=name1 img:1.2.3"},
+			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro " +
+			"-v /tmp/some-env-file-multiline:/etc/dojo.d/variables/00-multiline-vars.sh --env-file=/tmp/some-env-file --name=name1 img:1.2.3"},
 		mytestStruct{ shellInteractive: false, userInteractiveConfig: "",
-			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro --env-file=/tmp/some-env-file --name=name1 img:1.2.3"},
+			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro " +
+			"-v /tmp/some-env-file-multiline:/etc/dojo.d/variables/00-multiline-vars.sh --env-file=/tmp/some-env-file --name=name1 img:1.2.3"},
 	}
 	setTestEnv()
 	logger := NewLogger("debug")
@@ -45,10 +51,11 @@ func TestDockerDriver_ConstructDockerRunCmd_Interactive(t *testing.T){
 			ss = NewMockedShellServiceNotInteractive(logger)
 		}
 		d := NewDockerDriver(ss, NewMockedFileService(logger), logger)
-		cmd := d.ConstructDockerRunCmd(config, "/tmp/some-env-file", "name1")
+		cmd := d.ConstructDockerRunCmd(config, "/tmp/some-env-file", "/tmp/some-env-file-multiline", "name1")
 		assert.Equal(t, v.expOutput, cmd, fmt.Sprintf("shellInteractive: %v, userConfig: %v", v.shellInteractive, v.userInteractiveConfig))
 	}
 }
+
 func TestDockerDriver_ConstructDockerRunCmd_Command(t *testing.T){
 	type mytestStruct struct {
 		userCommandConfig string
@@ -56,11 +63,14 @@ func TestDockerDriver_ConstructDockerRunCmd_Command(t *testing.T){
 	}
 	mytests := []mytestStruct{
 		mytestStruct{ userCommandConfig: "",
-			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro --env-file=/tmp/some-env-file --name=name1 img:1.2.3"},
+			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro " +
+			"-v /tmp/some-env-file-multiline:/etc/dojo.d/variables/00-multiline-vars.sh --env-file=/tmp/some-env-file --name=name1 img:1.2.3"},
 		mytestStruct{ userCommandConfig: "bash",
-			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro --env-file=/tmp/some-env-file --name=name1 img:1.2.3 bash"},
+			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro " +
+			"-v /tmp/some-env-file-multiline:/etc/dojo.d/variables/00-multiline-vars.sh --env-file=/tmp/some-env-file --name=name1 img:1.2.3 bash"},
 		mytestStruct{ userCommandConfig: "bash -c \"echo hello\"",
-			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro --env-file=/tmp/some-env-file --name=name1 img:1.2.3 bash -c \"echo hello\""},
+			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro " +
+			"-v /tmp/some-env-file-multiline:/etc/dojo.d/variables/00-multiline-vars.sh --env-file=/tmp/some-env-file --name=name1 img:1.2.3 bash -c \"echo hello\""},
 	}
 	setTestEnv()
 	for _,v := range mytests {
@@ -68,7 +78,7 @@ func TestDockerDriver_ConstructDockerRunCmd_Command(t *testing.T){
 		config.RunCommand = v.userCommandConfig
 		logger := NewLogger("debug")
 		d := NewDockerDriver(NewMockedShellServiceNotInteractive(logger), NewMockedFileService(logger), logger)
-		cmd := d.ConstructDockerRunCmd(config, "/tmp/some-env-file", "name1")
+		cmd := d.ConstructDockerRunCmd(config, "/tmp/some-env-file", "/tmp/some-env-file-multiline","name1")
 		assert.Equal(t, v.expOutput, cmd, fmt.Sprintf("userCommandConfig: %v", v.userCommandConfig))
 	}
 }
@@ -80,9 +90,11 @@ func TestDockerDriver_ConstructDockerRunCmd_DisplayEnvVar(t *testing.T){
 	}
 	mytests := []mytestStruct{
 		mytestStruct{ displaySet: true,
-			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro --env-file=/tmp/some-env-file -v /tmp/.X11-unix:/tmp/.X11-unix --name=name1 img:1.2.3"},
+			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro " +
+			"-v /tmp/some-env-file-multiline:/etc/dojo.d/variables/00-multiline-vars.sh --env-file=/tmp/some-env-file -v /tmp/.X11-unix:/tmp/.X11-unix --name=name1 img:1.2.3"},
 		mytestStruct{ displaySet: false,
-			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro --env-file=/tmp/some-env-file --name=name1 img:1.2.3"},
+			expOutput: "docker run --rm -v /tmp/bla:/dojo/work -v /tmp/myidentity:/dojo/identity:ro " +
+			"-v /tmp/some-env-file-multiline:/etc/dojo.d/variables/00-multiline-vars.sh --env-file=/tmp/some-env-file --name=name1 img:1.2.3"},
 	}
 	setTestEnv()
 	for _,v := range mytests {
@@ -94,7 +106,7 @@ func TestDockerDriver_ConstructDockerRunCmd_DisplayEnvVar(t *testing.T){
 		}
 		logger := NewLogger("debug")
 		d := NewDockerDriver(NewMockedShellServiceNotInteractive(logger), NewMockedFileService(logger), logger)
-		cmd := d.ConstructDockerRunCmd(config, "/tmp/some-env-file", "name1")
+		cmd := d.ConstructDockerRunCmd(config, "/tmp/some-env-file", "/tmp/some-env-file-multiline", "name1")
 		assert.Equal(t, v.expOutput, cmd, fmt.Sprintf("displaySet: %v", v.displaySet))
 	}
 }
@@ -105,13 +117,20 @@ func TestDockerDriver_HandleRun_Unit(t *testing.T) {
 	d := NewDockerDriver(NewMockedShellServiceNotInteractive(logger), fs, logger)
 	config := getTestConfig()
 	config.RunCommand = ""
-	es := d.HandleRun(config, "testrunid", NewMockedEnvService())
+	envService := NewMockedEnvService()
+	envService.AddVariable(`MULTI_LINE=one
+two
+three`)
+	es := d.HandleRun(config, "testrunid", envService)
 	assert.Equal(t, 0, es)
 	assert.False(t, fileExists("/tmp/dojo-environment-testrunid"))
-	assert.Equal(t, 1, len(fs.FilesWrittenTo))
+	assert.False(t, fileExists("/tmp/dojo-environment-multiline-testrunid"))
+	assert.Equal(t, 2, len(fs.FilesWrittenTo))
 	assert.Equal(t, "ABC=123\n", fs.FilesWrittenTo["/tmp/dojo-environment-testrunid"])
-	assert.Equal(t, 1, len(fs.FilesRemovals))
+	assert.Equal(t, "export MULTI_LINE=$(echo b25lCnR3bwp0aHJlZQ== | base64 -d)\n", fs.FilesWrittenTo["/tmp/dojo-environment-multiline-testrunid"])
+	assert.Equal(t, 2, len(fs.FilesRemovals))
 	assert.Equal(t, "/tmp/dojo-environment-testrunid", fs.FilesRemovals[0])
+	assert.Equal(t, "/tmp/dojo-environment-multiline-testrunid", fs.FilesRemovals[1])
 }
 
 func fileExists(filePath string) bool {

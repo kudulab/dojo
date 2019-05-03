@@ -1,3 +1,14 @@
+* support multi-line environment variables [#4](https://github.com/ai-traders/dojo/issues/4).
+ From now on, we will pass into --env-file only these environment variables, which value is a single line.
+ The variables which values are multi-line, are now saved to another file on docker host and mounted onto
+ docker container(s) as /etc/dojo.d/variables/00-multiline-vars.sh. The entrypoint is expected to source
+ all files in /etc/dojo.d/variables.
+ In order to not deal with escaping quotes or special characters, the multi-line variables' values are
+ serialized with base64. Example of a multi-line variable serialized in 00-multiline-vars.sh:
+ ```
+ export ABC=$(echo MTExCjIyMiAzMzM= | base64 -d)
+ ```
+
 ### 0.4.3 (2019-May-01)
 
 * fix: added script to image_scripts which always setups `/run/user/<ID>`;

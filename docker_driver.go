@@ -29,7 +29,7 @@ func NewDockerDriver(shellService ShellServiceInterface, fs FileServiceInterface
 	}
 }
 
-func (d DockerDriver) ConstructDockerRunCmd(config Config, envFilePath string, containerName string) string {
+func (d DockerDriver) ConstructDockerRunCmd(config Config, envFilePath string, envFileMultiLine string, containerName string) string {
 	if envFilePath == "" {
 		panic("envFilePath was not set")
 	}
@@ -40,7 +40,8 @@ func (d DockerDriver) ConstructDockerRunCmd(config Config, envFilePath string, c
 	if config.RemoveContainers == "true" {
 		cmd += " --rm"
 	}
-	cmd += fmt.Sprintf(" -v %s:%s -v %s:/dojo/identity:ro", config.WorkDirOuter, config.WorkDirInner, config.IdentityDirOuter)
+	cmd += fmt.Sprintf(" -v %s:%s -v %s:/dojo/identity:ro -v %s:/etc/dojo.d/variables/00-multiline-vars.sh",
+			config.WorkDirOuter, config.WorkDirInner, config.IdentityDirOuter, envFileMultiLine)
 	cmd += fmt.Sprintf(" --env-file=%s", envFilePath)
 	if os.Getenv("DISPLAY") != "" {
 		// DISPLAY is set, enable running in graphical mode (opinionated)
@@ -67,10 +68,10 @@ func (d DockerDriver) ConstructDockerRunCmd(config Config, envFilePath string, c
 
 func (d DockerDriver) HandleRun(mergedConfig Config, runID string, envService EnvServiceInterface) int {
 	warnGeneral(d.FileService, mergedConfig, envService, d.Logger)
-	envFile := getEnvFilePath(runID, mergedConfig.Test)
-	saveEnvToFile(d.FileService, envFile, mergedConfig.BlacklistVariables, envService.GetVariables())
+	envFile, envFileMultiLine := getEnvFilePaths(runID, mergedConfig.Test)
+	saveEnvToFile(d.FileService, envFile, envFileMultiLine, mergedConfig.BlacklistVariables, envService.GetVariables())
 
-	cmd := d.ConstructDockerRunCmd(mergedConfig, envFile, runID)
+	cmd := d.ConstructDockerRunCmd(mergedConfig, envFile, envFileMultiLine, runID)
 	d.Logger.Log("info", green(fmt.Sprintf("docker command will be:\n %v", cmd)))
 
 	if mergedConfig.RemoveContainers != "true" {
@@ -148,8 +149,9 @@ func (d DockerDriver) HandleMultipleSignal(mergedConfig Config, runID string) in
 func (d DockerDriver) CleanAfterRun(mergedConfig Config, runID string) int {
 	if mergedConfig.RemoveContainers == "true" {
 		d.Logger.Log("debug", "Cleaning, because RemoveContainers is set to true")
-		envFile := getEnvFilePath(runID, mergedConfig.Test)
+		envFile, envFileMultiLine := getEnvFilePaths(runID, mergedConfig.Test)
 		d.FileService.RemoveGeneratedFile(mergedConfig.RemoveContainers, envFile)
+		d.FileService.RemoveGeneratedFile(mergedConfig.RemoveContainers, envFileMultiLine)
 
 		// no need to remove the container, if it was started with "docker run --rm", it was already removed
 
