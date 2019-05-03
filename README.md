@@ -117,9 +117,9 @@ There is only 1 binary file to install:
 ```
 version="0.4.0"
 # on Linux:
-wget -O=/tmp/dojo https://github.com/ai-traders/dojo/releases/download/${version}/dojo_linux_amd64
+wget -O /tmp/dojo https://github.com/ai-traders/dojo/releases/download/${version}/dojo_linux_amd64
 # or on Darwin:
-# wget -O=/tmp/dojo https://github.com/ai-traders/dojo/releases/download/${version}/dojo_darwin_amd64
+# wget -O /tmp/dojo https://github.com/ai-traders/dojo/releases/download/${version}/dojo_darwin_amd64
 chmod +x /tmp/dojo
 mv /tmp/dojo /usr/bin/dojo
 ```
