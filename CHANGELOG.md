@@ -1,3 +1,7 @@
+### 0.6.0 (2019-Sep-13)
+
+Added OSX support
+
 ### 0.5.0 (2019-May-03)
 
 * support multi-line environment variables [#4](https://github.com/ai-traders/dojo/issues/4).
@@ -15,7 +19,7 @@
 
 * fix: added script to image_scripts which always setups `/run/user/<ID>`;
  add tests
-* image scripts: if olduid == newuid, do not run usermod or groupmod 
+* image scripts: if olduid == newuid, do not run usermod or groupmod
 
 ### 0.4.2 (2019-Apr-30)
 
