@@ -91,7 +91,7 @@ const DojoVersion = \"${next_version}\"
     release)
         version="$(releaser::get_last_version_from_whole_changelog ${changelog_file})"
         git tag "${version}"
-        git push kudulab "${version}"
+        git push origin "${version}"
         ;;
     release_gh)
         if [ ! -f bin/dojo_linux_amd64 ]; then echo "dojo_linux_amd64 binary does not exist"; exit 1; fi
