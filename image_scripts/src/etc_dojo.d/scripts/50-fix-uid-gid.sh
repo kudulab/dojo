@@ -41,8 +41,8 @@ fi
 
 # use -n option which is the same as --numeric-uid-gid on Debian/Ubuntu,
 # but on Alpine, there is no --numeric-uid-gid option
-newuid=$(ls -n -d "${dojo_work}" | awk '{ print $3 }')
-newgid=$(ls -n -d "${dojo_work}" | awk '{ print $4 }')
+newuid=$(sudo -u "${owner_username}" ls -n -d "${dojo_work}" | awk '{ print $3 }')
+newgid=$(sudo -u "${owner_username}" ls -n -d "${dojo_work}" | awk '{ print $4 }')
 olduid=$(ls -n -d ${dojo_home} | awk '{ print $3 }')
 oldgid=$(ls -n -d ${dojo_home} | awk '{ print $4 }')
 

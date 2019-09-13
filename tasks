@@ -1,12 +1,14 @@
 #!/bin/bash
 set -Ee
 
-if [[ ! -f ./releaser ]];then
-  timeout 2 wget -O releaser http://http.archive.ai-traders.com/releaser/1.1.0/releaser || { echo "Cannot download releaser, ignoring"; rm -f ./releaser; }
+RELEASER_VERSION="2.1.0"
+RELEASER_FILE="ops/releaser-${RELEASER_VERSION}"
+
+mkdir -p ops
+if [[ ! -f $RELEASER_FILE ]];then
+  wget --quiet -O $RELEASER_FILE https://github.com/kudulab/releaser/releases/download/${RELEASER_VERSION}/releaser
 fi
-if [[ -f ./releaser ]];then
-  source ./releaser
-fi
+source $RELEASER_FILE
 
 function check_flavor {
   if [ -z "$1" ]; then
@@ -89,17 +91,36 @@ const DojoVersion = \"${next_version}\"
     release)
         version="$(releaser::get_last_version_from_whole_changelog ${changelog_file})"
         git tag "${version}"
-        git push origin "${version}"
+        git push kudulab "${version}"
         ;;
     release_gh)
         if [ ! -f bin/dojo_linux_amd64 ]; then echo "dojo_linux_amd64 binary does not exist"; exit 1; fi
         if [ ! -f bin/dojo_darwin_amd64 ]; then echo "dojo_darwin_amd64 binary does not exist"; exit 1; fi
         if [ -z "$GITHUB_TOKEN" ]; then echo "GITHUB_TOKEN is unset"; exit 1; fi
-        version="$(get_last_version_from_whole_changelog ${changelog_file})"
-        git remote add upstream git@github.com:ai-traders/dojo.git
-        git pull upstream master
-        git push --tags upstream master
-        ide --idefile Idefile.nodejs "sudo npm install --global release-it && release-it --verbose --increment=${version} --non-interactive"
+        releaser::prepare_github_release_bin
+        VERSION="$(releaser::get_last_version_from_whole_changelog ${changelog_file})"
+        GH_USER=kudulab
+
+        $GHRELEASE_BIN release \
+          --user $GH_USER \
+          --repo dojo \
+          --tag $VERSION \
+          --name $VERSION \
+          --pre-release
+
+        $GHRELEASE_BIN upload \
+          --user $GH_USER \
+          --repo dojo \
+          --tag $VERSION \
+          --name "dojo_linux_amd64" \
+          --file bin/dojo_linux_amd64
+
+        $GHRELEASE_BIN upload \
+          --user $GH_USER \
+          --repo dojo \
+          --tag $VERSION \
+          --name "dojo_darwin_amd64" \
+          --file bin/dojo_darwin_amd64
         ;;
     generate_release_notes)
         version=${2?version not set}

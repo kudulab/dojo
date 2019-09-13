@@ -5,8 +5,7 @@ pipelines:
     label_template: "${COUNT}-${git[:8]}"
     materials:
       git:
-        git: "git@git.ai-traders.com:dojo/dojo"
-        branch: master
+        type: configrepo
         blacklist:
         - "doc/**/*"
         - "**/*.md"
@@ -15,7 +14,8 @@ pipelines:
           clean_workspace: true
           jobs:
             build_unit:
-              elastic_profile_id: w.c1.m1024.e5
+              resources:
+                - docker
               artifacts:
                 - build:
                     source: bin/dojo_linux_amd64
@@ -25,22 +25,29 @@ pipelines:
                     destination:
               tasks:
                 - exec:
-                    command: ide
+                    command: dojo
                     arguments:
+                      - -c
+                      - Dojofile.build
                       - ./tasks deps
                 - exec:
-                    command: ide
+                    command: dojo
                     arguments:
+                      - -c
+                      - Dojofile.build
                       - ./tasks build
                 - exec:
-                    command: ide
+                    command: dojo
                     arguments:
+                      - -c
+                      - Dojofile.build
                       - ./tasks unit
       - e2e:
           clean_workspace: true
           jobs:
             alpine:
-              elastic_profile_id: w.c1.m1024.e5
+              resources:
+                - docker
               tasks:
                 - fetch:
                     stage: build_unit
@@ -64,7 +71,8 @@ pipelines:
                     - -c
                     - ./tasks test_signals alpine
             ubuntu18:
-              elastic_profile_id: w.c1.m1024.e5
+              resources:
+                - docker
               tasks:
                 - fetch:
                     stage: build_unit
@@ -91,7 +99,8 @@ pipelines:
           clean_workspace: true
           jobs:
             linux:
-              elastic_profile_id: w.c1.m1024.e5
+              resources:
+                - docker
               tasks:
                 - fetch:
                     stage: build_unit
@@ -127,7 +136,8 @@ pipelines:
             type: manual
           jobs:
             code:
-              elastic_profile_id: w.c1.m1024.e5
+              resources:
+                - docker
               tasks:
                 - exec:
                     command: bash
@@ -154,5 +164,5 @@ pipelines:
                 - exec:
                     command: bash
                     arguments:
-                    - -c
-                    - ./tasks release_gh
+                      - -c
+                      - ./tasks release_gh
