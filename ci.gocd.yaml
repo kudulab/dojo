@@ -5,8 +5,7 @@ pipelines:
     label_template: "${COUNT}-${git[:8]}"
     materials:
       git:
-        git: "git@git.ai-traders.com:dojo/dojo"
-        branch: master
+        type: configrepo
         blacklist:
         - "doc/**/*"
         - "**/*.md"
@@ -15,7 +14,8 @@ pipelines:
           clean_workspace: true
           jobs:
             build_unit:
-              elastic_profile_id: w.c1.m1024.e5
+              resources:
+                - docker
               artifacts:
                 - build:
                     source: bin/dojo_linux_amd64
@@ -46,7 +46,8 @@ pipelines:
           clean_workspace: true
           jobs:
             alpine:
-              elastic_profile_id: w.c1.m1024.e5
+              resources:
+                - docker
               tasks:
                 - fetch:
                     stage: build_unit
@@ -70,7 +71,8 @@ pipelines:
                     - -c
                     - ./tasks test_signals alpine
             ubuntu18:
-              elastic_profile_id: w.c1.m1024.e5
+              resources:
+                - docker
               tasks:
                 - fetch:
                     stage: build_unit
@@ -97,7 +99,8 @@ pipelines:
           clean_workspace: true
           jobs:
             linux:
-              elastic_profile_id: w.c1.m1024.e5
+              resources:
+                - docker
               tasks:
                 - fetch:
                     stage: build_unit
@@ -133,7 +136,8 @@ pipelines:
             type: manual
           jobs:
             code:
-              elastic_profile_id: w.c1.m1024.e5
+              resources:
+                - docker
               tasks:
                 - exec:
                     command: bash
