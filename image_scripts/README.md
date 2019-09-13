@@ -38,7 +38,7 @@ The `src/install.sh` script:
    1. provides directories structure, used in dojo docker entrypoint script
    1. adds dojo linux user and group
    1. installs the dojo docker entrypoint script
-   1. installs the script responsible for ensuring that dojo linux user has the same uid:gid as the ``/dojo/work` volume owner
+   1. installs the script responsible for ensuring that dojo linux user has the same uid:gid as the `/dojo/work` volume owner
 
 
 ## Development

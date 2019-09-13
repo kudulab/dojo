@@ -58,12 +58,21 @@ A dojo docker image becomes a contract of what is a **correct environment** for 
 
 1. [Install docker](https://docs.docker.com/install/), if you haven't already.
 2. Install Dojo, it is a self-contained binary, so just place it somewhere on the `PATH`.
-On **Linux**:
+
+#### On Linux
 ```bash
-DOJO_VERSION=0.4.0
-wget -O dojo https://github.com/ai-traders/dojo/releases/download/${DOJO_VERSION}/dojo_linux_amd64
+DOJO_VERSION=0.6.0
+wget -O dojo https://github.com/kudulab/dojo/releases/download/${DOJO_VERSION}/dojo_linux_amd64
 sudo mv dojo /usr/local/bin
 sudo chmod +x /usr/local/bin/dojo
+```
+
+#### On OSX
+```bash
+DOJO_VERSION=0.6.0
+wget -O dojo https://github.com/kudulab/dojo/releases/download/${DOJO_VERSION}/dojo_darwin_amd64
+mv dojo /usr/local/bin
+chmod +x /usr/local/bin/dojo
 ```
 
 Done. Now you have sufficient environment to build any project which leverages dojo images.
@@ -105,7 +114,7 @@ This is a quickstart preview to give you a sense of how you would work with dojo
 
 You must be able to run a local docker daemon that can execute linux docker containers.
 In practice this means Dojo works on **Linux or Mac**.
-Dojo is continuously tested only on Linux..
+Dojo is continuously tested only on Linux.
 
 ### Dependencies
 * Bash
@@ -114,12 +123,12 @@ Dojo is continuously tested only on Linux..
 
 ### The binary
 There is only 1 binary file to install:
-```
-version="0.4.0"
+```sh
+version="0.6.0"
 # on Linux:
-wget -O /tmp/dojo https://github.com/ai-traders/dojo/releases/download/${version}/dojo_linux_amd64
+wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_linux_amd64
 # or on Darwin:
-# wget -O /tmp/dojo https://github.com/ai-traders/dojo/releases/download/${version}/dojo_darwin_amd64
+# wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_darwin_amd64
 chmod +x /tmp/dojo
 mv /tmp/dojo /usr/bin/dojo
 ```
@@ -157,8 +166,8 @@ We have also established several **best practices** for dojo image development:
 Dojo provides [several scripts](image_scripts/src) to be used inside dojo images to meet most of above requirements. Scripts can be installed in a `Dockerfile` with:
 
 ```dockerfile
-ENV DOJO_VERSION=0.4.0
-RUN git clone --depth 1 -b ${DOJO_VERSION} https://github.com/ai-traders/dojo.git /tmp/dojo_git &&\
+ENV DOJO_VERSION=0.6.0
+RUN git clone --depth 1 -b ${DOJO_VERSION} https://github.com/kudulab/dojo.git /tmp/dojo_git &&\
   /tmp/dojo_git/image_scripts/src/install.sh && \
   rm -r /tmp/dojo_git
 ```
@@ -187,11 +196,11 @@ ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 RUN chmod +x /tini
 
 # Install common Dojo scripts
-ENV DOJO_VERSION=0.4.0
+ENV DOJO_VERSION=0.6.0
 RUN apt-get update && \
   DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
   sudo git ca-certificates && \
-  git clone --depth 1 -b ${DOJO_VERSION} https://github.com/ai-traders/dojo.git /tmp/dojo_git &&\
+  git clone --depth 1 -b ${DOJO_VERSION} https://github.com/kudulab/dojo.git /tmp/dojo_git &&\
   /tmp/dojo_git/image_scripts/src/install.sh && \
   rm -r /tmp/dojo_git
 
@@ -235,10 +244,10 @@ For alpine images a typical dockerfile has following structure:
 FROM alpine:3.9
 
 # Install common Dojo scripts
-ENV DOJO_VERSION=0.4.0
+ENV DOJO_VERSION=0.6.0
 RUN echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories && \
   apk add --no-cache tini bash shadow sudo git && \
-  git clone --depth 1 -b ${DOJO_VERSION} https://github.com/ai-traders/dojo.git /tmp/dojo_git &&\
+  git clone --depth 1 -b ${DOJO_VERSION} https://github.com/kudulab/dojo.git /tmp/dojo_git &&\
   /tmp/dojo_git/image_scripts/src/install.sh && \
   rm -r /tmp/dojo_git
 
