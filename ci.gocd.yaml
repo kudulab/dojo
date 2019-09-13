@@ -25,16 +25,22 @@ pipelines:
                     destination:
               tasks:
                 - exec:
-                    command: ide
+                    command: dojo
                     arguments:
+                      - -c
+                      - Dojofile.build
                       - ./tasks deps
                 - exec:
-                    command: ide
+                    command: dojo
                     arguments:
+                      - -c
+                      - Dojofile.build
                       - ./tasks build
                 - exec:
-                    command: ide
+                    command: dojo
                     arguments:
+                      - -c
+                      - Dojofile.build
                       - ./tasks unit
       - e2e:
           clean_workspace: true

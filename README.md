@@ -711,7 +711,7 @@ In any sensible organization, configuration management is used to provision the 
 The `Dojofile` is the *lock* file which allows to store this reference in source control. When you run `dojo <command>`, then the environment is fetched, just like a dependency manager would fetch all dependencies of the project.
 
 ## Development
-Run these commands in `ide` ([IDE](https://github.com/ai-traders/ide) is predecessor of Dojo):
+Run these commands in `dojo` (use previous version of dojo to build a next one):
 ```
 ./tasks deps
 ./tasks build

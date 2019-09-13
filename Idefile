@@ -1,4 +1,0 @@
-IDE_DRIVER=docker
-IDE_DOCKER_IMAGE="docker-registry.ai-traders.com/golang-ide:0.4.3"
-IDE_DOCKER_OPTIONS="--security-opt seccomp:unconfined"
-IDE_WORK_INNER="/ide/work/src/dojo"
