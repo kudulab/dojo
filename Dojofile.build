@@ -1,4 +1,3 @@
 DOJO_DOCKER_IMAGE=kudulab/golang-dojo:1.1.0
 DOJO_WORK_INNER="/dojo/work/src/gocd-cli"
 DOJO_DOCKER_OPTIONS="--security-opt seccomp:unconfined"
-DOJO_WORK_INNER="/dojo/work/src/dojo"

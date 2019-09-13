@@ -41,6 +41,7 @@ fi
 
 # use -n option which is the same as --numeric-uid-gid on Debian/Ubuntu,
 # but on Alpine, there is no --numeric-uid-gid option
+# Why we are sudo-ing as sudo? To deal with OSX driver; see more at https://github.com/kudulab/dojo/issues/8
 newuid=$(sudo -u "${owner_username}" ls -n -d "${dojo_work}" | awk '{ print $3 }')
 newgid=$(sudo -u "${owner_username}" ls -n -d "${dojo_work}" | awk '{ print $4 }')
 olduid=$(ls -n -d ${dojo_home} | awk '{ print $3 }')
