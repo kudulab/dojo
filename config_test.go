@@ -257,7 +257,7 @@ func Test_getMergedConfig(t *testing.T){
 	assert.Equal(t, "/tmp/myhome", mergedConfig.IdentityDirOuter)
 	assert.Equal(t, "img", mergedConfig.DockerImage)
 	assert.Equal(t,
-		"BASH*,HOME,USERNAME,USER,LOGNAME,PATH,TERM,SHELL,MAIL,SUDO_*,WINDOWID,SSH_*,SESSION_*,GEM_HOME,GEM_PATH,GEM_ROOT,HOSTNAME,HOSTTYPE,IFS,PPID,PWD,OLDPWD,LC*",
+		"BASH*,HOME,USERNAME,USER,LOGNAME,PATH,TERM,SHELL,MAIL,SUDO_*,WINDOWID,SSH_*,SESSION_*,GEM_HOME,GEM_PATH,GEM_ROOT,HOSTNAME,HOSTTYPE,IFS,PPID,PWD,OLDPWD,LC*,TMPDIR",
 		mergedConfig.BlacklistVariables)
 }
 
