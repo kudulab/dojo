@@ -1,3 +1,7 @@
+### 0.6.1 (2019-Sep-16)
+
+Blacklist TMPDIR to improve OSX experience
+
 ### 0.6.0 (2019-Sep-13)
 
 Added OSX support
