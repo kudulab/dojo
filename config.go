@@ -362,7 +362,7 @@ func getDefaultConfig(configFile string) Config {
 		WorkDirOuter:       currentDirectory,
 		WorkDirInner:       "/dojo/work",
 		IdentityDirOuter:   currentUser.HomeDir,
-		BlacklistVariables: "BASH*,HOME,USERNAME,USER,LOGNAME,PATH,TERM,SHELL,MAIL,SUDO_*,WINDOWID,SSH_*,SESSION_*,GEM_HOME,GEM_PATH,GEM_ROOT,HOSTNAME,HOSTTYPE,IFS,PPID,PWD,OLDPWD,LC*",
+		BlacklistVariables: "BASH*,HOME,USERNAME,USER,LOGNAME,PATH,TERM,SHELL,MAIL,SUDO_*,WINDOWID,SSH_*,SESSION_*,GEM_HOME,GEM_PATH,GEM_ROOT,HOSTNAME,HOSTTYPE,IFS,PPID,PWD,OLDPWD,LC*,TMPDIR",
 		DockerComposeFile:  "docker-compose.yml",
 		ExitBehavior:       "abort",
 		PreserveEnvironmentToAllContainers: "true",
