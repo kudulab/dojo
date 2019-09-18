@@ -694,6 +694,16 @@ dojo -c Dojofile-nodejs npm install
 
 ## Comparison to other tools
 
+### vs. Batect
+
+[Batect](https://github.com/charleskorn/batect) is the closest tool to Dojo and its created for the same reasons.
+The primary differences between dojo and Batect:
+ - Batect requires java to run, Dojo is a self-contained binary
+ - Batect orchestrates multiple containers by itself, dojo uses docker-compose
+ - Batect is configured with YAML where you define lifecycle tasks of the project. Dojo is agnostic towards the lifecycle, you can use any existing tool (Make, gradle, bash scripts) to define tasks/targets of the project.
+ - Batect encourages usage of existing official images, therefore YAML config of each project has to define options such as volume mounts, users, etc. Dojo encourages having custom images, so that Dojofile config is minimal within a project.
+ - Dojo does not support Windows.
+
 ### vs. Vagrant
 
 [Vagrant](https://www.vagrantup.com/) has the same mission as Dojo - to make portable, easy to setup, development environments.
