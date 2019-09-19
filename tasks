@@ -134,6 +134,7 @@ class Dojo < Formula
   homepage "https://github.com/kudulab/dojo"
   url "https://github.com/kudulab/dojo/releases/download/${VERSION}/dojo_darwin_amd64"
   sha256 "${SHA256}"
+  version "${VERSION}"
 
   bottle :unneeded
 

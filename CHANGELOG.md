@@ -1,3 +1,7 @@
+### 0.6.3 (2019-Sep-19)
+
+Fix homebrew formula to handle upgrades
+
 ### 0.6.2 (2019-Sep-19)
 
 Added homebrew tap automation
