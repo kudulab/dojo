@@ -1,3 +1,7 @@
+### 0.6.2 (2019-Sep-19)
+
+Added homebrew tap automation
+
 ### 0.6.1 (2019-Sep-16)
 
 Blacklist TMPDIR to improve OSX experience

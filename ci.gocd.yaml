@@ -166,3 +166,8 @@ pipelines:
                     arguments:
                       - -c
                       - ./tasks release_gh
+                - exec:
+                    command: bash
+                    arguments:
+                      - -c
+                      - ./tasks homebrew_tap

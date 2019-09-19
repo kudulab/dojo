@@ -122,6 +122,31 @@ const DojoVersion = \"${next_version}\"
           --name "dojo_darwin_amd64" \
           --file bin/dojo_darwin_amd64
         ;;
+    homebrew_tap)
+        if [ ! -f bin/dojo_darwin_amd64 ]; then echo "dojo_darwin_amd64 binary does not exist"; exit 1; fi
+        VERSION="$(releaser::get_last_version_from_whole_changelog ${changelog_file})"
+        git clone git@github.com:kudulab/homebrew-dojo-osx.git homebrew-dojo-osx
+        cd homebrew-dojo-osx
+        SHA256=$(sha256 bin/dojo_darwin_amd64 | awk '{printf $1}')
+        cat << EOF > dojo.rb
+class Dojo < Formula
+  desc "Containerize your development and operations environment"
+  homepage "https://github.com/kudulab/dojo"
+  url "https://github.com/kudulab/dojo/releases/download/${VERSION}/dojo_darwin_amd64"
+  sha256 "${SHA256}"
+
+  bottle :unneeded
+
+  def install
+    bin.install "dojo_darwin_amd64"
+    mv bin/"dojo_darwin_amd64", bin/"dojo"
+  end
+end
+EOF
+        git add dojo.rb
+        git commit -m "Updated homebrew tap to ${VERSION}"
+        git push origin master
+        ;;
     generate_release_notes)
         version=${2?version not set}
         changelog="CHANGELOG.md"
