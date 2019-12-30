@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -280,6 +281,15 @@ func removeDCFile(dcFilePath string, fs FileServiceInterface)  {
 	fs.RemoveFile(dcFilePath, true)
 }
 
+func elem_in_array(arr []string, str string) bool {
+	for _, a := range arr {
+		if strings.Contains(a, str) {
+			return true
+		}
+	}
+	return false
+}
+
 func TestDockerComposeDriver_HandleRun_Unit(t *testing.T) {
 	logger := NewLogger("debug")
 	fs := NewMockedFileService(logger)
@@ -315,6 +325,60 @@ three`)
 	assert.Equal(t, "/tmp/dojo-environment-multiline-1234", fs.FilesRemovals[1])
 	assert.Equal(t, "docker-compose.yml.dojo", fs.FilesRemovals[2])
 	assert.False(t, fileExists("/tmp/dojo-environment-1234"))
+}
+
+func TestDockerComposeDriver_HandleRun_Unit_PrintLogsFailure(t *testing.T) {
+	logger := NewLogger("debug")
+	fs := NewMockedFileService(logger)
+	fakePSOutput := getFakeDockerComposePSStdout()
+	commandsReactions := make(map[string]interface{}, 0)
+	commandsReactions["docker-compose -f docker-compose.yml -f docker-compose.yml.dojo -p 1234 ps"] =
+		[]string{fakePSOutput, "", "0" }
+	commandsReactions["docker-compose -f docker-compose.yml -f docker-compose.yml.dojo -p 1234 config --services"] =
+		[]string{"container1", "", "0" }
+
+	shellS := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
+	driver := NewDockerComposeDriver(shellS, fs, logger)
+
+	config := getTestConfig()
+	config.Driver = "docker-compose"
+	config.RunCommand = "bla"
+	config.PrintLogs = "failure"
+	runID := "1234"
+	envService := NewMockedEnvService()
+	exitstatus := driver.HandleRun(config, runID, envService)
+	assert.Equal(t, 0, exitstatus)
+	assert.False(t, elem_in_array(shellS.CommandsRun, "docker logs"))
+
+	exitstatus = driver.CleanAfterRun(config, runID)
+	assert.Equal(t, 0, exitstatus)
+}
+
+func TestDockerComposeDriver_HandleRun_Unit_PrintLogsAlways(t *testing.T) {
+	logger := NewLogger("debug")
+	fs := NewMockedFileService(logger)
+	fakePSOutput := getFakeDockerComposePSStdout()
+	commandsReactions := make(map[string]interface{}, 0)
+	commandsReactions["docker-compose -f docker-compose.yml -f docker-compose.yml.dojo -p 1234 ps"] =
+		[]string{fakePSOutput, "", "0" }
+	commandsReactions["docker-compose -f docker-compose.yml -f docker-compose.yml.dojo -p 1234 config --services"] =
+		[]string{"container1", "", "0" }
+
+	shellS := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
+	driver := NewDockerComposeDriver(shellS, fs, logger)
+
+	config := getTestConfig()
+	config.Driver = "docker-compose"
+	config.RunCommand = "bla"
+	config.PrintLogs = "always"
+	runID := "1234"
+	envService := NewMockedEnvService()
+	exitstatus := driver.HandleRun(config, runID, envService)
+	assert.Equal(t, 0, exitstatus)
+	assert.True(t, elem_in_array(shellS.CommandsRun, "docker logs"))
+
+	exitstatus = driver.CleanAfterRun(config, runID)
+	assert.Equal(t, 0, exitstatus)
 }
 
 func TestDockerComposeDriver_HandleRun_RealFileService(t *testing.T) {

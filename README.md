@@ -600,6 +600,8 @@ Usage of dojo <flags> [--] <CMD>:
     	Set to false if you want to force not interactive docker run
   -preserve-env-to-all string
 
+  -print-logs string
+        Decide when to print the logs of non-default containers. Possible values: always, failure (default), never. Only for driver: docker-compose
   -remove-containers string
     	Set to true if you want to not remove docker containers. Default: true
   -rm string
