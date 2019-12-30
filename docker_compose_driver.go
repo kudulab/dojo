@@ -206,6 +206,7 @@ func (dc DockerComposeDriver) checkContainerIsRunning(containerID string) (bool)
 	return true
 }
 
+// returns expected containers names as written in a docker-compose file, e.g. default, abc
 func (dc DockerComposeDriver) getExpectedContainers(mergedConfig Config, runID string) []string {
 	cmd := dc.ConstructDockerComposeCommandPart1(mergedConfig, runID)
 	cmd += " config --services"
@@ -248,7 +249,7 @@ func (dc DockerComposeDriver) waitForContainersToBeRunning(mergedConfig Config, 
 				fmt.Sprintf("Containers created. Waiting for them to be initially running: %v", containersNames))
 			allRunning := dc.checkAllContainersRunning(containersNames)
 			if allRunning {
-				dc.Logger.Log("debug", "Containers are initially running")
+				dc.Logger.Log("debug", "All containers are running")
 				return containersNames
 			} else {
 				time.Sleep(time.Second)
@@ -322,6 +323,24 @@ func safelyCloseChannel(ch chan bool) (justClosed bool) {
 	return true // <=> justClosed = true; return
 }
 
+func (dc DockerComposeDriver) getNonDefaultContainersLogs(mergedConfig Config, runID string) (map[string]string) {
+	containersNames := dc.getDCContainersNames(mergedConfig, runID)
+	logs := make(map[string]string)
+	for _, containerName := range containersNames {
+		if strings.Contains(containerName, "_default_") {
+			continue
+		} else {
+			cmd := fmt.Sprintf("docker logs %s", containerName)
+			stdout, stderr, exitStatus, _ := dc.ShellService.RunGetOutput(cmd, true)
+			if exitStatus != 0 {
+				dc.Logger.Log("debug", fmt.Sprintf("Problem with getting logs from: %s, problem: %s", containerName, stderr))
+			}
+			logs[containerName] = "stderr:\n" + stderr + "stdout:\n" + stdout
+		}
+	}
+	return logs
+}
+
 func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envService EnvServiceInterface) int {
 	warnGeneral(dc.FileService, mergedConfig, envService, dc.Logger)
 	envFile, envFileMultiLine := getEnvFilePaths(runID, mergedConfig.Test)
@@ -344,11 +363,16 @@ func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envSe
 	go dc.watchContainers(mergedConfig, runID, len(expContainers))
 	exitStatus, _ := dc.ShellService.RunInteractive(cmd, true)
 	dc.Logger.Log("debug", fmt.Sprintf("Exit status from run command: %v", exitStatus))
+	dc.Logger.Log("debug", fmt.Sprintf("Collecting logs from other containers"))
 	// Here:
 	// * either "docker-compose run" finished by itself, we expect the default container to be stopped/removed. Let's stop the
 	//   other containers.
 	// * or it was stopped by a handle signal function, we expect all containers to be stopped (default container
 	// may be removed)
+	containerLogs := dc.getNonDefaultContainersLogs(mergedConfig, runID)
+	for k,v := range containerLogs {
+		dc.Logger.Log("debug", fmt.Sprintf("Here are logs of container: %s\n%s", k, v))
+	}
 	dc.stop(mergedConfig, runID, "")
 	return exitStatus
 

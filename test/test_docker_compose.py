@@ -183,3 +183,66 @@ def test_docker_compose_dojo_work_variables():
     test_dc_dojofile_is_removed()
     test_dc_containers_are_removed()
     test_dc_network_is_removed()
+
+
+def test_docker_compose_run_shows_nondefault_containers_logs_when_all_constainers_succeeded():
+    clean_up_dc_containers()
+    clean_up_dc_network()
+    clean_up_dc_dojofile()
+    # make the command of the default container last long enough so that the other
+    # container is started and managed to produce some output
+    result = run_dojo(['--driver=docker-compose', '--dcf=./test/test-files/itest-dc-verbose.yaml',
+                       '--debug=true', '--test=true', '--image=alpine:3.8', '--', 'sh',
+                       '-c', "echo 1; sleep 1; echo 2; sleep 1;"])
+    assert 'Dojo version' in result.stderr
+    assert result.returncode == 0
+    assert 'echo 1; sleep 1; echo 2; sleep 1;' in result.stderr
+    assert 'Exit status from run command: 0' in result.stderr
+    assert 'Here are logs of container: testdojorunid_abc_1' in result.stderr
+    assert 'iteration: 1' in result.stderr
+    assert_no_warnings_or_errors(result.stderr)
+    assert_no_warnings_or_errors(result.stdout)
+    test_dc_dojofile_is_removed()
+    test_dc_containers_are_removed()
+    test_dc_network_is_removed()
+
+
+def test_docker_compose_run_shows_nondefault_containers_logs_when_nondefault_container_failed():
+    clean_up_dc_containers()
+    clean_up_dc_network()
+    clean_up_dc_dojofile()
+    # make the command of the default container last long enough so that the other
+    # container is started and managed to produce some output
+    result = run_dojo(['--driver=docker-compose', '--dcf=./test/test-files/itest-dc-verbose-fail.yaml',
+                       '--debug=true', '--test=true', '--image=alpine:3.8', '--', 'sh',
+                       '-c', "echo 1; sleep 1; echo 2; sleep 1;"])
+    assert 'Dojo version' in result.stderr
+    assert result.returncode == 0
+    assert 'echo 1; sleep 1; echo 2; sleep 1;' in result.stderr
+    assert 'Exit status from run command: 0' in result.stderr
+    assert 'Here are logs of container: testdojorunid_abc_1' in result.stderr
+    assert 'some-non-existent-command: not found' in result.stderr
+    assert_no_warnings_or_errors(result.stderr)
+    assert_no_warnings_or_errors(result.stdout)
+    test_dc_dojofile_is_removed()
+    test_dc_containers_are_removed()
+    test_dc_network_is_removed()
+
+
+def test_docker_compose_run_shows_nondefault_containers_logs_when_default_container_failed():
+    clean_up_dc_containers()
+    clean_up_dc_network()
+    clean_up_dc_dojofile()
+    # make the command of the default container last long enough so that the other
+    # container is started and managed to produce some output
+    result = run_dojo("--driver=docker-compose --dcf=./test/test-files/itest-dc.yaml --debug=true --test=true --image=alpine:3.8 -- some-non-existent-command".split())
+    assert 'Dojo version' in result.stderr
+    assert result.returncode == 127
+    assert 'Exit status from run command: 127' in result.stderr
+    assert 'Here are logs of container: testdojorunid_abc_1' in result.stderr
+    assert 'iteration: 1' in result.stderr
+    assert_no_warnings_or_errors(result.stderr)
+    assert_no_warnings_or_errors(result.stdout)
+    test_dc_dojofile_is_removed()
+    test_dc_containers_are_removed()
+    test_dc_network_is_removed()
