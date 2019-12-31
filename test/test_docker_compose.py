@@ -200,6 +200,7 @@ def test_docker_compose_run_shows_nondefault_containers_logs_when_all_constainer
     assert 'echo 1; sleep 1; echo 2; sleep 1;' in result.stderr
     assert 'Exit status from run command: 0' in result.stderr
     assert 'Here are logs of container: testdojorunid_abc_1' in result.stderr
+    assert 'which status is: running' in result.stderr
     assert 'iteration: 1' in result.stderr
     assert_no_warnings_or_errors(result.stderr)
     assert_no_warnings_or_errors(result.stdout)
@@ -223,6 +224,7 @@ def test_docker_compose_run_shows_nondefault_containers_logs_when_nondefault_con
     assert 'echo 1; sleep 1; echo 2; sleep 1;' in result.stderr
     assert 'Exit status from run command: 0' in result.stderr
     assert 'Here are logs of container: testdojorunid_abc_1' in result.stderr
+    assert 'which exited with exitcode: 127' in result.stderr
     assert 'some-non-existent-command: not found' in result.stderr
     assert_no_warnings_or_errors(result.stderr)
     assert_no_warnings_or_errors(result.stdout)
@@ -242,6 +244,7 @@ def test_docker_compose_run_shows_nondefault_containers_logs_when_default_contai
     assert result.returncode == 127
     assert 'Exit status from run command: 127' in result.stderr
     assert 'Here are logs of container: testdojorunid_abc_1' in result.stderr
+    assert 'which status is: running' in result.stderr
     assert 'iteration: 1' in result.stderr
     assert_no_warnings_or_errors(result.stderr)
     assert_no_warnings_or_errors(result.stdout)

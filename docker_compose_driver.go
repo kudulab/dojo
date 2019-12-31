@@ -323,9 +323,9 @@ func safelyCloseChannel(ch chan bool) (justClosed bool) {
 	return true // <=> justClosed = true; return
 }
 
-func (dc DockerComposeDriver) getNonDefaultContainersLogs(mergedConfig Config, runID string) (map[string]string) {
+func (dc DockerComposeDriver) getNonDefaultContainersLogs(mergedConfig Config, runID string) (map[string](map[string]string)) {
 	containersNames := dc.getDCContainersNames(mergedConfig, runID)
-	logs := make(map[string]string)
+	logs := make(map[string](map[string]string))
 	for _, containerName := range containersNames {
 		if strings.Contains(containerName, "_default_") {
 			continue
@@ -336,7 +336,15 @@ func (dc DockerComposeDriver) getNonDefaultContainersLogs(mergedConfig Config, r
 				dc.Logger.Log("debug", fmt.Sprintf("Problem with getting logs from: %s, problem: %s",
 					containerName, stderr))
 			}
-			logs[containerName] = "stderr:\n" + stderr + "stdout:\n" + stdout
+			infoHash := make(map[string]string)
+			infoHash["logs"] = "stderr:\n" + stderr + "stdout:\n" + stdout
+			containerInfo, err := getContainerInfo(dc.ShellService, containerName)
+			if err != nil {
+				panic(err)
+			}
+			infoHash["status"] = containerInfo.Status
+			infoHash["exitcode"] = containerInfo.ExitCode
+			logs[containerName] = infoHash
 		}
 	}
 	return logs
@@ -373,7 +381,18 @@ func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envSe
 		dc.Logger.Log("debug", fmt.Sprintf("Collecting logs from other containers"))
 		containerLogs := dc.getNonDefaultContainersLogs(mergedConfig, runID)
 		for k, v := range containerLogs {
-			dc.Logger.Log("debug", fmt.Sprintf("Here are logs of container: %s\n%s", k, v))
+			containerInfo := v
+			status := containerInfo["status"]
+			if status == "running" {
+				dc.Logger.Log("debug", fmt.Sprintf("Here are logs of container: %s, which status is: %s\n%s",
+					k, status, containerInfo["logs"]))
+			} else if status == "exited" {
+				dc.Logger.Log("debug", fmt.Sprintf("Here are logs of container: %s, which exited with exitcode: %s\n%s",
+					k, containerInfo["exitcode"], containerInfo["logs"]))
+			} else {
+				dc.Logger.Log("debug", fmt.Sprintf("Here are logs of container: %s, which status is: %s, exitcode: %s\n%s",
+					k, status, containerInfo["exitcode"], containerInfo["logs"]))
+			}
 		}
 	}
 	dc.stop(mergedConfig, runID, "")

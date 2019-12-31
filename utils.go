@@ -131,6 +131,7 @@ func removeWhiteSpaces(str string) string {
 type ContainerInfo struct {
 	ID     string
 	Status string
+	ExitCode string
 	Exists bool
 }
 
@@ -139,7 +140,8 @@ func getContainerInfo(shellService ShellServiceInterface, containerNameOrID stri
 	if containerNameOrID == "" {
 		panic("containerNameOrID was empty")
 	}
-	cmd := fmt.Sprintf("docker inspect --format='{{.Id}} {{.State.Status}}' %s", containerNameOrID)
+	// https://docs.docker.com/engine/api/v1.21/
+	cmd := fmt.Sprintf("docker inspect --format='{{.Id}} {{.State.Status}} {{.State.ExitCode}}' %s", containerNameOrID)
 	stdout, stderr, exitStatus, _ := shellService.RunGetOutput(cmd, true)
 	if exitStatus != 0 {
 		if strings.Contains(stdout, "No such object") || strings.Contains(stderr, "No such object") {
@@ -153,6 +155,7 @@ func getContainerInfo(shellService ShellServiceInterface, containerNameOrID stri
 	return ContainerInfo{
 		ID:     outputArr[0],
 		Status: outputArr[1],
+		ExitCode: outputArr[2],
 		Exists: true,
 	}, nil
 }

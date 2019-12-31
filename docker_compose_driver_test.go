@@ -363,6 +363,8 @@ func TestDockerComposeDriver_HandleRun_Unit_PrintLogsAlways(t *testing.T) {
 		[]string{fakePSOutput, "", "0" }
 	commandsReactions["docker-compose -f docker-compose.yml -f docker-compose.yml.dojo -p 1234 config --services"] =
 		[]string{"container1", "", "0" }
+	commandsReactions["docker inspect --format='{{.Id}} {{.State.Status}} {{.State.ExitCode}}' edudocker_abc_1"] = []string{"some_hash running 0", "", "0"}
+	commandsReactions["docker inspect --format='{{.Id}} {{.State.Status}} {{.State.ExitCode}}' edudocker_def_1"] = []string{"some_hash running 127", "", "0"}
 
 	shellS := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
 	driver := NewDockerComposeDriver(shellS, fs, logger)
@@ -467,8 +469,8 @@ func Test_getDefaultContainerID(t *testing.T) {
 	fs := NewMockedFileService(logger)
 
 	commandsReactions := make(map[string]interface{}, 0)
-	commandsReactions["docker inspect --format='{{.Id}} {{.State.Status}}' edudocker_default_run_1"] =
-		[]string{"dummy-id running", "", "0" }
+	commandsReactions["docker inspect --format='{{.Id}} {{.State.Status}} {{.State.ExitCode}}' edudocker_default_run_1"] =
+		[]string{"dummy-id running 000", "", "0" }
 	shellS := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
 	driver := NewDockerComposeDriver(shellS, fs, logger)
 
@@ -500,7 +502,7 @@ func Test_checkContainerIsRunning(t *testing.T) {
 	fs := NewMockedFileService(logger)
 
 	commandsReactions := make(map[string]interface{}, 0)
-	commandsReactions["docker inspect --format='{{.Id}} {{.State.Status}}' id1"] =	[]string{"id1 running", "", "0" }
+	commandsReactions["docker inspect --format='{{.Id}} {{.State.Status}} {{.State.ExitCode}}' id1"] =	[]string{"id1 running 0", "", "0" }
 	shellS := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
 	driver := NewDockerComposeDriver(shellS, fs, logger)
 
@@ -515,12 +517,12 @@ func Test_waitForContainersToBeRunning(t *testing.T) {
 	commandsReactions := make(map[string]interface{}, 0)
 	commandsReactions["docker-compose -f docker-compose.yml -f docker-compose.yml.dojo -p 1234 ps"] =
 		[]string{fakePSOutput, "", "0" }
-	commandsReactions["docker inspect --format='{{.Id}} {{.State.Status}}' edudocker_abc_1"] =
-		[]string{"id1 running", "", "0" }
-	commandsReactions["docker inspect --format='{{.Id}} {{.State.Status}}' edudocker_def_1"] =
-		[]string{"id2 running", "", "0" }
-	commandsReactions["docker inspect --format='{{.Id}} {{.State.Status}}' edudocker_default_run_1"] =
-		[]string{"id3 running", "", "0" }
+	commandsReactions["docker inspect --format='{{.Id}} {{.State.Status}} {{.State.ExitCode}}' edudocker_abc_1"] =
+		[]string{"id1 running 0", "", "0" }
+	commandsReactions["docker inspect --format='{{.Id}} {{.State.Status}} {{.State.ExitCode}}' edudocker_def_1"] =
+		[]string{"id2 running 0", "", "0" }
+	commandsReactions["docker inspect --format='{{.Id}} {{.State.Status}} {{.State.ExitCode}}' edudocker_default_run_1"] =
+		[]string{"id3 running 0", "", "0" }
 	fakeContainers := `abc
 cde
 efd

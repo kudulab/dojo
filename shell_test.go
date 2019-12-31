@@ -15,10 +15,13 @@ type MockedShellServiceNotInteractive struct {
 	CommandsReactions map[string]interface{}
 	CommandsRun []string
 	Environment []string
+	Mutex *sync.Mutex
 }
 func NewMockedShellServiceNotInteractive(logger *Logger) *MockedShellServiceNotInteractive {
 	return &MockedShellServiceNotInteractive{
 		Logger: logger,
+		Mutex: &sync.Mutex{},
+		CommandsRun: make([]string, 0),
 	}
 }
 func (bs MockedShellServiceNotInteractive) SetEnvironment(variables []string) {
@@ -31,13 +34,14 @@ func NewMockedShellServiceNotInteractive2(logger *Logger, commandsReactions map[
 	return &MockedShellServiceNotInteractive{
 		Logger: logger,
 		CommandsReactions: commandsReactions,
+		Mutex: &sync.Mutex{},
+		CommandsRun: make([]string, 0),
 	}
 }
 func (ss *MockedShellServiceNotInteractive) AppendCommandRun(command string) {
-	if ss.CommandsRun == nil {
-		ss.CommandsRun = make([]string, 0)
-	}
+	ss.Mutex.Lock()
 	ss.CommandsRun = append(ss.CommandsRun, command)
+	ss.Mutex.Unlock()
 }
 func (bs MockedShellServiceNotInteractive) RunInteractive(cmdString string, separePGroup bool) (int, bool) {
 	cmd := fmt.Sprintf("Pretending to run: %s", cmdString)
@@ -85,13 +89,11 @@ func (bs MockedShellServiceInteractive) SetEnvironment(variables []string) {
 func NewMockedShellServiceInteractive(logger *Logger) *MockedShellServiceInteractive {
 	return &MockedShellServiceInteractive{
 		Logger: logger,
+		Mutex: &sync.Mutex{},
+		CommandsRun: make([]string, 0),
 	}
 }
 func (ss *MockedShellServiceInteractive) AppendCommandRun(command string) {
-	if ss.CommandsRun == nil {
-		ss.Mutex = &sync.Mutex{}
-		ss.CommandsRun = make([]string, 0)
-	}
 	ss.Mutex.Lock()
 	ss.CommandsRun = append(ss.CommandsRun, command)
 	ss.Mutex.Unlock()
