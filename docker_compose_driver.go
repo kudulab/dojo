@@ -323,9 +323,26 @@ func safelyCloseChannel(ch chan bool) (justClosed bool) {
 	return true // <=> justClosed = true; return
 }
 
-func (dc DockerComposeDriver) getNonDefaultContainersLogs(mergedConfig Config, runID string) (map[string](map[string]string)) {
-	containersNames := dc.getDCContainersNames(mergedConfig, runID)
-	logs := make(map[string](map[string]string))
+func (dc DockerComposeDriver) getNonDefaultContainersInfos(containersNames []string) (map[string](map[string]string)) {
+	containerInfos := make(map[string](map[string]string))
+	for _, containerName := range containersNames {
+		if strings.Contains(containerName, "_default_") {
+			continue
+		} else {
+			infoHash := make(map[string]string)
+			containerInfo, err := getContainerInfo(dc.ShellService, containerName)
+			if err != nil {
+				panic(err)
+			}
+			infoHash["status"] = containerInfo.Status
+			infoHash["exitcode"] = containerInfo.ExitCode
+			containerInfos[containerName] = infoHash
+		}
+	}
+	return containerInfos
+}
+
+func (dc DockerComposeDriver) getNonDefaultContainersLogs(containersNames []string, containerInfos map[string](map[string]string)) map[string](map[string]string){
 	for _, containerName := range containersNames {
 		if strings.Contains(containerName, "_default_") {
 			continue
@@ -333,22 +350,26 @@ func (dc DockerComposeDriver) getNonDefaultContainersLogs(mergedConfig Config, r
 			cmd := fmt.Sprintf("docker logs %s", containerName)
 			stdout, stderr, exitStatus, _ := dc.ShellService.RunGetOutput(cmd, true)
 			if exitStatus != 0 {
-				dc.Logger.Log("debug", fmt.Sprintf("Problem with getting logs from: %s, problem: %s",
+				dc.Logger.Log("debug", fmt.Sprintf("Problem with getting containerInfos from: %s, problem: %s",
 					containerName, stderr))
 			}
-			infoHash := make(map[string]string)
-			infoHash["logs"] = "stderr:\n" + stderr + "stdout:\n" + stdout
-			containerInfo, err := getContainerInfo(dc.ShellService, containerName)
-			if err != nil {
-				panic(err)
-			}
-			infoHash["status"] = containerInfo.Status
-			infoHash["exitcode"] = containerInfo.ExitCode
-			logs[containerName] = infoHash
+			containerInfos[containerName]["logs"] = "stderr:\n" + stderr + "stdout:\n" + stdout
 		}
 	}
-	return logs
+	return containerInfos
 }
+
+func checkIfAnyContainerFailed(nonDefaultContainerInfos map[string](map[string]string), defaultContainerExitCode int) bool {
+	anyContainerFailed := false
+	for _, v := range nonDefaultContainerInfos {
+		if v["exitcode"] != "0" {
+			anyContainerFailed = true
+		}
+	}
+	anyContainerFailed = (defaultContainerExitCode != 0) || anyContainerFailed
+	return anyContainerFailed
+}
+
 
 func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envService EnvServiceInterface) int {
 	warnGeneral(dc.FileService, mergedConfig, envService, dc.Logger)
@@ -377,10 +398,14 @@ func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envSe
 	//   other containers.
 	// * or it was stopped by a handle signal function, we expect all containers to be stopped (default container
 	// may be removed)
-	if mergedConfig.PrintLogs == "always" || (mergedConfig.PrintLogs == "failure" && exitStatus != 0) {
-		dc.Logger.Log("debug", fmt.Sprintf("Collecting logs from other containers"))
-		containerLogs := dc.getNonDefaultContainersLogs(mergedConfig, runID)
-		for k, v := range containerLogs {
+
+	dc.Logger.Log("debug", fmt.Sprintf("Collecting information from other containers"))
+	containersNames := dc.getDCContainersNames(mergedConfig, runID)
+	containersInfos := dc.getNonDefaultContainersInfos(containersNames)
+	anyContainerFailed := checkIfAnyContainerFailed(containersInfos, exitStatus)
+	if mergedConfig.PrintLogs == "always" || (mergedConfig.PrintLogs == "failure" && anyContainerFailed) {
+		dc.getNonDefaultContainersLogs(containersNames, containersInfos)
+		for k, v := range containersInfos {
 			containerInfo := v
 			status := containerInfo["status"]
 			if status == "running" {
@@ -395,6 +420,7 @@ func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envSe
 			}
 		}
 	}
+
 	dc.stop(mergedConfig, runID, "")
 	return exitStatus
 
