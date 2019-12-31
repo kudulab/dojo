@@ -399,7 +399,7 @@ func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envSe
 	// * or it was stopped by a handle signal function, we expect all containers to be stopped (default container
 	// may be removed)
 
-	dc.Logger.Log("debug", fmt.Sprintf("Collecting information from other containers"))
+	dc.Logger.Log("debug", fmt.Sprintf("Collecting information from non default containers"))
 	containersNames := dc.getDCContainersNames(mergedConfig, runID)
 	containersInfos := dc.getNonDefaultContainersInfos(containersNames)
 	anyContainerFailed := checkIfAnyContainerFailed(containersInfos, exitStatus)
@@ -409,13 +409,13 @@ func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envSe
 			containerInfo := v
 			status := containerInfo["status"]
 			if status == "running" {
-				dc.Logger.Log("debug", fmt.Sprintf("Here are logs of container: %s, which status is: %s\n%s",
+				dc.Logger.Log("info", fmt.Sprintf("Here are logs of container: %s, which status is: %s\n%s",
 					k, status, containerInfo["logs"]))
 			} else if status == "exited" {
-				dc.Logger.Log("debug", fmt.Sprintf("Here are logs of container: %s, which exited with exitcode: %s\n%s",
+				dc.Logger.Log("info", fmt.Sprintf("Here are logs of container: %s, which exited with exitcode: %s\n%s",
 					k, containerInfo["exitcode"], containerInfo["logs"]))
 			} else {
-				dc.Logger.Log("debug", fmt.Sprintf("Here are logs of container: %s, which status is: %s, exitcode: %s\n%s",
+				dc.Logger.Log("info", fmt.Sprintf("Here are logs of container: %s, which status is: %s, exitcode: %s\n%s",
 					k, status, containerInfo["exitcode"], containerInfo["logs"]))
 			}
 		}
