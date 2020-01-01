@@ -156,7 +156,7 @@ func getContainerInfo(shellService ShellServiceInterface, containerNameOrID stri
 	outputArr := strings.Split(status, " ")
 	return &ContainerInfo{
 		ID:     outputArr[0],
-		Name:     strings.TrimSuffix(outputArr[1], "/"),
+		Name:     strings.TrimPrefix(outputArr[1], "/"),
 		Status: outputArr[2],
 		ExitCode: outputArr[3],
 		Exists: true,

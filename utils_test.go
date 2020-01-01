@@ -127,7 +127,7 @@ bb
 func Test_getContainerInfo(t *testing.T) {
 	logger := NewLogger("debug")
 	commandsReactions := make(map[string]interface{}, 0)
-	fakeOutput := `1234 name1 running 133`
+	fakeOutput := `1234 /name1 running 133`
 	commandsReactions["docker inspect --format='{{.Id}} {{.Name}} {{.State.Status}} {{.State.ExitCode}}' 1234"] =
 		[]string{fakeOutput, "", "0" }
 	shell := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
