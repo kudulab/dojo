@@ -323,27 +323,25 @@ func safelyCloseChannel(ch chan bool) (justClosed bool) {
 	return true // <=> justClosed = true; return
 }
 
-func (dc DockerComposeDriver) getNonDefaultContainersInfos(containersNames []string) (map[string](map[string]string)) {
-	containerInfos := make(map[string](map[string]string))
+func (dc DockerComposeDriver) getNonDefaultContainersInfos(containersNames []string) ([]*ContainerInfo) {
+	containerInfos := make([]*ContainerInfo, 0)
 	for _, containerName := range containersNames {
 		if strings.Contains(containerName, "_default_") {
 			continue
 		} else {
-			infoHash := make(map[string]string)
 			containerInfo, err := getContainerInfo(dc.ShellService, containerName)
 			if err != nil {
 				panic(err)
 			}
-			infoHash["status"] = containerInfo.Status
-			infoHash["exitcode"] = containerInfo.ExitCode
-			containerInfos[containerName] = infoHash
+			containerInfos = append(containerInfos, containerInfo)
 		}
 	}
 	return containerInfos
 }
 
-func (dc DockerComposeDriver) getNonDefaultContainersLogs(containersNames []string, containerInfos map[string](map[string]string)) map[string](map[string]string){
-	for _, containerName := range containersNames {
+func (dc DockerComposeDriver) getNonDefaultContainersLogs(containerInfos []*ContainerInfo){
+	for _, containerInfo := range containerInfos {
+		containerName := containerInfo.Name
 		if strings.Contains(containerName, "_default_") {
 			continue
 		} else {
@@ -353,16 +351,15 @@ func (dc DockerComposeDriver) getNonDefaultContainersLogs(containersNames []stri
 				dc.Logger.Log("debug", fmt.Sprintf("Problem with getting containerInfos from: %s, problem: %s",
 					containerName, stderr))
 			}
-			containerInfos[containerName]["logs"] = "stderr:\n" + stderr + "stdout:\n" + stdout
+			containerInfo.Logs = "stderr:\n" + stderr + "stdout:\n" + stdout
 		}
 	}
-	return containerInfos
 }
 
-func checkIfAnyContainerFailed(nonDefaultContainerInfos map[string](map[string]string), defaultContainerExitCode int) bool {
+func checkIfAnyContainerFailed(nonDefaultContainerInfos []*ContainerInfo, defaultContainerExitCode int) bool {
 	anyContainerFailed := false
 	for _, v := range nonDefaultContainerInfos {
-		if v["exitcode"] != "0" {
+		if v.ExitCode != "0" {
 			anyContainerFailed = true
 		}
 	}
@@ -404,19 +401,19 @@ func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envSe
 	containersInfos := dc.getNonDefaultContainersInfos(containersNames)
 	anyContainerFailed := checkIfAnyContainerFailed(containersInfos, exitStatus)
 	if mergedConfig.PrintLogs == "always" || (mergedConfig.PrintLogs == "failure" && anyContainerFailed) {
-		dc.getNonDefaultContainersLogs(containersNames, containersInfos)
-		for k, v := range containersInfos {
+		dc.getNonDefaultContainersLogs(containersInfos)
+		for _, v := range containersInfos {
 			containerInfo := v
-			status := containerInfo["status"]
+			status := containerInfo.Status
 			if status == "running" {
 				dc.Logger.Log("info", fmt.Sprintf("Here are logs of container: %s, which status is: %s\n%s",
-					k, status, containerInfo["logs"]))
+					containerInfo.Name, status, containerInfo.Logs))
 			} else if status == "exited" {
 				dc.Logger.Log("info", fmt.Sprintf("Here are logs of container: %s, which exited with exitcode: %s\n%s",
-					k, containerInfo["exitcode"], containerInfo["logs"]))
+					containerInfo.Name, containerInfo.ExitCode, containerInfo.Logs))
 			} else {
 				dc.Logger.Log("info", fmt.Sprintf("Here are logs of container: %s, which status is: %s, exitcode: %s\n%s",
-					k, status, containerInfo["exitcode"], containerInfo["logs"]))
+					containerInfo.Name, status, containerInfo.ExitCode, containerInfo.Logs))
 			}
 		}
 	}
