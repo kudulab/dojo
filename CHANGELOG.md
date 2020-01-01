@@ -1,3 +1,10 @@
+### 0.7.0 (2020-Jan-01)
+
+Docker-compose driver: print logs of non default docker containers. By default this will be done if any
+ of the containers (default or not) failed. This can be set by `--print-logs` commandline option
+ and by `DOJO_DOCKER_COMPOSE_PRINT_LOGS` Dojofile option.
+ Possible values: always, failure, never. [#12](https://github.com/kudulab/dojo/issues/12)
+
 ### 0.6.3 (2019-Sep-19)
 
 Fix homebrew formula to handle upgrades

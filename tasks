@@ -42,7 +42,7 @@ case "${command}" in
         chmod +x ./bin/dojo
         ;;
     unit)
-        (set -x; go test -v -race ./...; )
+        (set -x; go test -v -race ./... | sed ''/PASS/s//$(printf "\033[32mPASS\033[0m")/'' | sed ''/FAIL/s//$(printf "\033[31mFAIL\033[0m")/''; )
         ;;
     e2e_py)
         python3 -m venv venv

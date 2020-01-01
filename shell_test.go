@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"strconv"
+	"sync"
 	"testing"
 )
 
@@ -12,11 +13,15 @@ type MockedShellServiceNotInteractive struct {
 	ShellBinary string
 	Logger *Logger
 	CommandsReactions map[string]interface{}
+	CommandsRun []string
 	Environment []string
+	Mutex *sync.Mutex
 }
 func NewMockedShellServiceNotInteractive(logger *Logger) *MockedShellServiceNotInteractive {
 	return &MockedShellServiceNotInteractive{
 		Logger: logger,
+		Mutex: &sync.Mutex{},
+		CommandsRun: make([]string, 0),
 	}
 }
 func (bs MockedShellServiceNotInteractive) SetEnvironment(variables []string) {
@@ -25,18 +30,29 @@ func (bs MockedShellServiceNotInteractive) SetEnvironment(variables []string) {
 		bs.Environment = append(bs.Environment, value)
 	}
 }
-func NewMockedShellServiceNotInteractive2(logger *Logger, commandsReactions map[string]interface{}) MockedShellServiceNotInteractive {
-	return MockedShellServiceNotInteractive{
+func NewMockedShellServiceNotInteractive2(logger *Logger, commandsReactions map[string]interface{}) *MockedShellServiceNotInteractive {
+	return &MockedShellServiceNotInteractive{
 		Logger: logger,
 		CommandsReactions: commandsReactions,
+		Mutex: &sync.Mutex{},
+		CommandsRun: make([]string, 0),
 	}
 }
+func (ss *MockedShellServiceNotInteractive) AppendCommandRun(command string) {
+	ss.Mutex.Lock()
+	ss.CommandsRun = append(ss.CommandsRun, command)
+	ss.Mutex.Unlock()
+}
 func (bs MockedShellServiceNotInteractive) RunInteractive(cmdString string, separePGroup bool) (int, bool) {
-	bs.Logger.Log("debug", fmt.Sprintf("Pretending to run: %s", cmdString))
+	cmd := fmt.Sprintf("Pretending to run: %s", cmdString)
+	bs.Logger.Log("debug", cmd)
+	bs.AppendCommandRun(cmd)
 	return 0, false
 }
-func (bs MockedShellServiceNotInteractive) RunGetOutput(cmdString string, separePGroup bool) (string, string, int, bool) {
-	bs.Logger.Log("debug", fmt.Sprintf("Pretending to run: %s", cmdString))
+func (bs *MockedShellServiceNotInteractive) RunGetOutput(cmdString string, separePGroup bool) (string, string, int, bool) {
+	cmd := fmt.Sprintf("Pretending to run: %s", cmdString)
+	bs.Logger.Log("debug", cmd)
+	bs.AppendCommandRun(cmd)
 	if bs.CommandsReactions != nil {
 		if val, ok := bs.CommandsReactions[cmdString]; ok {
 			valArr := val.([]string)
@@ -61,6 +77,8 @@ type MockedShellServiceInteractive struct {
 	ShellBinary string
 	Logger *Logger
 	Environment []string
+	CommandsRun []string
+	Mutex *sync.Mutex
 }
 func (bs MockedShellServiceInteractive) SetEnvironment(variables []string) {
 	bs.Environment = make([]string, 0)
@@ -71,14 +89,25 @@ func (bs MockedShellServiceInteractive) SetEnvironment(variables []string) {
 func NewMockedShellServiceInteractive(logger *Logger) *MockedShellServiceInteractive {
 	return &MockedShellServiceInteractive{
 		Logger: logger,
+		Mutex: &sync.Mutex{},
+		CommandsRun: make([]string, 0),
 	}
 }
+func (ss *MockedShellServiceInteractive) AppendCommandRun(command string) {
+	ss.Mutex.Lock()
+	ss.CommandsRun = append(ss.CommandsRun, command)
+	ss.Mutex.Unlock()
+}
 func (bs MockedShellServiceInteractive) RunInteractive(cmdString string, separePGroup bool) (int, bool) {
-	bs.Logger.Log("debug", fmt.Sprintf("Pretending to run: %s", cmdString))
+	cmd := fmt.Sprintf("Pretending to run: %s", cmdString)
+	bs.Logger.Log("debug", cmd)
+	bs.AppendCommandRun(cmd)
 	return 0, false
 }
 func (bs MockedShellServiceInteractive) RunGetOutput(cmdString string, separePGroup bool) (string, string, int, bool) {
-	bs.Logger.Log("debug", fmt.Sprintf("Pretending to run: %s", cmdString))
+	cmd := fmt.Sprintf("Pretending to run: %s", cmdString)
+	bs.Logger.Log("debug", cmd)
+	bs.AppendCommandRun(cmd)
 	return "", "", 0, false
 }
 func (bs MockedShellServiceInteractive) CheckIfInteractive() bool {

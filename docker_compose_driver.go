@@ -206,6 +206,7 @@ func (dc DockerComposeDriver) checkContainerIsRunning(containerID string) (bool)
 	return true
 }
 
+// returns expected containers names as written in a docker-compose file, e.g. default, abc
 func (dc DockerComposeDriver) getExpectedContainers(mergedConfig Config, runID string) []string {
 	cmd := dc.ConstructDockerComposeCommandPart1(mergedConfig, runID)
 	cmd += " config --services"
@@ -248,7 +249,7 @@ func (dc DockerComposeDriver) waitForContainersToBeRunning(mergedConfig Config, 
 				fmt.Sprintf("Containers created. Waiting for them to be initially running: %v", containersNames))
 			allRunning := dc.checkAllContainersRunning(containersNames)
 			if allRunning {
-				dc.Logger.Log("debug", "Containers are initially running")
+				dc.Logger.Log("debug", "All containers are running")
 				return containersNames
 			} else {
 				time.Sleep(time.Second)
@@ -322,6 +323,51 @@ func safelyCloseChannel(ch chan bool) (justClosed bool) {
 	return true // <=> justClosed = true; return
 }
 
+func (dc DockerComposeDriver) getNonDefaultContainersInfos(containersNames []string) ([]*ContainerInfo) {
+	containerInfos := make([]*ContainerInfo, 0)
+	for _, containerName := range containersNames {
+		if strings.Contains(containerName, "_default_") {
+			continue
+		} else {
+			containerInfo, err := getContainerInfo(dc.ShellService, containerName)
+			if err != nil {
+				panic(err)
+			}
+			containerInfos = append(containerInfos, containerInfo)
+		}
+	}
+	return containerInfos
+}
+
+func (dc DockerComposeDriver) getNonDefaultContainersLogs(containerInfos []*ContainerInfo){
+	for _, containerInfo := range containerInfos {
+		containerName := containerInfo.Name
+		if strings.Contains(containerName, "_default_") {
+			continue
+		} else {
+			cmd := fmt.Sprintf("docker logs %s", containerName)
+			stdout, stderr, exitStatus, _ := dc.ShellService.RunGetOutput(cmd, true)
+			if exitStatus != 0 {
+				dc.Logger.Log("debug", fmt.Sprintf("Problem with getting containerInfos from: %s, problem: %s",
+					containerName, stderr))
+			}
+			containerInfo.Logs = "stderr:\n" + stderr + "stdout:\n" + stdout
+		}
+	}
+}
+
+func checkIfAnyContainerFailed(nonDefaultContainerInfos []*ContainerInfo, defaultContainerExitCode int) bool {
+	anyContainerFailed := false
+	for _, v := range nonDefaultContainerInfos {
+		if v.ExitCode != "0" {
+			anyContainerFailed = true
+		}
+	}
+	anyContainerFailed = (defaultContainerExitCode != 0) || anyContainerFailed
+	return anyContainerFailed
+}
+
+
 func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envService EnvServiceInterface) int {
 	warnGeneral(dc.FileService, mergedConfig, envService, dc.Logger)
 	envFile, envFileMultiLine := getEnvFilePaths(runID, mergedConfig.Test)
@@ -349,6 +395,29 @@ func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envSe
 	//   other containers.
 	// * or it was stopped by a handle signal function, we expect all containers to be stopped (default container
 	// may be removed)
+
+	dc.Logger.Log("debug", fmt.Sprintf("Collecting information from non default containers"))
+	containersNames := dc.getDCContainersNames(mergedConfig, runID)
+	containersInfos := dc.getNonDefaultContainersInfos(containersNames)
+	anyContainerFailed := checkIfAnyContainerFailed(containersInfos, exitStatus)
+	if mergedConfig.PrintLogs == "always" || (mergedConfig.PrintLogs == "failure" && anyContainerFailed) {
+		dc.getNonDefaultContainersLogs(containersInfos)
+		for _, v := range containersInfos {
+			containerInfo := v
+			status := containerInfo.Status
+			if status == "running" {
+				dc.Logger.Log("info", fmt.Sprintf("Here are logs of container: %s, which status is: %s\n%s",
+					containerInfo.Name, status, containerInfo.Logs))
+			} else if status == "exited" {
+				dc.Logger.Log("info", fmt.Sprintf("Here are logs of container: %s, which exited with exitcode: %s\n%s",
+					containerInfo.Name, containerInfo.ExitCode, containerInfo.Logs))
+			} else {
+				dc.Logger.Log("info", fmt.Sprintf("Here are logs of container: %s, which status is: %s, exitcode: %s\n%s",
+					containerInfo.Name, status, containerInfo.ExitCode, containerInfo.Logs))
+			}
+		}
+	}
+
 	dc.stop(mergedConfig, runID, "")
 	return exitStatus
 

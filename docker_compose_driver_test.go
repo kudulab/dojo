@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -280,6 +281,15 @@ func removeDCFile(dcFilePath string, fs FileServiceInterface)  {
 	fs.RemoveFile(dcFilePath, true)
 }
 
+func elem_in_array(arr []string, str string) bool {
+	for _, a := range arr {
+		if strings.Contains(a, str) {
+			return true
+		}
+	}
+	return false
+}
+
 func TestDockerComposeDriver_HandleRun_Unit(t *testing.T) {
 	logger := NewLogger("debug")
 	fs := NewMockedFileService(logger)
@@ -289,6 +299,10 @@ func TestDockerComposeDriver_HandleRun_Unit(t *testing.T) {
 		[]string{fakePSOutput, "", "0" }
 	commandsReactions["docker-compose -f docker-compose.yml -f docker-compose.yml.dojo -p 1234 config --services"] =
 		[]string{"container1", "", "0" }
+	commandsReactions["docker inspect --format='{{.Id}} {{.Name}} {{.State.Status}} {{.State.ExitCode}}' edudocker_abc_1"] =
+		[]string{"container1 name1 running 0", "", "0"}
+	commandsReactions["docker inspect --format='{{.Id}} {{.Name}} {{.State.Status}} {{.State.ExitCode}}' edudocker_def_1"] =
+		[]string{"container1 name2 running 0", "", "0"}
 
 	shellS := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
 	driver := NewDockerComposeDriver(shellS, fs, logger)
@@ -317,6 +331,66 @@ three`)
 	assert.False(t, fileExists("/tmp/dojo-environment-1234"))
 }
 
+func TestDockerComposeDriver_HandleRun_Unit_PrintLogsFailure(t *testing.T) {
+	logger := NewLogger("debug")
+	fs := NewMockedFileService(logger)
+	fakePSOutput := getFakeDockerComposePSStdout()
+	commandsReactions := make(map[string]interface{}, 0)
+	commandsReactions["docker-compose -f docker-compose.yml -f docker-compose.yml.dojo -p 1234 ps"] =
+		[]string{fakePSOutput, "", "0" }
+	commandsReactions["docker-compose -f docker-compose.yml -f docker-compose.yml.dojo -p 1234 config --services"] =
+		[]string{"container1", "", "0" }
+	commandsReactions["docker inspect --format='{{.Id}} {{.Name}} {{.State.Status}} {{.State.ExitCode}}' edudocker_abc_1"] =
+		[]string{"container1 name1 running 0", "", "0"}
+	commandsReactions["docker inspect --format='{{.Id}} {{.Name}} {{.State.Status}} {{.State.ExitCode}}' edudocker_def_1"] =
+		[]string{"container1 name1 running 0", "", "0"}
+
+	shellS := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
+	driver := NewDockerComposeDriver(shellS, fs, logger)
+
+	config := getTestConfig()
+	config.Driver = "docker-compose"
+	config.RunCommand = "bla"
+	config.PrintLogs = "failure"
+	runID := "1234"
+	envService := NewMockedEnvService()
+	exitstatus := driver.HandleRun(config, runID, envService)
+	assert.Equal(t, 0, exitstatus)
+	assert.False(t, elem_in_array(shellS.CommandsRun, "docker logs"))
+
+	exitstatus = driver.CleanAfterRun(config, runID)
+	assert.Equal(t, 0, exitstatus)
+}
+
+func TestDockerComposeDriver_HandleRun_Unit_PrintLogsAlways(t *testing.T) {
+	logger := NewLogger("debug")
+	fs := NewMockedFileService(logger)
+	fakePSOutput := getFakeDockerComposePSStdout()
+	commandsReactions := make(map[string]interface{}, 0)
+	commandsReactions["docker-compose -f docker-compose.yml -f docker-compose.yml.dojo -p 1234 ps"] =
+		[]string{fakePSOutput, "", "0" }
+	commandsReactions["docker-compose -f docker-compose.yml -f docker-compose.yml.dojo -p 1234 config --services"] =
+		[]string{"container1", "", "0" }
+	commandsReactions["docker inspect --format='{{.Id}} {{.Name}} {{.State.Status}} {{.State.ExitCode}}' edudocker_abc_1"] = []string{"some_hash name1 running 0", "", "0"}
+	commandsReactions["docker inspect --format='{{.Id}} {{.Name}} {{.State.Status}} {{.State.ExitCode}}' edudocker_def_1"] = []string{"some_hash name2 running 127", "", "0"}
+
+	shellS := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
+	driver := NewDockerComposeDriver(shellS, fs, logger)
+
+	config := getTestConfig()
+	config.Driver = "docker-compose"
+	config.RunCommand = "bla"
+	config.PrintLogs = "always"
+	runID := "1234"
+	envService := NewMockedEnvService()
+	exitstatus := driver.HandleRun(config, runID, envService)
+	assert.Equal(t, 0, exitstatus)
+	assert.True(t, elem_in_array(shellS.CommandsRun, "docker logs"))
+
+	exitstatus = driver.CleanAfterRun(config, runID)
+	assert.Equal(t, 0, exitstatus)
+}
+
 func TestDockerComposeDriver_HandleRun_RealFileService(t *testing.T) {
 	logger := NewLogger("debug")
 	fs := NewMockedFileService(logger)
@@ -327,6 +401,8 @@ func TestDockerComposeDriver_HandleRun_RealFileService(t *testing.T) {
 		[]string{fakePSOutput, "", "0" }
 	commandsReactions["docker-compose -f test-docker-compose.yml -f test-docker-compose.yml.dojo -p 1234 config --services"] =
 		[]string{"container1", "", "0" }
+	commandsReactions["docker inspect --format='{{.Id}} {{.Name}} {{.State.Status}} {{.State.ExitCode}}' edudocker_abc_1"] = []string{"some_hash name1 running 0", "", "0"}
+	commandsReactions["docker inspect --format='{{.Id}} {{.Name}} {{.State.Status}} {{.State.ExitCode}}' edudocker_def_1"] = []string{"some_hash name2 running 127", "", "0"}
 
 	shellS := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
 	driver := NewDockerComposeDriver(shellS, fs, logger)
@@ -365,6 +441,8 @@ func TestDockerComposeDriver_HandleRun_RealEnvService(t *testing.T) {
 		[]string{fakePSOutput, "", "0" }
 	commandsReactions["docker-compose -f docker-compose.yml -f docker-compose.yml.dojo -p 1234 config --services"] =
 		[]string{"container1", "", "0" }
+	commandsReactions["docker inspect --format='{{.Id}} {{.Name}} {{.State.Status}} {{.State.ExitCode}}' edudocker_abc_1"] = []string{"some_hash name1 running 0", "", "0"}
+	commandsReactions["docker inspect --format='{{.Id}} {{.Name}} {{.State.Status}} {{.State.ExitCode}}' edudocker_def_1"] = []string{"some_hash name2 running 127", "", "0"}
 
 	shellS := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
 	driver := NewDockerComposeDriver(shellS, fs, logger)
@@ -403,8 +481,8 @@ func Test_getDefaultContainerID(t *testing.T) {
 	fs := NewMockedFileService(logger)
 
 	commandsReactions := make(map[string]interface{}, 0)
-	commandsReactions["docker inspect --format='{{.Id}} {{.State.Status}}' edudocker_default_run_1"] =
-		[]string{"dummy-id running", "", "0" }
+	commandsReactions["docker inspect --format='{{.Id}} {{.Name}} {{.State.Status}} {{.State.ExitCode}}' edudocker_default_run_1"] =
+		[]string{"dummy-id name1 running 000", "", "0" }
 	shellS := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
 	driver := NewDockerComposeDriver(shellS, fs, logger)
 
@@ -436,7 +514,7 @@ func Test_checkContainerIsRunning(t *testing.T) {
 	fs := NewMockedFileService(logger)
 
 	commandsReactions := make(map[string]interface{}, 0)
-	commandsReactions["docker inspect --format='{{.Id}} {{.State.Status}}' id1"] =	[]string{"id1 running", "", "0" }
+	commandsReactions["docker inspect --format='{{.Id}} {{.Name}} {{.State.Status}} {{.State.ExitCode}}' id1"] =	[]string{"id1 name1 running 0", "", "0" }
 	shellS := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
 	driver := NewDockerComposeDriver(shellS, fs, logger)
 
@@ -451,12 +529,12 @@ func Test_waitForContainersToBeRunning(t *testing.T) {
 	commandsReactions := make(map[string]interface{}, 0)
 	commandsReactions["docker-compose -f docker-compose.yml -f docker-compose.yml.dojo -p 1234 ps"] =
 		[]string{fakePSOutput, "", "0" }
-	commandsReactions["docker inspect --format='{{.Id}} {{.State.Status}}' edudocker_abc_1"] =
-		[]string{"id1 running", "", "0" }
-	commandsReactions["docker inspect --format='{{.Id}} {{.State.Status}}' edudocker_def_1"] =
-		[]string{"id2 running", "", "0" }
-	commandsReactions["docker inspect --format='{{.Id}} {{.State.Status}}' edudocker_default_run_1"] =
-		[]string{"id3 running", "", "0" }
+	commandsReactions["docker inspect --format='{{.Id}} {{.Name}} {{.State.Status}} {{.State.ExitCode}}' edudocker_abc_1"] =
+		[]string{"id1 name1 running 0", "", "0" }
+	commandsReactions["docker inspect --format='{{.Id}} {{.Name}} {{.State.Status}} {{.State.ExitCode}}' edudocker_def_1"] =
+		[]string{"id2 name2 running 0", "", "0" }
+	commandsReactions["docker inspect --format='{{.Id}} {{.Name}} {{.State.Status}} {{.State.ExitCode}}' edudocker_default_run_1"] =
+		[]string{"id3 name3 running 0", "", "0" }
 	fakeContainers := `abc
 cde
 efd
@@ -514,4 +592,62 @@ default`
 			t.Fatalf("Expected panic")
 		}
 	}
+}
+
+func Test_checkIfAnyContainerFailed_allSucceeded(t *testing.T) {
+	nonDefContInfos := make([]*ContainerInfo, 0)
+	cont1Info := &ContainerInfo{
+		ExitCode: "0",
+	}
+	nonDefContInfos = append(nonDefContInfos, cont1Info)
+	cont2Info := &ContainerInfo{
+		ExitCode: "0",
+	}
+	nonDefContInfos = append(nonDefContInfos, cont2Info)
+	anyContFailed := checkIfAnyContainerFailed(nonDefContInfos, 0)
+	assert.False(t, anyContFailed)
+}
+func Test_checkIfAnyContainerFailed_defaultFailed(t *testing.T) {
+	nonDefContInfos := make([]*ContainerInfo, 0)
+	cont1Info := &ContainerInfo{
+		ExitCode: "0",
+	}
+	nonDefContInfos = append(nonDefContInfos, cont1Info)
+	cont2Info := &ContainerInfo{
+		ExitCode: "0",
+	}
+	nonDefContInfos = append(nonDefContInfos, cont2Info)
+	anyContFailed := checkIfAnyContainerFailed(nonDefContInfos, 3)
+	assert.True(t, anyContFailed)
+}
+func Test_checkIfAnyContainerFailed_nonDefFailed(t *testing.T) {
+	nonDefContInfos := make([]*ContainerInfo, 0)
+	cont1Info := &ContainerInfo{
+		ExitCode: "0",
+	}
+	nonDefContInfos = append(nonDefContInfos, cont1Info)
+	cont2Info := &ContainerInfo{
+		ExitCode: "144",
+	}
+	nonDefContInfos = append(nonDefContInfos, cont2Info)
+	anyContFailed := checkIfAnyContainerFailed(nonDefContInfos, 0)
+	assert.True(t, anyContFailed)
+}
+
+func Test_getNonDefaultContainersLogs(t *testing.T) {
+	nonDefContInfos := make([]*ContainerInfo, 0)
+	cont1Info := &ContainerInfo{
+		Name: "name1",
+	}
+	nonDefContInfos = append(nonDefContInfos, cont1Info)
+	commandsReactions := make(map[string]interface{}, 0)
+	commandsReactions["docker logs name1"] =
+		[]string{"123", "", "0"}
+
+	logger := NewLogger("debug")
+	fs := NewMockedFileService(logger)
+	shellS := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
+	driver := NewDockerComposeDriver(shellS, fs, logger)
+	driver.getNonDefaultContainersLogs(nonDefContInfos)
+	assert.Equal(t, nonDefContInfos[0].Logs, "stderr:\nstdout:\n123")
 }

@@ -30,6 +30,7 @@ type Config struct {
 	PreserveEnvironmentToAllContainers string
 	ExitBehavior string
 	Test string
+	PrintLogs string
 }
 
 func (c Config) String() string {
@@ -52,6 +53,7 @@ func (c Config) String() string {
 	str += fmt.Sprintf("{ PreserveEnvironmentToAllContainers: %s }", c.PreserveEnvironmentToAllContainers)
 	str += fmt.Sprintf("{ ExitBehavior: %s }", c.ExitBehavior)
 	str += fmt.Sprintf("{ Test: %s }", c.Test)
+	str += fmt.Sprintf("{ PrintLogs: %s }", c.PrintLogs)
 	return str
 }
 
@@ -139,9 +141,14 @@ func getCLIConfig() Config {
 	const usageExitBehavior         = "How to react when a container (not the default one) exits. Possible values: ignore, abort (default), restart. Only for driver: docker-compose"
 	flagSet.StringVar(&exitBehavior, "exit-behavior", "", usageExitBehavior)
 
+	var printLogs string
+	const usagePrintLogs         = "Decide when to print the logs of non-default containers. Possible values: always, failure (default), never. Only for driver: docker-compose"
+	flagSet.StringVar(&printLogs, "print-logs", "", usagePrintLogs)
+
 	var test string
 	const usageTest         = "Set this to true when integration testing. This turns writing env files to a test directory"
 	flagSet.StringVar(&test, "test", "", usageTest)
+
 
 	flagSet.Parse(os.Args[1:])
 	runCommandArr := flagSet.Args()
@@ -180,6 +187,7 @@ func getCLIConfig() Config {
 		DockerComposeFile:  dockerComposeFile,
 		ExitBehavior: 		exitBehavior,
 		Test: 				test,
+		PrintLogs: 			printLogs,
 	}
 }
 
@@ -243,6 +251,7 @@ func MapToConfig(configMap map[string]string) Config {
 	config.PreserveEnvironmentToAllContainers = configMap["preserveEnvironmentToAllContainers"]
 	config.ExitBehavior = configMap["exitBehavior"]
 	config.Test = configMap["test"]
+	config.PrintLogs = configMap["printLogs"]
 	return config
 }
 func ConfigToMap(config Config) map[string]string {
@@ -265,6 +274,7 @@ func ConfigToMap(config Config) map[string]string {
 	configMap["preserveEnvironmentToAllContainers"] = config.PreserveEnvironmentToAllContainers
 	configMap["exitBehavior"] = config.ExitBehavior
 	configMap["test"] = config.Test
+	configMap["printLogs"] = config.PrintLogs
 	return configMap
 }
 
@@ -314,6 +324,8 @@ func getFileConfig(logger *Logger, pathToFile string) Config {
 					config.DockerComposeFile = value
 				case "DOJO_DOCKER_COMPOSE_OPTIONS":
 					config.DockerComposeOptions = value
+				case "DOJO_DOCKER_COMPOSE_PRINT_LOGS":
+					config.PrintLogs = value
 				case "DOJO_PRESERVE_ENV_TO_ALL_CONTAINERS":
 					config.PreserveEnvironmentToAllContainers = value
 				case "DOJO_WORK_OUTER":
@@ -366,6 +378,7 @@ func getDefaultConfig(configFile string) Config {
 		DockerComposeFile:  "docker-compose.yml",
 		ExitBehavior:       "abort",
 		PreserveEnvironmentToAllContainers: "true",
+		PrintLogs: "failure",
 	}
 	return defaultConfig
 }
@@ -420,6 +433,11 @@ func verifyConfig(logger *Logger, config *Config) error {
 	}
 	if config.PreserveEnvironmentToAllContainers != "true" && config.PreserveEnvironmentToAllContainers != "false" {
 		return fmt.Errorf("Invalid configuration, unsupported PreserveEnvironmentToAllContainers: %s. Supported: true, false", config.PreserveEnvironmentToAllContainers)
+	}
+	if config.PrintLogs != "always" && config.PrintLogs != "failure" && config.PrintLogs != "never" {
+		return fmt.Errorf(
+			"Invalid configuration, PrintLogs supported values are: always, failure, never. It was set to: %s",
+			config.PrintLogs)
 	}
 	if config.DockerImage == "" {
 		return fmt.Errorf("Invalid configuration, DockerImage is unset")

@@ -1,41 +1,45 @@
 import os
-
 from .support.common import *
 
 
-def cleanUpDCDojoFile():
+def clean_up_dc_dojofile():
     try:
         os.remove(os.path.join(project_root, 'test/test-files/itest-dc.yaml.dojo'))
     except FileNotFoundError:
         pass
 
-def testDCDojoFileIsRemoved():
+
+def test_dc_dojofile_is_removed():
     assert not os.path.exists(os.path.join(project_root, 'test/test-files/itest-dc.yaml.dojo'))
 
-def cleanUpDCContainers():
+
+def clean_up_dc_containers():
     run_command('docker', ['stop', 'testdojorunid_default_run_1'])
     run_command('docker', ['stop', 'testdojorunid_abc_1'])
     run_command('docker', ['rm', 'testdojorunid_default_run_1'])
     run_command('docker', ['rm', 'testdojorunid_abc_1'])
 
-def testDCContainersAreRemoved():
+
+def test_dc_containers_are_removed():
     result = run_command('docker', ['ps', '-a', '--filter', 'name=testdojorunid'])
     assert not "testdojorunid" in result.stdout
     assert result.returncode == 0
 
-def cleanUpDCNetwork():
+
+def clean_up_dc_network():
     run_command('docker', ['network', 'rm', 'testdojorunid_default'])
 
-def testDCNetworkIsRemoved():
+
+def test_dc_network_is_removed():
     result = run_command('docker',  ['network', 'ls', '--filter', "name=testdojorunid"])
     assert not "testdojorunid" in result.stdout
     assert result.returncode == 0
 
 
 def test_docker_compose_run_when_exit_zero():
-    cleanUpDCContainers()
-    cleanUpDCNetwork()
-    cleanUpDCDojoFile()
+    clean_up_dc_containers()
+    clean_up_dc_network()
+    clean_up_dc_dojofile()
     result = run_dojo("--driver=docker-compose --dcf=./test/test-files/itest-dc.yaml --debug=true --test=true --image=alpine:3.8 whoami".split(' '))
     assert 'Dojo version' in result.stderr
     assert result.returncode == 0
@@ -44,14 +48,15 @@ def test_docker_compose_run_when_exit_zero():
     assert 'Exit status from run command: 0' in result.stderr
     assert_no_warnings_or_errors(result.stderr)
     assert_no_warnings_or_errors(result.stdout)
-    testDCDojoFileIsRemoved()
-    testDCContainersAreRemoved()
-    testDCNetworkIsRemoved()
+    test_dc_dojofile_is_removed()
+    test_dc_containers_are_removed()
+    test_dc_network_is_removed()
+
 
 def test_docker_compose_run_command_output_capture():
-    cleanUpDCContainers()
-    cleanUpDCNetwork()
-    cleanUpDCDojoFile()
+    clean_up_dc_containers()
+    clean_up_dc_network()
+    clean_up_dc_dojofile()
     result = run_dojo(['--driver=docker-compose', '--dcf=./test/test-files/itest-dc.yaml', '--debug=true', '--test=true', '--image=alpine:3.8', 'sh', '-c', "printenv HOME"])
     assert result.stdout == '/root\n'
     assert "Exit status from run command: 0" in result.stderr
@@ -59,24 +64,26 @@ def test_docker_compose_run_command_output_capture():
     assert "Exit status from signals: 0" in result.stderr
     assert "Dojo version" in result.stderr
 
+
 def test_docker_compose_run_when_exit_non_zero():
-    cleanUpDCContainers()
-    cleanUpDCNetwork()
-    cleanUpDCDojoFile()
+    clean_up_dc_containers()
+    clean_up_dc_network()
+    clean_up_dc_dojofile()
     result = run_dojo("--driver=docker-compose --dcf=./test/test-files/itest-dc.yaml --debug=true --test=true --image=alpine:3.8 notexistentcommand".split(' '))
     assert 'Dojo version' in result.stderr
     assert "Current shell is interactive: false" in result.stderr
     assert "exec notexistentcommand failed: No such file or directory" in result.stderr
     assert "Exit status from run command: 127" in result.stderr
     assert 127 == result.returncode
-    testDCDojoFileIsRemoved()
-    testDCContainersAreRemoved()
-    testDCNetworkIsRemoved()
+    test_dc_dojofile_is_removed()
+    test_dc_containers_are_removed()
+    test_dc_network_is_removed()
+
 
 def test_docker_compose_run_when_double_dash_command_split():
-    cleanUpDCContainers()
-    cleanUpDCNetwork()
-    cleanUpDCDojoFile()
+    clean_up_dc_containers()
+    clean_up_dc_network()
+    clean_up_dc_dojofile()
     result = run_dojo("--driver=docker-compose --dcf=./test/test-files/itest-dc.yaml --debug=true --test=true --image=alpine:3.8 -- whoami".split())
     assert 'Dojo version' in result.stderr
     assert result.returncode == 0
@@ -85,14 +92,15 @@ def test_docker_compose_run_when_double_dash_command_split():
     assert 'Exit status from run command: 0' in result.stderr
     assert_no_warnings_or_errors(result.stderr)
     assert_no_warnings_or_errors(result.stdout)
-    testDCDojoFileIsRemoved()
-    testDCContainersAreRemoved()
-    testDCNetworkIsRemoved()
+    test_dc_dojofile_is_removed()
+    test_dc_containers_are_removed()
+    test_dc_network_is_removed()
+
 
 def test_docker_compose_run_when_shell_command():
-    cleanUpDCContainers()
-    cleanUpDCNetwork()
-    cleanUpDCDojoFile()
+    clean_up_dc_containers()
+    clean_up_dc_network()
+    clean_up_dc_dojofile()
     result = run_dojo(['--driver=docker-compose',  '--dcf=./test/test-files/itest-dc.yaml', '--debug=true', '--test=true', '--image=alpine:3.8', 'sh', '-c', 'echo hello'])
     assert 'Dojo version' in result.stderr
     assert 'Exit status from run command: 0' in result.stderr
@@ -100,14 +108,15 @@ def test_docker_compose_run_when_shell_command():
     assert result.returncode == 0
     assert_no_warnings_or_errors(result.stderr)
     assert_no_warnings_or_errors(result.stdout)
-    testDCDojoFileIsRemoved()
-    testDCContainersAreRemoved()
-    testDCNetworkIsRemoved()
+    test_dc_dojofile_is_removed()
+    test_dc_containers_are_removed()
+    test_dc_network_is_removed()
+
 
 def test_docker_compose_run_preserves_env_vars():
-    cleanUpDCContainers()
-    cleanUpDCNetwork()
-    cleanUpDCDojoFile()
+    clean_up_dc_containers()
+    clean_up_dc_network()
+    clean_up_dc_dojofile()
     envs = dict(os.environ)
     envs['ABC'] ='custom_value'
     result = run_dojo(['--driver=docker-compose', '--dcf=./test/test-files/itest-dc.yaml', '--debug=true', '--test=true', '--image=alpine:3.8', 'sh', '-c', 'env | grep ABC'],
@@ -117,14 +126,15 @@ def test_docker_compose_run_preserves_env_vars():
     assert '1234' in result.stdout
     assert 'Exit status from run command: 0' in result.stderr
     assert result.returncode == 0
-    testDCDojoFileIsRemoved()
-    testDCContainersAreRemoved()
-    testDCNetworkIsRemoved()
+    test_dc_dojofile_is_removed()
+    test_dc_containers_are_removed()
+    test_dc_network_is_removed()
+
 
 def test_docker_compose_run_preserves_multiline_env_vars():
-    cleanUpDCContainers()
-    cleanUpDCNetwork()
-    cleanUpDCDojoFile()
+    clean_up_dc_containers()
+    clean_up_dc_network()
+    clean_up_dc_dojofile()
     envs = dict(os.environ)
     envs['ABC'] = """first line
 second line"""
@@ -139,9 +149,10 @@ second line"""
     assert 'Exit status from run command:' in result.stderr
     assert """first line
 second line""" in result.stdout
-    testDCDojoFileIsRemoved()
-    testDCContainersAreRemoved()
-    testDCNetworkIsRemoved()
+    test_dc_dojofile_is_removed()
+    test_dc_containers_are_removed()
+    test_dc_network_is_removed()
+
 
 def test_docker_compose_pull():
     result = run_dojo('--driver=docker-compose --dcf=./test/test-files/itest-dc.yaml --debug=true --action=pull --image=alpine:3.8'.split(' '))
@@ -151,10 +162,11 @@ def test_docker_compose_pull():
     assert_no_warnings_or_errors(result.stderr)
     assert_no_warnings_or_errors(result.stdout)
 
+
 def test_docker_compose_dojo_work_variables():
-    cleanUpDCContainers()
-    cleanUpDCNetwork()
-    cleanUpDCDojoFile()
+    clean_up_dc_containers()
+    clean_up_dc_network()
+    clean_up_dc_dojofile()
     os.makedirs(os.path.join(project_root, 'test/test-files/custom-dir-env-var'), exist_ok=True)
     with open(os.path.join(project_root, 'test/test-files/custom-dir-env-var/file1.txt'), 'w') as f:
         f.write('123')
@@ -168,6 +180,74 @@ def test_docker_compose_dojo_work_variables():
     assert_no_warnings_or_errors(result.stderr)
     assert_no_warnings_or_errors(result.stdout)
     assert result.returncode == 0
-    testDCDojoFileIsRemoved()
-    testDCContainersAreRemoved()
-    testDCNetworkIsRemoved()
+    test_dc_dojofile_is_removed()
+    test_dc_containers_are_removed()
+    test_dc_network_is_removed()
+
+
+def test_docker_compose_run_shows_nondefault_containers_logs_when_all_constainers_succeeded():
+    clean_up_dc_containers()
+    clean_up_dc_network()
+    clean_up_dc_dojofile()
+    # make the command of the default container last long enough so that the other
+    # container is started and managed to produce some output
+    result = run_dojo(['--driver=docker-compose', '--dcf=./test/test-files/itest-dc-verbose.yaml',
+                       '--print-logs=always',
+                       '--debug=true', '--test=true', '--image=alpine:3.8', '--', 'sh',
+                       '-c', "echo 1; sleep 1; echo 2; sleep 1;"])
+    assert 'Dojo version' in result.stderr
+    assert result.returncode == 0
+    assert 'echo 1; sleep 1; echo 2; sleep 1;' in result.stderr
+    assert 'Exit status from run command: 0' in result.stderr
+    assert 'Here are logs of container: testdojorunid_abc_1' in result.stderr
+    assert 'which status is: running' in result.stderr
+    assert 'iteration: 1' in result.stderr
+    assert_no_warnings_or_errors(result.stderr)
+    assert_no_warnings_or_errors(result.stdout)
+    test_dc_dojofile_is_removed()
+    test_dc_containers_are_removed()
+    test_dc_network_is_removed()
+
+
+def test_docker_compose_run_shows_nondefault_containers_logs_when_nondefault_container_failed():
+    clean_up_dc_containers()
+    clean_up_dc_network()
+    clean_up_dc_dojofile()
+    # make the command of the default container last long enough so that the other
+    # container is started and managed to produce some output
+    result = run_dojo(['--driver=docker-compose', '--dcf=./test/test-files/itest-dc-verbose-fail.yaml',
+                       '--print-logs=always',
+                       '--debug=true', '--test=true', '--image=alpine:3.8', '--', 'sh',
+                       '-c', "echo 1; sleep 1; echo 2; sleep 1;"])
+    assert 'Dojo version' in result.stderr
+    assert result.returncode == 0
+    assert 'echo 1; sleep 1; echo 2; sleep 1;' in result.stderr
+    assert 'Exit status from run command: 0' in result.stderr
+    assert 'Here are logs of container: testdojorunid_abc_1' in result.stderr
+    assert 'which exited with exitcode: 127' in result.stderr
+    assert 'some-non-existent-command: not found' in result.stderr
+    assert_no_warnings_or_errors(result.stderr)
+    assert_no_warnings_or_errors(result.stdout)
+    test_dc_dojofile_is_removed()
+    test_dc_containers_are_removed()
+    test_dc_network_is_removed()
+
+
+def test_docker_compose_run_shows_nondefault_containers_logs_when_default_container_failed():
+    clean_up_dc_containers()
+    clean_up_dc_network()
+    clean_up_dc_dojofile()
+    # make the command of the default container last long enough so that the other
+    # container is started and managed to produce some output
+    result = run_dojo("--driver=docker-compose --dcf=./test/test-files/itest-dc-verbose.yaml --print-logs=failure --debug=true --test=true --image=alpine:3.8 -- some-non-existent-command".split())
+    assert 'Dojo version' in result.stderr
+    assert result.returncode == 127
+    assert 'Exit status from run command: 127' in result.stderr
+    assert 'Here are logs of container: testdojorunid_abc_1' in result.stderr
+    assert 'which status is: running' in result.stderr
+    assert 'iteration: 1' in result.stderr
+    assert_no_warnings_or_errors(result.stderr)
+    assert_no_warnings_or_errors(result.stdout)
+    test_dc_dojofile_is_removed()
+    test_dc_containers_are_removed()
+    test_dc_network_is_removed()
