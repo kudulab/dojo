@@ -4,6 +4,7 @@
  Previously, only printing on console (stderr) was supported. This can be set by `--print-logs-target`
  commandline option and by `DOJO_DOCKER_COMPOSE_PRINT_LOGS_TARGET` Dojofile option.
  Possible values: console, file. [#12](https://github.com/kudulab/dojo/issues/12)
+* Fix automated github releases to add release notes and to not mark a release as pre-release
 
 ### 0.7.0 (2020-Jan-01)
 
