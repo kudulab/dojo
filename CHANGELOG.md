@@ -1,3 +1,10 @@
+### 0.8.0 (2020-Jan-01)
+
+* Docker-composer driver: enable printing logs of non default docker containers either to console or to file.
+ Previously, only printing on console (stderr) was supported. This can be set by `--print-logs-target`
+ commandline option and by `DOJO_DOCKER_COMPOSE_PRINT_LOGS_TARGET` Dojofile option.
+ Possible values: console, file. [#12](https://github.com/kudulab/dojo/issues/12)
+
 ### 0.7.0 (2020-Jan-01)
 
 Docker-compose driver: print logs of non default docker containers. By default this will be done if any

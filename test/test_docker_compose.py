@@ -251,3 +251,41 @@ def test_docker_compose_run_shows_nondefault_containers_logs_when_default_contai
     test_dc_dojofile_is_removed()
     test_dc_containers_are_removed()
     test_dc_network_is_removed()
+
+
+def clean_up_dojo_logs_file(logs_file):
+    try:
+        os.remove(os.path.join(project_root, logs_file))
+    except FileNotFoundError:
+        pass
+
+
+def test_docker_compose_run_shows_nondefault_containers_logs_when_all_constainers_succeeded_print_logs_to_file():
+    clean_up_dc_containers()
+    clean_up_dc_network()
+    clean_up_dc_dojofile()
+    logs_file = "dojo-logs-testdojorunid_abc_1-testdojorunid.txt"
+    clean_up_dojo_logs_file(logs_file)
+
+    # make the command of the default container last long enough so that the other
+    # container is started and managed to produce some output
+    result = run_dojo(['--driver=docker-compose', '--dcf=./test/test-files/itest-dc-verbose.yaml',
+                       '--print-logs=always', '--print-logs-target=file',
+                       '--debug=false', '--test=true', '--image=alpine:3.8', '--', 'sh',
+                       '-c', "echo 1; sleep 1; echo 2; sleep 1;"])
+    assert 'Dojo version' in result.stderr
+    assert result.returncode == 0
+    assert 'echo 1; sleep 1; echo 2; sleep 1;' in result.stderr
+    assert 'The logs of container: testdojorunid_abc_1, which status is: running, were saved to file: dojo-logs-testdojorunid_abc_1-testdojorunid.txt' in result.stderr
+    with open(logs_file, "r") as file:
+        contents = file.readlines()
+        assert 'iteration: 1\n' in contents
+        assert 'stdout:\n' in contents
+        assert 'stderr:\n' in contents
+    assert 'iteration: 1' not in result.stderr
+    assert_no_warnings_or_errors(result.stderr)
+    assert_no_warnings_or_errors(result.stdout)
+    test_dc_dojofile_is_removed()
+    test_dc_containers_are_removed()
+    test_dc_network_is_removed()
+    clean_up_dojo_logs_file(logs_file)

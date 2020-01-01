@@ -601,7 +601,9 @@ Usage of dojo <flags> [--] <CMD>:
   -preserve-env-to-all string
 
   -print-logs string
-        Decide when to print the logs of non-default containers. Possible values: always, failure (default), never. Only for driver: docker-compose
+      	Decide when to print the logs of non-default containers. Possible values: always, failure (default), never. Only for driver: docker-compose
+  -print-logs-target string
+      	Decide where to print the logs of non-default containers. Possible values: console (default, stderr), file. Only for driver: docker-compose
   -remove-containers string
     	Set to true if you want to not remove docker containers. Default: true
   -rm string

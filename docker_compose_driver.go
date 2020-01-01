@@ -405,15 +405,23 @@ func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envSe
 		for _, v := range containersInfos {
 			containerInfo := v
 			status := containerInfo.Status
+			statusMsg := ""
 			if status == "running" {
-				dc.Logger.Log("info", fmt.Sprintf("Here are logs of container: %s, which status is: %s\n%s",
-					containerInfo.Name, status, containerInfo.Logs))
+				statusMsg = fmt.Sprintf("which status is: %s", status)
 			} else if status == "exited" {
-				dc.Logger.Log("info", fmt.Sprintf("Here are logs of container: %s, which exited with exitcode: %s\n%s",
-					containerInfo.Name, containerInfo.ExitCode, containerInfo.Logs))
+				statusMsg = fmt.Sprintf("which exited with exitcode: %s", containerInfo.ExitCode)
 			} else {
-				dc.Logger.Log("info", fmt.Sprintf("Here are logs of container: %s, which status is: %s, exitcode: %s\n%s",
-					containerInfo.Name, status, containerInfo.ExitCode, containerInfo.Logs))
+				statusMsg = fmt.Sprintf("which status is: %s, exitcode: %s", status, containerInfo.ExitCode)
+			}
+
+			if mergedConfig.PrintLogsTarget == "file" {
+				logsFilePath := "dojo-logs-" + containerInfo.Name + "-" + runID + ".txt"
+				dc.FileService.WriteToFile(logsFilePath, containerInfo.Logs, "debug")
+				dc.Logger.Log("info", fmt.Sprintf("The logs of container: %s, %s, were saved to file: %s",
+					containerInfo.Name, statusMsg, logsFilePath))
+			} else {
+				dc.Logger.Log("info", fmt.Sprintf("Here are logs of container: %s, %s:\n%s",
+					containerInfo.Name, statusMsg, containerInfo.Logs))
 			}
 		}
 	}

@@ -120,7 +120,8 @@ func Test_getCLIConfig(t *testing.T) {
 		{[]string{"cmd", "-i=false"}, Config{Action:"", ConfigFile:"", Driver:"", Debug:"", Interactive:"false"}},
 		{[]string{"cmd", "--remove-containers=false"}, Config{RemoveContainers: "false"}},
 		{[]string{"cmd", "--rm=false"}, Config{RemoveContainers: "false"}},
-		{[]string{"cmd", "-print-logs=always"}, Config{PrintLogs:"always"}},
+		{[]string{"cmd", "-print-logs=always"}, Config{PrintLogs: "always"}},
+		{[]string{"cmd", "-print-logs-target=console"}, Config{PrintLogsTarget: "console"}},
 	}
 
 	for _, currentTest := range flagTest {
@@ -301,6 +302,22 @@ func Test_verifyConfig_invalidPrintLogs(t *testing.T) {
 	assert.Equal(t, "Invalid configuration, PrintLogs supported values are: always, failure, never. It was set to: bla", err.Error())
 }
 
+func Test_verifyConfig_invalidPrintLogsTarget(t *testing.T) {
+	config := &Config{
+		Action: "run",
+		Driver: "docker-compose",
+		Debug: "true",
+		RemoveContainers: "true",
+		PreserveEnvironmentToAllContainers: "true",
+		PrintLogs: "always",
+		PrintLogsTarget: "invalid",
+	}
+	logger := NewLogger("debug")
+	err := verifyConfig(logger, config)
+	assert.NotNil(t, err)
+	assert.Equal(t, "Invalid configuration, PrintLogsTarget supported values are: console, file. It was set to: invalid", err.Error())
+}
+
 func Test_verifyConfig_driverShorthandDC(t *testing.T) {
 	dcFile := "/tmp/dojo-Test_verifyConfig_driverShorthandDC.yml"
 	config := &Config{
@@ -313,6 +330,7 @@ func Test_verifyConfig_driverShorthandDC(t *testing.T) {
 		PreserveEnvironmentToAllContainers: "true",
 		ExitBehavior: "ignore",
 		PrintLogs: "never",
+		PrintLogsTarget: "console",
 	}
 	os.Create(dcFile)
 	logger := NewLogger("debug")
@@ -343,6 +361,7 @@ func Test_mapToConfig(t *testing.T) {
 	mymap["exitBehavior"] = "ignore"
 	mymap["test"] = "false"
 	mymap["printLogs"] = "always"
+	mymap["printLogsTarget"] = "console"
 	config := MapToConfig(mymap)
 	assert.Equal(t, "mydriver", config.Driver)
 	assert.Equal(t, "run", config.Action)
