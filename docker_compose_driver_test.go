@@ -362,7 +362,7 @@ func TestDockerComposeDriver_HandleRun_Unit_PrintLogsFailure(t *testing.T) {
 	assert.Equal(t, 0, exitstatus)
 }
 
-func TestDockerComposeDriver_HandleRun_Unit_PrintLogsAlways(t *testing.T) {
+func TestDockerComposeDriver_HandleRun_Unit_PrintLogsAlways_TargetConsole(t *testing.T) {
 	logger := NewLogger("debug")
 	fs := NewMockedFileService(logger)
 	fakePSOutput := getFakeDockerComposePSStdout()
@@ -386,6 +386,39 @@ func TestDockerComposeDriver_HandleRun_Unit_PrintLogsAlways(t *testing.T) {
 	exitstatus := driver.HandleRun(config, runID, envService)
 	assert.Equal(t, 0, exitstatus)
 	assert.True(t, elem_in_array(shellS.CommandsRun, "docker logs"))
+
+	exitstatus = driver.CleanAfterRun(config, runID)
+	assert.Equal(t, 0, exitstatus)
+}
+func TestDockerComposeDriver_HandleRun_Unit_PrintLogsAlways_TargetFile(t *testing.T) {
+	logger := NewLogger("debug")
+	fs := NewMockedFileService(logger)
+	fakePSOutput := getFakeDockerComposePSStdout()
+	commandsReactions := make(map[string]interface{}, 0)
+	commandsReactions["docker-compose -f docker-compose.yml -f docker-compose.yml.dojo -p 1234 ps"] =
+		[]string{fakePSOutput, "", "0" }
+	commandsReactions["docker-compose -f docker-compose.yml -f docker-compose.yml.dojo -p 1234 config --services"] =
+		[]string{"container1", "", "0" }
+	commandsReactions["docker inspect --format='{{.Id}} {{.Name}} {{.State.Status}} {{.State.ExitCode}}' edudocker_abc_1"] = []string{"some_hash name1 running 0", "", "0"}
+	commandsReactions["docker inspect --format='{{.Id}} {{.Name}} {{.State.Status}} {{.State.ExitCode}}' edudocker_def_1"] = []string{"some_hash name2 running 127", "", "0"}
+	commandsReactions["docker logs name1"] = []string{"some-output", "", "0"}
+	commandsReactions["docker logs name2"] = []string{"some-output2", "", "0"}
+
+	shellS := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
+	driver := NewDockerComposeDriver(shellS, fs, logger)
+
+	config := getTestConfig()
+	config.Driver = "docker-compose"
+	config.RunCommand = "bla"
+	config.PrintLogs = "always"
+	config.PrintLogsTarget  = "file"
+	runID := "1234"
+	envService := NewMockedEnvService()
+	exitstatus := driver.HandleRun(config, runID, envService)
+	assert.Equal(t, 0, exitstatus)
+	assert.True(t, elem_in_array(shellS.CommandsRun, "docker logs"))
+	assert.Contains(t, fs.FilesWrittenTo["dojo-logs-name1-1234.txt"], "stderr:\nstdout:\nsome-output")
+	assert.Contains(t, fs.FilesWrittenTo["dojo-logs-name2-1234.txt"], "stderr:\nstdout:\nsome-output2")
 
 	exitstatus = driver.CleanAfterRun(config, runID)
 	assert.Equal(t, 0, exitstatus)
