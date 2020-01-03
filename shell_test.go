@@ -43,7 +43,10 @@ func (ss *MockedShellServiceNotInteractive) AppendCommandRun(command string) {
 	ss.CommandsRun = append(ss.CommandsRun, command)
 	ss.Mutex.Unlock()
 }
-func (bs MockedShellServiceNotInteractive) RunInteractive(cmdString string, separePGroup bool) (int, bool) {
+
+// AppendCommandRun needs to be invoked on a pointer to object, because it changes the object state.
+// Since this method invokes AppendCommandRun() function, it also needs to be invoked on a pointer to object.
+func (bs *MockedShellServiceNotInteractive) RunInteractive(cmdString string, separePGroup bool) (int, bool) {
 	cmd := fmt.Sprintf("Pretending to run: %s", cmdString)
 	bs.Logger.Log("debug", cmd)
 	bs.AppendCommandRun(cmd)
@@ -98,13 +101,13 @@ func (ss *MockedShellServiceInteractive) AppendCommandRun(command string) {
 	ss.CommandsRun = append(ss.CommandsRun, command)
 	ss.Mutex.Unlock()
 }
-func (bs MockedShellServiceInteractive) RunInteractive(cmdString string, separePGroup bool) (int, bool) {
+func (bs *MockedShellServiceInteractive) RunInteractive(cmdString string, separePGroup bool) (int, bool) {
 	cmd := fmt.Sprintf("Pretending to run: %s", cmdString)
 	bs.Logger.Log("debug", cmd)
 	bs.AppendCommandRun(cmd)
 	return 0, false
 }
-func (bs MockedShellServiceInteractive) RunGetOutput(cmdString string, separePGroup bool) (string, string, int, bool) {
+func (bs *MockedShellServiceInteractive) RunGetOutput(cmdString string, separePGroup bool) (string, string, int, bool) {
 	cmd := fmt.Sprintf("Pretending to run: %s", cmdString)
 	bs.Logger.Log("debug", cmd)
 	bs.AppendCommandRun(cmd)
