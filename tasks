@@ -106,7 +106,7 @@ const DojoVersion = \"${next_version}\"
           --repo dojo \
           --tag $VERSION \
           --name $VERSION \
-          --description "./tasks generate_release_notes ${VERSION}"
+          --description "$(./tasks generate_release_notes ${VERSION})"
 
         $GHRELEASE_BIN upload \
           --user $GH_USER \
