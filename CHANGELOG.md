@@ -3,6 +3,9 @@
 * Implemented Ctrl+C (SigInt) to work for action: run for both drivers (docker and docker-compose).
  The change in the run action for docker-compose driver is that now Dojo first explicitly invokes the pull action
   and then it invokes the run action.
+* Driver: docker-compose, action: run: fix a bug when handling a signal. Previously, when default container was
+ not (yet) created, there was a panic. But, it may happen that the default container is not created while
+ other containers are created. From now on, Dojo will not panic and it will stop the other containers.
 
 ### 0.8.0 (2020-Jan-01)
 

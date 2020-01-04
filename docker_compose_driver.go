@@ -528,6 +528,7 @@ func (dc DockerComposeDriver) HandleSignal(mergedConfig Config, runID string) in
 	}
 
 	defaultContainerID := dc.getDefaultContainerID(names)
+	// it may happen that the default container is not created, but other containers are
 	es := dc.stop(mergedConfig, runID, defaultContainerID)
 	dc.Logger.Log("info", "Stopping on signal finished")
 	return es
@@ -568,6 +569,7 @@ func (dc DockerComposeDriver) HandleMultipleSignal(mergedConfig Config, runID st
 	}
 
 	defaultContainerID := dc.getDefaultContainerID(names)
+	// it may happen that the default container is not created, but other containers are
 	es := dc.kill(mergedConfig, runID, defaultContainerID)
 	dc.Logger.Log("info", "Stopping on multiple signals finished")
 	return es
@@ -588,7 +590,8 @@ func (dc DockerComposeDriver) getDefaultContainerID(containersNames []string) st
 			return contanerInfo.ID
 		}
 	}
-	panic(fmt.Errorf("default container not found. Were the containers created?"))
+	dc.Logger.Log("info", "Default container not found")
+	return ""
 }
 
 // example output of docker-compose ps:
