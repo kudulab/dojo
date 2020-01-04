@@ -87,8 +87,22 @@ func main() {
 	shellService.SetEnvironment(envService.GetVariables())
 
 	if mergedConfig.Action == "pull" {
+		// just pull the image(s) and exit
 		exitstatus := driver.HandlePull(mergedConfig)
 		os.Exit(exitstatus)
+	}
+
+	if mergedConfig.Action == "run" && mergedConfig.Driver == "docker-compose" {
+		// We have to first pull the image(s) in order to support ctrl+c while pulling.
+		// If we didn't do it, then docker-compose run command could result in starting some containers
+		// while pulling some images. Then, on ctrl+c we would stop the docker-compose process, which
+		// would stop the pulling and also the current (this) main thread. This means that there is no
+		// way to perform cleaning and the already started containers would be left running.
+		// (This is not the case for the driver: docker, but it we could implement in the same way).
+		exitstatus := driver.HandlePull(mergedConfig)
+		if exitstatus !=0 {
+			panic("Exit status from pulling the image was not 0")
+		}
 	}
 
 	// action is run

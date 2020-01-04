@@ -1,3 +1,9 @@
+### 0.9.0 (2020-Jan-04)
+
+* Implemented Ctrl+C (SigInt) to work for action: run for both drivers (docker and docker-compose).
+ The change in the run action for docker-compose driver is that now Dojo first explicitly invokes the pull action
+  and then it invokes the run action.
+
 ### 0.8.0 (2020-Jan-01)
 
 * Docker-composer driver: enable printing logs of non default docker containers either to console or to file.
