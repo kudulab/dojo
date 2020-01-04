@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"log"
+	"os/exec"
 	"strconv"
 	"sync"
 	"testing"
@@ -42,6 +44,10 @@ func (ss *MockedShellServiceNotInteractive) AppendCommandRun(command string) {
 	ss.Mutex.Lock()
 	ss.CommandsRun = append(ss.CommandsRun, command)
 	ss.Mutex.Unlock()
+}
+
+func (bs MockedShellServiceNotInteractive) GetProcessPid(processStrings []string) int {
+	return -1
 }
 
 // AppendCommandRun needs to be invoked on a pointer to object, because it changes the object state.
@@ -116,6 +122,9 @@ func (bs *MockedShellServiceInteractive) RunGetOutput(cmdString string, separePG
 func (bs MockedShellServiceInteractive) CheckIfInteractive() bool {
 	return true
 }
+func (bs MockedShellServiceInteractive) GetProcessPid(processStrings []string) int {
+	return -1
+}
 
 func TestMockedShellService_CheckIfInteractive(t *testing.T){
 	logger := NewLogger("debug")
@@ -151,4 +160,42 @@ func TestBashShellService_SetEnv(t *testing.T) {
 	shell.SetEnvironment([]string{"ABC=123", "DEF=444", "ZZZ=999", "YYY=666"})
 	assert.Equal(t, 4, len(shell.Environment))
 	assert.Equal(t, "ABC=123", shell.Environment[0])
+}
+func startSomeCmd(name, arg string) func() {
+	var cmd = exec.Command(name, arg)
+	err := cmd.Start()
+	if err != nil {
+		log.Fatal(err)
+	}
+	// Return a function to be invoked with "defer", so that the process is killed
+	// even if tests are failed. Idea from: https://stackoverflow.com/a/42310257/4457564
+	return func() { cmd.Process.Kill() }
+}
+
+func TestBashShellService_GetProcessPid(t *testing.T) {
+	var processTests = []struct {
+		names []string
+		proccessFound bool
+	} {
+		{[]string{"sleep", "5"}, true},
+		{[]string{"sleep", "50"}, true},
+		{[]string{"sleep"}, true},
+		{[]string{"sleep", "1"}, false},
+		{[]string{"blaaa"}, false},
+	}
+
+	deferFunc1 := startSomeCmd("sleep", "5")
+	deferFunc2 := startSomeCmd("sleep", "50")
+	defer deferFunc1()
+	defer deferFunc2()
+	for _, tt := range processTests {
+		logger := NewLogger("debug")
+		shell := NewBashShellService(logger)
+		pid := shell.GetProcessPid(tt.names)
+		if tt.proccessFound {
+			assert.True(t, pid > 0, tt.names)
+		} else {
+			assert.Equal(t, pid, -1, tt.names)
+		}
+	}
 }

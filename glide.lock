@@ -1,6 +1,27 @@
-hash: 13d82af33c2e300a647db8fcb237c6422a22ddcef92485a25406ebadb59ebc6d
-updated: 2019-01-07T14:14:43.49796582Z
-imports: []
+hash: 2961f48911b14aba5d76faeb1d377594f172009939191ae2d8c65eb78801cfb9
+updated: 2020-01-04T01:06:28.5795167Z
+imports:
+- name: github.com/go-ole/go-ole
+  version: 14974a1cf6477f616180232977d8ab4791ea8820
+  subpackages:
+  - oleutil
+- name: github.com/mitchellh/go-ps
+  version: 621e5597135b1d14a7d9c2bfc7bc312e7c58463c
+- name: github.com/shirou/gopsutil
+  version: c0410b92ca5e440fba10e069c9a4aac3f64d3fc6
+  subpackages:
+  - cpu
+  - internal/common
+  - mem
+  - net
+  - process
+- name: github.com/StackExchange/wmi
+  version: cbe66965904dbe8a6cd589e2298e5d8b986bd7dd
+- name: golang.org/x/sys
+  version: a1369afcdac740082c63165b07ec83b531884be2
+  subpackages:
+  - unix
+  - windows
 testImports:
 - name: github.com/davecgh/go-spew
   version: d8f796af33cc11cb798c1aaeb27a4ebc5099927d
