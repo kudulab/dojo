@@ -1,5 +1,7 @@
 package: dojo
-import: []
+import:
+- package: github.com/mitchellh/go-ps
+- package: github.com/shirou/gopsutil/process
 testImport:
 - package: github.com/stretchr/testify
   subpackages:

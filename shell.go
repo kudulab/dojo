@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"syscall"
 	"unsafe"
+	go_ps "github.com/mitchellh/go-ps"
+	gopsutil "github.com/shirou/gopsutil/process"
 )
 
 type ShellServiceInterface interface {
@@ -21,6 +24,7 @@ type ShellServiceInterface interface {
 	CheckIfInteractive() bool
 	// set environment variables, override any existing variables
 	SetEnvironment(variables []string)
+	GetProcessPid(processStrings []string) int
 }
 
 func NewBashShellService(logger *Logger) *BashShellService {
@@ -36,6 +40,32 @@ type BashShellService struct {
 	// which are supposed to be preserved when running
 	// a command with this struct
 	Environment []string
+}
+func (bs BashShellService) GetProcessPid(processStrings []string) int {
+	allProcesses, err := go_ps.Processes()
+	if err != nil {
+		panic(err)
+	}
+	for _, v := range allProcesses {
+		processPid := int32(v.Pid())
+		theProcess := gopsutil.Process{Pid: processPid}
+		processCmd, cmdErr := theProcess.Cmdline()
+		if cmdErr != nil {
+			return -1
+		}
+		processName := processCmd
+		allStringsContained := true
+		for _, stringToBeContained := range processStrings {
+			if ! strings.Contains(processName, stringToBeContained) {
+				allStringsContained = false
+				break
+			}
+		}
+		if allStringsContained {
+			return int(v.Pid())
+		}
+	}
+	return -1
 }
 
 func (bs *BashShellService) SetEnvironment(variables []string) {

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 )
 
 type DockerDriver struct {
@@ -110,7 +111,20 @@ func (d DockerDriver) HandleSignal(mergedConfig Config, runID string) int {
 		panic(err)
 	}
 	if !containerInfo.Exists {
-		d.Logger.Log("info", "Container already removed or not created at all, will not react on this signal")
+		d.Logger.Log("info", "Container already removed or not created at all")
+		pid := d.ShellService.GetProcessPid([]string{"docker run", runID})
+		if pid != 0 {
+			proc, err := os.FindProcess(pid)
+			if err != nil {
+				d.Logger.Log("debug", fmt.Sprintf("Nothing to do, docker run process not found: %s", err.Error()))
+				panic(err)
+			}
+			d.Logger.Log("info", fmt.Sprintf("Sending SIGINT to the docker run process: %s, to stop the docker pull", strconv.Itoa(pid)))
+			err = proc.Signal(os.Interrupt)
+			if err != nil {
+				panic(err)
+			}
+		}
 		return 0
 	}
 	cmd := fmt.Sprintf("docker stop %s", runID)

@@ -531,15 +531,9 @@ func Test_getDefaultContainerID_notCreated(t *testing.T) {
 	shellS := NewMockedShellServiceNotInteractive(logger)
 	driver := NewDockerComposeDriver(shellS, fs, logger)
 
-	defer func() {
-		r := recover()
-		assert.Contains(t, r.(error).Error(), "default container not found. Were the containers created?")
-	}()
-
 	names := []string{}
 	id := driver.getDefaultContainerID(names)
 	assert.Equal(t, "", id)
-	t.Fatal("Expected panic")
 }
 
 func Test_checkContainerIsRunning(t *testing.T) {
