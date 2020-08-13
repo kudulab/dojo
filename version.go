@@ -1,3 +1,3 @@
 package main
-const DojoVersion = "0.8.0"
+const DojoVersion = "0.9.0"
 

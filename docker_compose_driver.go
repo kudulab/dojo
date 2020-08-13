@@ -73,13 +73,14 @@ func (dc DockerComposeDriver) getDCGeneratedFilePath(dcfilePath string) string {
 }
 
 func (dc DockerComposeDriver) generateDCFileContentsWithEnv(expContainers []string,	config Config, envFile string,
-	envFileMultiLine string) string {
+	envFileMultiLine string, envFileBashFunctions string) string {
 	contents := fmt.Sprintf(
 		`    volumes:
       - %s:%s:ro
       - %s:%s
       - %s:/etc/dojo.d/variables/00-multiline-vars.sh
-`, config.IdentityDirOuter, "/dojo/identity", config.WorkDirOuter, config.WorkDirInner, envFileMultiLine)
+      - %s:/etc/dojo.d/variables/01-bash-functions.sh
+`, config.IdentityDirOuter, "/dojo/identity", config.WorkDirOuter, config.WorkDirInner, envFileMultiLine, envFileBashFunctions)
 	if os.Getenv("DISPLAY") != "" {
 		// DISPLAY is set, enable running in graphical mode (opinionated)
 		contents += "      - /tmp/.X11-unix:/tmp/.X11-unix\n"
@@ -100,7 +101,8 @@ func (dc DockerComposeDriver) generateDCFileContentsWithEnv(expContainers []stri
       - %s
     volumes:
       - %s:/etc/dojo.d/variables/00-multiline-vars.sh
-`, name, envFile, envFileMultiLine)
+      - %s:/etc/dojo.d/variables/01-bash-functions.sh
+`, name, envFile, envFileMultiLine, envFileBashFunctions)
 		}
 	}
 	return contents
@@ -370,14 +372,15 @@ func checkIfAnyContainerFailed(nonDefaultContainerInfos []*ContainerInfo, defaul
 
 func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envService EnvServiceInterface) int {
 	warnGeneral(dc.FileService, mergedConfig, envService, dc.Logger)
-	envFile, envFileMultiLine := getEnvFilePaths(runID, mergedConfig.Test)
-	saveEnvToFile(dc.FileService, envFile, envFileMultiLine, mergedConfig.BlacklistVariables, envService.GetVariables())
+	envFile, envFileMultiLine, envFileBashFunctions := getEnvFilePaths(runID, mergedConfig.Test)
+	saveEnvToFile(dc.FileService, envFile, envFileMultiLine, envFileBashFunctions,
+		mergedConfig.BlacklistVariables, envService.GetVariables())
 	dojoDCGeneratedFile, err := dc.handleDCFiles(mergedConfig)
 	if err != nil {
 		return 1
 	}
 	expContainers := dc.getExpectedContainers(mergedConfig, runID)
-	additionalContents := dc.generateDCFileContentsWithEnv(expContainers, mergedConfig, envFile, envFileMultiLine)
+	additionalContents := dc.generateDCFileContentsWithEnv(expContainers, mergedConfig, envFile, envFileMultiLine, envFileBashFunctions)
 	dc.FileService.AppendContents(dojoDCGeneratedFile, additionalContents, "debug")
 
 	cmd := dc.ConstructDockerComposeCommandRun(mergedConfig, runID)
@@ -435,9 +438,10 @@ func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envSe
 func (dc DockerComposeDriver) CleanAfterRun(mergedConfig Config, runID string) int {
 	if mergedConfig.RemoveContainers == "true" {
 		dc.Logger.Log("debug", "Cleaning, because RemoveContainers is set to true")
-		envFile, envFileMultiLine := getEnvFilePaths(runID, mergedConfig.Test)
+		envFile, envFileMultiLine, envFilePathBashFunctions := getEnvFilePaths(runID, mergedConfig.Test)
 		defer dc.FileService.RemoveGeneratedFile(mergedConfig.RemoveContainers, envFile)
 		defer dc.FileService.RemoveGeneratedFile(mergedConfig.RemoveContainers, envFileMultiLine)
+		defer dc.FileService.RemoveGeneratedFile(mergedConfig.RemoveContainers, envFilePathBashFunctions)
 		dojoDCGeneratedFile := dc.getDCGeneratedFilePath(mergedConfig.DockerComposeFile)
 		defer dc.FileService.RemoveGeneratedFile(mergedConfig.RemoveContainers, dojoDCGeneratedFile)
 

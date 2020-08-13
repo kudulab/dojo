@@ -108,6 +108,33 @@ def test_docker_preserves_env_vars():
     assert_no_warnings_or_errors(result.stdout)
     assert result.returncode == 0
 
+# Bash experiments:
+# $ export MULTILINE1="first line\nsecond line"
+# $ export MULTILINE2="first line
+# > second line"
+# $ read -d '' MULTILINE3 <<EOF
+# > first line
+# > second line
+# > EOF
+# $ export MULTILINE3
+#
+# $ echo $MULTILINE1
+# first line\nsecond line
+# $ echo $MULTILINE2
+# first line second line
+# $ echo $MULTILINE3
+# first line second line
+# $ echo "$MULTILINE1"
+# first line\nsecond line
+# $ echo "$MULTILINE2"
+# first line
+# second line
+# $ echo "$MULTILINE3"
+# first line
+# second line
+#
+# In Dojo, only the MULTILINE2 and MULTILINE3 will be put among multiline variables.
+# MULTILINE1 will be treated as oneline variable.
 
 def test_docker_preserves_multiline_env_vars():
     clean_up_docker_container()
@@ -115,6 +142,9 @@ def test_docker_preserves_multiline_env_vars():
     envs['ABC'] = """first line
 second line"""
     result = run_dojo(
+        # We need to source the file: /etc/dojo.d/variables/01-bash-functions.sh
+        # explicitly, because the alpine docker image is not a Dojo image, i.e.
+        # it does not have the Dojo entrypoint.sh.
         ['--debug=true', '--test=true', '--image=alpine:3.8', 'sh', '-c', '"source /etc/dojo.d/variables/00-multiline-vars.sh && env | grep -A 1 ABC"'],
         env=envs)
     assert 'Dojo version' in result.stderr
@@ -125,6 +155,39 @@ second line"""
     assert 'Exit status from run command:' in result.stderr
     assert """first line
 second line""" in result.stdout
+
+
+def test_docker_preserves_bash_functions_from_env_vars():
+    clean_up_docker_container()
+    envs = dict(os.environ)
+    # the following does not influence the dojo process
+    # envs['BASH_FUNC_my_bash_func%%'] = """()) {  echo "hello"
+# }"""
+    proc = run_dojo_and_set_bash_func(
+        # We need to source the file: /etc/dojo.d/variables/01-bash-functions.sh
+        # explicitly, because the alpine docker image is not a Dojo image, i.e.
+        # it does not have the Dojo entrypoint.sh. Even if it had,
+        # we'd still have to source the file explicitly, because
+        # sudo does not preserve bash functions.
+        # Dojo entrypoint sources this file too, but then it runs sudo.
+        # https://unix.stackexchange.com/questions/549140/why-doesnt-sudo-e-preserve-the-function-environment-variables-exported-by-ex
+        # https://unix.stackexchange.com/a/233097
+        ['--debug=true', '--test=true', '--image=alpine:3.8', 'sh', '-c', '"apk add -U bash && bash -c \'source /etc/dojo.d/variables/01-bash-functions.sh && my_bash_func\'"'],
+        env=envs)
+    stdout_value_bytes, stderr_value_bytes = proc.communicate()
+    stdout = stdout_value_bytes.decode("utf-8")
+    stderr = stderr_value_bytes.decode("utf-8")
+    assert 'Dojo version' in stderr
+    # print(stdout)
+    # print(stderr)
+    assert 'Written file /tmp/test-dojo-environment-bash-functions-testdojorunid, contents:' in stderr
+    assert 'my_bash_func() {  echo "hello"' in stderr
+    assert '/etc/dojo.d/variables/01-bash-functions.sh' in stderr
+    assert_no_warnings_or_errors(stderr)
+    assert_no_warnings_or_errors(stdout)
+    # the bash function was invoked
+    assert 'hello' in stdout
+    assert 'Exit status from run command: 0' in stderr
 
 
 def test_docker_when_custom_relative_directory():

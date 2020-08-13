@@ -57,11 +57,33 @@ func (f EnvService) IsCurrentUserRoot() bool {
 // any variable starting with BASH will be blacklisted (and prefixed).
 // Variables with DOJO_ prefix cannot be blacklisted.
 func saveEnvToFile(fileService FileServiceInterface, envFilePath string, envFilePathMultiLine string,
+		envFilePathBashFunctions string,
 		blacklistedVars string, currentVariables []string)  {
 	if fileService == nil {
 		panic("fileService was nil")
 	}
 	filteredEnvVariables := filterBlacklistedVariables(blacklistedVars, currentVariables)
+
+	// First, we have to deal with such Bash environment variables, which were created by Bash
+	// when exporting a function. (A function may be one- or multi- line). Example Bash function is:
+	//   my_bash_func() {
+	//    echo "hello"
+	//  }
+	// and it can be exported with:
+	//   export -f my_bash_func
+	// In result, Bash creates the following environment variable:
+	//   BASH_FUNC_my_bash_func%%=() {  echo "hello"
+	//  }
+	// We cannot serialize this variable in the same way as we serialize the other multiline variables, because we
+	// cannot assign any value to a bash variable ending in double percentage signs:
+	//   $ export ABC%%=anything
+	//  bash: export: `ABC%%=anything': not a valid identifier
+	//  $ ABC%%=anything
+	//  bash: ABC%%=anything: command not found
+	// Thus, we have to put such bash functions to a file and export the bash functions again.
+	fileService.RemoveFile(envFilePathBashFunctions, true)
+	bashFunctionsVariablesStr := bashFunctionsVariablesToString(filteredEnvVariables)
+	fileService.WriteToFile(envFilePathBashFunctions, bashFunctionsVariablesStr, "debug")
 
 	fileService.RemoveFile(envFilePath, true)
 	singleLineVariablesStr := singleLineVariablesToString(filteredEnvVariables)
@@ -76,6 +98,8 @@ type EnvironmentVariable struct {
 	Key string
 	Value string
 	MultiLine bool
+	// returns true if it is a bash variable created by exporting a bash function
+	BashFunctionVariable bool
 }
 func (e EnvironmentVariable) String() string {
 	return fmt.Sprintf("%s=%s", e.Key, e.Value)
@@ -87,6 +111,10 @@ func (e EnvironmentVariable) encryptValue() string {
 	return str
 }
 
+func checkIfBashFunc(value string, key string) bool {
+	return strings.HasPrefix(value, "()") && strings.HasPrefix(key, "BASH_FUNC_")
+}
+
 // allVariables is a []string, where each element is of format: VariableName=VariableValue
 func filterBlacklistedVariables(blacklistedVarsNames string, allVariables []string) []EnvironmentVariable {
 	blacklistedVarsArr := strings.Split(blacklistedVarsNames, ",")
@@ -96,29 +124,48 @@ func filterBlacklistedVariables(blacklistedVarsNames string, allVariables []stri
 		key := arr[0]
 		value := arr[1]
 		isMultiLine := (len(strings.Split(value, "\n")) > 1)
+		isBashFunc := checkIfBashFunc(value, key)
 		var envVar EnvironmentVariable
 		if key == "DISPLAY" {
 			// this is highly opinionated
-			envVar = EnvironmentVariable{"DISPLAY", "unix:0.0", isMultiLine}
+			envVar = EnvironmentVariable{"DISPLAY", "unix:0.0", isMultiLine, isBashFunc}
 		} else if existsVariableWithDOJOPrefix(key, allVariables) {
 			// ignore this key, we will deal with DOJO_${key}
 			continue
-		} else if strings.HasPrefix(key, "DOJO_") {
-			envVar = EnvironmentVariable{key, value, isMultiLine}
+		} else if strings.HasPrefix(key, "DOJO_") || isBashFunc {
+			// do not add DOJO_ prefix if such a prefix is already added or
+			// when this is an exported bash function
+			envVar = EnvironmentVariable{key, value, isMultiLine, isBashFunc}
 		} else if isVariableBlacklisted(key, blacklistedVarsArr) {
-			envVar = EnvironmentVariable{fmt.Sprintf("DOJO_%s", key), value, isMultiLine}
+			envVar = EnvironmentVariable{fmt.Sprintf("DOJO_%s", key), value, isMultiLine, isBashFunc}
 		} else {
-			envVar = EnvironmentVariable{key, value, isMultiLine}
+			envVar = EnvironmentVariable{key, value, isMultiLine, isBashFunc}
 		}
 		envVariables = append(envVariables, envVar)
 	}
 	return envVariables
 }
 
+func bashFunctionsVariablesToString(variables []EnvironmentVariable) string {
+	bashFunctionVariablesStr := "#!/bin/bash\n"
+	for _, e := range variables {
+		if e.BashFunctionVariable {
+			arr := strings.SplitN(e.String(),"=", 2)
+			key := arr[0]
+			value := arr[1]
+
+			bash_function_name := strings.TrimPrefix(key, "BASH_FUNC_")
+			bash_function_name = strings.TrimSuffix(bash_function_name, "%%")
+			bashFunctionVariablesStr += fmt.Sprintf("%s%s\nexport -f %s\n", bash_function_name, value, bash_function_name)
+		}
+	}
+	return bashFunctionVariablesStr
+}
+
 func singleLineVariablesToString(variables []EnvironmentVariable) string {
 	singleLineVariablesStr := ""
 	for _, e := range variables {
-		if !e.MultiLine {
+		if !e.MultiLine && !e.BashFunctionVariable {
 			singleLineVariablesStr += e.String()
 			singleLineVariablesStr += "\n"
 		}
@@ -132,20 +179,22 @@ func singleLineVariablesToString(variables []EnvironmentVariable) string {
 func multiLineVariablesToString(variables []EnvironmentVariable) string {
 	multiLineVariablesStr := ""
 	for _, e := range variables {
-		if e.MultiLine {
+		if e.MultiLine && !e.BashFunctionVariable {
 			multiLineVariablesStr += fmt.Sprintf("export %s=$(echo %s | base64 -d)\n", e.Key, e.encryptValue())
 		}
 	}
 	return multiLineVariablesStr
 }
 
-func getEnvFilePaths(runID string, test string) (string,string) {
+func getEnvFilePaths(runID string, test string) (string,string,string) {
 	if test == "true" {
 		return fmt.Sprintf("/tmp/test-dojo-environment-%s", runID),
-			fmt.Sprintf("/tmp/test-dojo-environment-multiline-%s", runID)
+			fmt.Sprintf("/tmp/test-dojo-environment-multiline-%s", runID),
+			fmt.Sprintf("/tmp/test-dojo-environment-bash-functions-%s", runID)
 	} else {
 		return fmt.Sprintf("/tmp/dojo-environment-%s", runID),
-			fmt.Sprintf("/tmp/dojo-environment-multiline-%s", runID)
+			fmt.Sprintf("/tmp/dojo-environment-multiline-%s", runID),
+			fmt.Sprintf("/tmp/dojo-environment-bash-functions-%s", runID)
 	}
 }
 

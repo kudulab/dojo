@@ -1,3 +1,51 @@
+### 0.9.0 (2020-Aug-13)
+
+* support exported bash functions https://github.com/kudulab/dojo/issues/17
+  **TLDR**:
+  Dojo resulted in an error when any bash function
+   was exported, since 0.9.0 it will succeed. However, in order to preserve all the exported bash functions, you
+   need to run:
+   ```
+   source /etc/dojo.d/variables/01-bash-functions.sh
+   ```
+  **Long vesion**:
+  Whenever a bash function is exported in the following way:
+  ```
+  my_bash_func() {
+	  echo "hello"
+	}
+  export -f my_bash_func
+	```
+  Bash creates an environment variable, in this case:
+  ```
+	BASH_FUNC_my_bash_func%%=() {  echo "hello"
+	}
+  ```
+  So far, when there was any bash function exported, Dojo resulted in an error like:
+  ```
+  13-08-2020 19:53:43 Dojo entrypoint info: Sourcing: /etc/dojo.d/variables/00-multiline-vars.sh
+  /etc/dojo.d/variables/00-multiline-vars.sh: line 1: export: `DOJO_BASH_FUNC_my_bash_func%%=()': not a valid identifier
+  /etc/dojo.d/variables/00-multiline-vars.sh: line 1: export: `{': not a valid identifier
+  /etc/dojo.d/variables/00-multiline-vars.sh: line 1: export: `"hello"': not a valid identifier
+  /etc/dojo.d/variables/00-multiline-vars.sh: line 1: export: `}': not a valid identifier
+  ```
+  This was made visible when using Bats-core v1.2.1, because they exported
+  a bash function [in this PR](https://github.com/bats-core/bats-core/pull/312/files).
+  Dojo interpreted this bash environment variable as a multiline variable and
+  attempted to serialize it with base64. It was fine, but deserialization lead to
+  the error above.
+  Dojo 0.9.0 treats all the environment variables which names start with "BASH_FUNC_"
+  prefix and which values start with "()" as exported bash functions and serializes them into
+  /etc/dojo.d/variables/01-bash-functions.sh file. This file is sourced at
+  a container start. However, the bash functions are not preserved later,
+  because `sudo -E` (used in Dojo entrypoint) does not preserve exported
+  bash functions after ShellShock. See [this](https://unix.stackexchange.com/questions/549140/why-doesnt-sudo-e-preserve-the-function-environment-variables-exported-by-ex) and [this](https://unix.stackexchange.com/a/233097).
+  It was decided that Dojo 0.9.0 should follow the sudo's practice and not try to
+  add a work around leading to bash functions being preserved. But, it was made easy for the end user to preserve them with:
+  ```
+  source /etc/dojo.d/variables/01-bash-functions.sh
+  ```
+
 ### 0.8.0 (2020-Jan-01)
 
 * Docker-composer driver: enable printing logs of non default docker containers either to console or to file.
