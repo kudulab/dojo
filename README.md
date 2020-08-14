@@ -668,6 +668,37 @@ dojo --docker-options="--init" --image=alpine:3.8 -i=false sh -c "echo 'will sle
 dojo --driver=docker-compose --dcf=./test/test-files/itest-dc.yaml -i=false --image=alpine:3.8 sh -c "echo 'will sleep' && sleep 1d"
 ```
 
+### Preserving exported Bash functions [#17](https://github.com/kudulab/dojo/issues/17)
+
+*Needs Dojo >= 0.9.0*, earlier Dojo versions will result in an error like:
+```
+13-08-2020 19:53:43 Dojo entrypoint info: Sourcing: /etc/dojo.d/variables/00-multiline-vars.sh
+/etc/dojo.d/variables/00-multiline-vars.sh: line 1: export: `DOJO_BASH_FUNC_my_bash_func%%=()': not a valid identifier
+/etc/dojo.d/variables/00-multiline-vars.sh: line 1: export: `{': not a valid identifier
+/etc/dojo.d/variables/00-multiline-vars.sh: line 1: export: `"hello"': not a valid identifier
+/etc/dojo.d/variables/00-multiline-vars.sh: line 1: export: `}': not a valid identifier
+```
+
+---
+
+You may want to have your **locally exported Bash functions available in a Dojo Docker image**. For example, you have defined and exported such a Bash function:
+```
+my_bash_func() {
+  echo "hello"
+}
+export -f my_bash_func
+```
+
+This function (and all the other exported Bash functions) will be saved into the file `/etc/dojo.d/variables/01-bash-functions.sh` inside a Dojo Docker image. This is done automatically, by Dojo, on a container start. In order **to be able to invoke a function in a Dojo Docker image, you have to run**:
+```
+source /etc/dojo.d/variables/01-bash-functions.sh
+```
+
+If you use Dojo and Bats-core v1.2.1, use Dojo >= 0.9.0.
+
+Due to using Sudo in Dojo images standard entrypoint, exported bash functions are not preserved and that is why you have to source the file yourself. Preserving Bash functions by Sudo was removed after Shellshock, see [this](https://unix.stackexchange.com/questions/549140/why-doesnt-sudo-e-preserve-the-function-environment-variables-exported-by-ex) and [this](https://unix.stackexchange.com/a/233097).
+
+
 # FAQ
 
 ### Will Dojo work with any docker image?
