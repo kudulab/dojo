@@ -29,6 +29,13 @@ def run_dojo(args, env=None):
     return run_command(dojo_exe, args, env)
 
 
+def run_dojo_and_set_bash_func(args, env=None):
+    dojo_exe = os.path.join(test_dir, '..', '..', 'bin', 'dojo')
+    fullArgs = 'source ' + test_dir + '/../test-files/test-bash-function.sh && ' + dojo_exe + ' ' + ' '.join(args)
+    proc = subprocess.Popen(['bash','-c',fullArgs], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return proc
+
+
 def assert_no_warnings_or_errors(text):
     assert not 'warn' in text
     assert not 'error' in text

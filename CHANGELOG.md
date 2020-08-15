@@ -1,3 +1,13 @@
+### 0.9.0 (2020-Aug-13)
+
+* support exported bash functions [#17](https://github.com/kudulab/dojo/issues/17).
+   Earlier, Dojo resulted in an error when any bash function was exported. Now,
+   it will succeed. However, in order to preserve all the exported bash functions, you
+   need to run:
+   ```
+   source /etc/dojo.d/variables/01-bash-functions.sh
+   ```
+
 ### 0.8.0 (2020-Jan-01)
 
 * Docker-composer driver: enable printing logs of non default docker containers either to console or to file.

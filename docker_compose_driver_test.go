@@ -97,13 +97,14 @@ func Test_generateDCFileContentsWithEnv(t *testing.T){
 			setTestEnv()
 		}
 		contents := dc.generateDCFileContentsWithEnv(expectedServices, config,
-			"/tmp/env-file.txt", "/tmp/env-file-multiline.txt")
+			"/tmp/env-file.txt", "/tmp/env-file-multiline.txt",  "/tmp/env-file-bash-functions.txt")
 
 		if v.displaySet {
 			assert.Equal(t,  `    volumes:
       - /tmp/myidentity:/dojo/identity:ro
       - /tmp/bla:/dojo/work
       - /tmp/env-file-multiline.txt:/etc/dojo.d/variables/00-multiline-vars.sh
+      - /tmp/env-file-bash-functions.txt:/etc/dojo.d/variables/01-bash-functions.sh
       - /tmp/.X11-unix:/tmp/.X11-unix
     env_file:
       - /tmp/env-file.txt
@@ -112,17 +113,20 @@ func Test_generateDCFileContentsWithEnv(t *testing.T){
       - /tmp/env-file.txt
     volumes:
       - /tmp/env-file-multiline.txt:/etc/dojo.d/variables/00-multiline-vars.sh
+      - /tmp/env-file-bash-functions.txt:/etc/dojo.d/variables/01-bash-functions.sh
   def:
     env_file:
       - /tmp/env-file.txt
     volumes:
       - /tmp/env-file-multiline.txt:/etc/dojo.d/variables/00-multiline-vars.sh
+      - /tmp/env-file-bash-functions.txt:/etc/dojo.d/variables/01-bash-functions.sh
 `, contents)
 		} else {
 			assert.Equal(t,  `    volumes:
       - /tmp/myidentity:/dojo/identity:ro
       - /tmp/bla:/dojo/work
       - /tmp/env-file-multiline.txt:/etc/dojo.d/variables/00-multiline-vars.sh
+      - /tmp/env-file-bash-functions.txt:/etc/dojo.d/variables/01-bash-functions.sh
     env_file:
       - /tmp/env-file.txt
   abc:
@@ -130,11 +134,13 @@ func Test_generateDCFileContentsWithEnv(t *testing.T){
       - /tmp/env-file.txt
     volumes:
       - /tmp/env-file-multiline.txt:/etc/dojo.d/variables/00-multiline-vars.sh
+      - /tmp/env-file-bash-functions.txt:/etc/dojo.d/variables/01-bash-functions.sh
   def:
     env_file:
       - /tmp/env-file.txt
     volumes:
       - /tmp/env-file-multiline.txt:/etc/dojo.d/variables/00-multiline-vars.sh
+      - /tmp/env-file-bash-functions.txt:/etc/dojo.d/variables/01-bash-functions.sh
 `, contents)
 		}
 	}
@@ -317,17 +323,18 @@ two
 three`)
 	exitstatus := driver.HandleRun(config, runID, envService)
 	assert.Equal(t, 0, exitstatus)
-	assert.Equal(t, 3, len(fs.FilesWrittenTo))
+	assert.Equal(t, 4, len(fs.FilesWrittenTo))
 	assert.Equal(t, "ABC=123\n", fs.FilesWrittenTo["/tmp/dojo-environment-1234"])
 	assert.Equal(t, "export MULTI_LINE=$(echo b25lCnR3bwp0aHJlZQ== | base64 -d)\n", fs.FilesWrittenTo["/tmp/dojo-environment-multiline-1234"])
 	assert.Contains(t, fs.FilesWrittenTo["docker-compose.yml.dojo"], "version: '2.2'")
 
 	exitstatus = driver.CleanAfterRun(config, runID)
 	assert.Equal(t, 0, exitstatus)
-	assert.Equal(t, 5, len(fs.FilesRemovals))
-	assert.Equal(t, "/tmp/dojo-environment-1234", fs.FilesRemovals[0])
-	assert.Equal(t, "/tmp/dojo-environment-multiline-1234", fs.FilesRemovals[1])
-	assert.Equal(t, "docker-compose.yml.dojo", fs.FilesRemovals[2])
+	assert.Equal(t, 7, len(fs.FilesRemovals))
+	assert.Equal(t, "/tmp/dojo-environment-1234", fs.FilesRemovals[1])
+	assert.Equal(t, "/tmp/dojo-environment-multiline-1234", fs.FilesRemovals[2])
+	assert.Equal(t, "/tmp/dojo-environment-bash-functions-1234", fs.FilesRemovals[0])
+	assert.Equal(t, "docker-compose.yml.dojo", fs.FilesRemovals[3])
 	assert.False(t, fileExists("/tmp/dojo-environment-1234"))
 }
 

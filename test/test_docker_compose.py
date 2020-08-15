@@ -154,6 +154,34 @@ second line""" in result.stdout
     test_dc_network_is_removed()
 
 
+# see also: test_docker_preserves_bash_functions_from_env_vars for more comments
+def test_docker_compose_run_preserves_bash_functions():
+    clean_up_dc_containers()
+    clean_up_dc_network()
+    clean_up_dc_dojofile()
+    envs = dict(os.environ)
+    proc = run_dojo_and_set_bash_func(
+        ['--driver=docker-compose', '--dcf=./test/test-files/itest-dc.yaml', '--debug=true', '--test=true',
+                 '--image=alpine:3.8', 'sh', '-c',
+                 '"apk add -U bash && bash -c \'source /etc/dojo.d/variables/01-bash-functions.sh && my_bash_func\'"'],
+        env=envs)
+    stdout_value_bytes, stderr_value_bytes = proc.communicate()
+    stdout = str(stdout_value_bytes)
+    stderr = str(stderr_value_bytes)
+    assert 'Dojo version' in stderr
+    assert 'Written file /tmp/test-dojo-environment-bash-functions-testdojorunid, contents:' in stderr
+    assert 'my_bash_func() {  echo "hello"' in stderr
+    assert '/etc/dojo.d/variables/01-bash-functions.sh' in stderr
+    assert_no_warnings_or_errors(stderr)
+    assert_no_warnings_or_errors(stdout)
+    # the bash function was invoked
+    assert 'hello' in stdout
+    assert 'Exit status from run command: 0' in stderr
+    test_dc_dojofile_is_removed()
+    test_dc_containers_are_removed()
+    test_dc_network_is_removed()
+
+
 def test_docker_compose_pull():
     result = run_dojo('--driver=docker-compose --dcf=./test/test-files/itest-dc.yaml --debug=true --action=pull --image=alpine:3.8'.split(' '))
     assert 'Dojo version' in result.stderr
