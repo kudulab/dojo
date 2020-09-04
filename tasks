@@ -124,7 +124,9 @@ const DojoVersion = \"${next_version}\"
         ;;
     homebrew_tap)
         if [ ! -f bin/dojo_darwin_amd64 ]; then echo "dojo_darwin_amd64 binary does not exist"; exit 1; fi
-        SHA256=$(sha256sum bin/dojo_darwin_amd64 | awk '{printf $1}')
+        if [ ! -f bin/dojo_darwin_amd64 ]; then echo "dojo_linux_amd64 binary does not exist"; exit 1; fi
+        DARWIN_SHA256=$(sha256sum bin/dojo_darwin_amd64 | awk '{printf $1}')
+        LINUX_SHA256=$(sha256sum bin/dojo_linux_amd64 | awk '{printf $1}')
         VERSION="$(releaser::get_last_version_from_whole_changelog ${changelog_file})"
         git clone git@github.com:kudulab/homebrew-dojo-osx.git homebrew-dojo-osx
         cd homebrew-dojo-osx
@@ -132,15 +134,25 @@ const DojoVersion = \"${next_version}\"
 class Dojo < Formula
   desc "Containerize your development and operations environment"
   homepage "https://github.com/kudulab/dojo"
-  url "https://github.com/kudulab/dojo/releases/download/${VERSION}/dojo_darwin_amd64"
-  sha256 "${SHA256}"
   version "${VERSION}"
-
   bottle :unneeded
 
+if OS.mac?
+    url "https://github.com/kudulab/dojo/releases/download/${VERSION}/dojo_darwin_amd64"
+    sha256 "${DARWIN_SHA256}"
   def install
     bin.install "dojo_darwin_amd64"
     mv bin/"dojo_darwin_amd64", bin/"dojo"
+  end
+  elsif OS.linux?
+    if Hardware::CPU.intel?
+      url "https://github.com/kudulab/dojo/releases/download/${VERSION}/dojo_linux_amd64"
+      sha256 "${LINUX_SHA256}"
+  def install
+    bin.install "dojo_linux_amd64"
+    mv bin/"dojo_linux_amd64", bin/"dojo"
+  end
+    end
   end
 end
 EOF
