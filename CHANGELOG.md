@@ -1,3 +1,7 @@
+### 0.10.0 (2020-Sep-06)
+
+* Added support for [homebrew on Linux](https://github.com/kudulab/dojo/pull/20). Thanks to [Justin Garrison](https://github.com/rothgar)
+
 ### 0.9.0 (2020-Aug-13)
 
 * support exported bash functions [#17](https://github.com/kudulab/dojo/issues/17).
