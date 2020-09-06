@@ -123,7 +123,7 @@ Dojo is continuously tested only on Linux.
 
 ### The binary
 There is only 1 binary file to install:
-On OSX, you can install with homebrew:
+On OSX and Linux, you can install with homebrew:
 ```
 brew install kudulab/homebrew-dojo-osx/dojo
 ```
