@@ -1,3 +1,7 @@
+### 0.10.1 (2020-Oct-18)
+
+* Verify if Bash is installed when running Dojo. Dojo performs a shell out and Bash is its dependency. If Bash is not installed, a pretty error will be printed. [#22](https://github.com/kudulab/dojo/issues/22)
+
 ### 0.10.0 (2020-Sep-06)
 
 * Added support for [homebrew on Linux](https://github.com/kudulab/dojo/pull/20). Thanks to [Justin Garrison](https://github.com/rothgar)
