@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"os/signal"
 	"sync"
 	"syscall"
@@ -66,9 +67,29 @@ func handleSignal(logger *Logger, mergedConfig Config, runID string, driver Dojo
 	return exitStatus
 }
 
+func verifyBashInstalled(logger Logger) {
+	bash_cmd := "bash"
+	bash_cmd_args := "--version"
+	cmd := exec.Command(bash_cmd, bash_cmd_args)
+	cmd.Stdout = os.Stdout
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
+
+	err := cmd.Run()
+	if err != nil  {
+		logger.Log("error", fmt.Sprintf("Error while verifying if Bash is installed. Please make sure Bash is installed. Error: %s", err))
+		os.Exit(1)
+	}
+}
+
 func main() {
 	logger := NewLogger("debug")
 	logger.Log("info", fmt.Sprintf("Dojo version %s", DojoVersion))
+
+	// This will either result in exit or return nothing.
+	// In the future, if we support more shells, we can decide here which shell to use.
+	verifyBashInstalled(*logger)
+
 	mergedConfig := handleConfig(logger)
 
 	fileService := NewFileService(logger)
