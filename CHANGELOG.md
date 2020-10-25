@@ -2,6 +2,7 @@
 
 * Verify if Bash is installed when running Dojo. Dojo performs a shell out and Bash is its dependency. If Bash is not installed, a pretty error will be printed. [#22](https://github.com/kudulab/dojo/issues/22)
 * Use newer pytest version 6.1.1, was 4.4.1
+* Improve e2e tests output - print stdout and stderr on failure
 
 ### 0.10.0 (2020-Sep-06)
 

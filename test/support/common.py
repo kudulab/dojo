@@ -36,8 +36,8 @@ def run_dojo_and_set_bash_func(args, env=None):
     return proc
 
 
-def assert_no_warnings_or_errors(text):
-    assert not 'warn' in text
-    assert not 'error' in text
-    assert not 'WARN' in text
-    assert not 'ERROR' in text
+def assert_no_warnings_or_errors(text, full_output_to_print):
+    assert not 'warn' in text, full_output_to_print
+    assert not 'error' in text, full_output_to_print
+    assert not 'WARN' in text, full_output_to_print
+    assert not 'ERROR' in text, full_output_to_print
