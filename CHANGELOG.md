@@ -1,3 +1,7 @@
+### 0.10.2 (2020-Oct-25)
+
+* Fix image scripts - invalid permissions when running on Mac with FUSE volume driver \#21 
+
 ### 0.10.1 (2020-Oct-25)
 
 * Verify if Bash is installed when running Dojo. Dojo performs a shell out and Bash is its dependency. If Bash is not installed, a pretty error will be printed. [#22](https://github.com/kudulab/dojo/issues/22)
