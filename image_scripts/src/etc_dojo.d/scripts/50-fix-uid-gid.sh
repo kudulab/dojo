@@ -41,7 +41,7 @@ fi
 
 # use -n option which is the same as --numeric-uid-gid on Debian/Ubuntu,
 # but on Alpine, there is no --numeric-uid-gid option
-# Why we are sudo-ing as sudo? To deal with OSX driver; see more at https://github.com/kudulab/dojo/issues/8
+# Why we are sudo-ing as dojo? To deal with OSX legacy volume driver; see more at https://github.com/kudulab/dojo/issues/8
 newuid=$(sudo -u "${owner_username}" ls -n -d "${dojo_work}" | awk '{ print $3 }')
 newgid=$(sudo -u "${owner_username}" ls -n -d "${dojo_work}" | awk '{ print $4 }')
 olduid=$(ls -n -d ${dojo_home} | awk '{ print $3 }')
@@ -49,6 +49,10 @@ oldgid=$(ls -n -d ${dojo_home} | awk '{ print $4 }')
 
 if [[ "${olduid}" == "${newuid}" ]] && [[ "${oldgid}" == "${newgid}" ]]; then
     echo "olduid == newuid == ${newuid}, nothing to do" >&2
+elif [[ "0" == "${newuid}" ]] && [[ "0" == "${newgid}" ]]; then
+    # We are on gRPC FUSE driver on Mac - do nothing
+    # Or dojo was executed from host where current directory is owned by the root - not supported use case
+    echo "Assuming docker running with gRPC FUSE driver on Mac" >&2
 else
     ( set -x; usermod -u "${newuid}" "${owner_username}"; groupmod -g "${newgid}" "${owner_groupname}"; )
     ( set -x; chown ${newuid}:${newgid} -R "${dojo_home}"; )

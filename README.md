@@ -61,7 +61,7 @@ A dojo docker image becomes a contract of what is a **correct environment** for 
 
 #### On Linux
 ```bash
-DOJO_VERSION=0.10.1
+DOJO_VERSION=0.10.2
 wget -O dojo https://github.com/kudulab/dojo/releases/download/${DOJO_VERSION}/dojo_linux_amd64
 sudo mv dojo /usr/local/bin
 sudo chmod +x /usr/local/bin/dojo
@@ -69,7 +69,7 @@ sudo chmod +x /usr/local/bin/dojo
 
 #### Using brew - on OSX or Linux
 ```bash
-DOJO_VERSION=0.10.1
+DOJO_VERSION=0.10.2
 wget -O dojo https://github.com/kudulab/dojo/releases/download/${DOJO_VERSION}/dojo_darwin_amd64
 mv dojo /usr/local/bin
 chmod +x /usr/local/bin/dojo
@@ -130,7 +130,7 @@ brew install kudulab/homebrew-dojo-osx/dojo
 ```
 A manual install is another option:
 ```sh
-version="0.10.1"
+version="0.10.2"
 # on Linux:
 wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_linux_amd64
 # or on Darwin:
@@ -172,7 +172,7 @@ We have also established several **best practices** for dojo image development:
 Dojo provides [several scripts](image_scripts/src) to be used inside dojo images to meet most of above requirements. Scripts can be installed in a `Dockerfile` with:
 
 ```dockerfile
-ENV DOJO_VERSION=0.10.1
+ENV DOJO_VERSION=0.10.2
 RUN git clone --depth 1 -b ${DOJO_VERSION} https://github.com/kudulab/dojo.git /tmp/dojo_git &&\
   /tmp/dojo_git/image_scripts/src/install.sh && \
   rm -r /tmp/dojo_git
@@ -202,7 +202,7 @@ ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 RUN chmod +x /tini
 
 # Install common Dojo scripts
-ENV DOJO_VERSION=0.10.1
+ENV DOJO_VERSION=0.10.2
 RUN apt-get update && \
   DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
   sudo git ca-certificates && \
@@ -250,7 +250,7 @@ For alpine images a typical dockerfile has following structure:
 FROM alpine:3.9
 
 # Install common Dojo scripts
-ENV DOJO_VERSION=0.10.1
+ENV DOJO_VERSION=0.10.2
 RUN echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories && \
   apk add --no-cache tini bash shadow sudo git && \
   git clone --depth 1 -b ${DOJO_VERSION} https://github.com/kudulab/dojo.git /tmp/dojo_git &&\
