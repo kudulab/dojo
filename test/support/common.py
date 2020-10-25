@@ -37,7 +37,5 @@ def run_dojo_and_set_bash_func(args, env=None):
 
 
 def assert_no_warnings_or_errors(text, full_output_to_print):
-    assert not 'warn' in text, full_output_to_print
-    assert not 'error' in text, full_output_to_print
-    assert not 'WARN' in text, full_output_to_print
-    assert not 'ERROR' in text, full_output_to_print
+    assert not 'warn' in text.lower(), full_output_to_print
+    assert not 'error' in text.lower(), full_output_to_print
