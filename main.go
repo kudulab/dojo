@@ -68,10 +68,8 @@ func handleSignal(logger *Logger, mergedConfig Config, runID string, driver Dojo
 }
 
 func verifyBashInstalled(logger Logger) {
-	bash_cmd := "bash"
-	bash_cmd_args := "--version"
-	cmd := exec.Command(bash_cmd, bash_cmd_args)
-	cmd.Stdout = os.Stdout
+	cmd := exec.Command( "bash", "--version", "1>/dev/null")
+	// do not print stdout of the above command, do not do this: cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 
