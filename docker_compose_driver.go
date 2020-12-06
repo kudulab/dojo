@@ -610,7 +610,13 @@ func (dc DockerComposeDriver) getDCContainersNames(mergedConfig Config, projectN
 	stdout, stderr, exitStatus, _ := dc.ShellService.RunGetOutput(cmd, true)
 	if exitStatus != 0 {
 		cmdInfo := cmdInfoToString(cmd, stdout, stderr, exitStatus)
-		panic(fmt.Errorf("Unexpected exit status:\n%s", cmdInfo))
+		if strings.Contains(stderr, "No such container") {
+			// Workaround for issue #27: do not panic but print error level log message.
+			dc.Logger.Log("error", fmt.Sprintf("Unexpected exit status:\n#{cmdInfo}"))
+			return []string{}
+		} else {
+			panic(fmt.Errorf("Unexpected exit status:\n%s", cmdInfo))
+		}
 	}
 	stdout = strings.TrimSuffix(stdout, "\n")
 	if stdout == "" {
