@@ -1,3 +1,7 @@
+### 0.10.3 (2020-Dec-07)
+
+* Add workaround for issu #27. Instead of exiting with error, ignore the error with particular message and print a log message.
+
 ### 0.10.2 (2020-Oct-25)
 
 * Fix image scripts - invalid permissions when running on Mac with FUSE volume driver \#21 
