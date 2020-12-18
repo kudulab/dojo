@@ -103,6 +103,70 @@ dojo@407490ab35cb(aws-dojo):/dojo/work$ aws ec2 describe-instances --filters "Na
     "Reservations": []
 }
 ```
+
+To exit the container, type `exit`.
+
+### Docker in Docker (dind) Example
+
+There are 2 methods.
+
+The first method is to **use the Docker Daemon from host**. E.g.:
+```
+$ cat Dojofile.docker-from-host
+DOJO_DOCKER_IMAGE="kudulab/ansible-dojo:1.5.0"
+# we use docker daemon from host
+DOJO_DOCKER_OPTIONS="-v /var/run/docker.sock:/var/run/docker.sock"
+```
+
+```
+$ dojo -c Dojofile.docker-from-host
+# now we run in Docker container
+$ sudo docker ps -a
+CONTAINER ID        IMAGE                        COMMAND                  CREATED             STATUS                     PORTS               NAMES
+2a1529381f9f        kudulab/ansible-dojo:1.5.0   "/usr/bin/tini -g --…"   7 seconds ago       Up 6 seconds                                   dojo-dojo-2020-12-18_08-19-32-69068479
+```
+The above command listed the Docker container, we are currently running in.
+
+
+The second method is to **run a separate Docker Daemon inside of a Docker container**. E.g.:
+```
+$ cat Dojofile.dind-ubuntu18
+DOJO_DOCKER_IMAGE="kudulab/inception-dojo:ubuntu18-dind-0.1.2"
+DOJO_DOCKER_OPTIONS="--privileged"
+```
+
+```
+$ dojo -c Dojofile.dind-ubuntu18
+# now we run in the Docker container
+# no containers are running inside the current Docker container:
+$ docker ps -a
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+$ ps aux | grep docker
+root         198  0.0  0.0    200     4 pts/0    S    07:59   0:00 s6-supervise docker
+root         201  0.5  0.5 1493132 83252 ?       Ssl  07:59   0:00 dockerd --host=unix:///var/run/docker.sock --log-level=error
+root         240  0.5  0.2 1203480 43064 ?       Ssl  07:59   0:00 containerd --config /var/run/docker/containerd/containerd.toml --log-level error
+dojo         346  0.0  0.0  13212  1096 pts/0    S+   08:00   0:00 grep --color=auto docker
+$ docker --version
+Docker version 19.03.5, build 633a0ea838
+$ docker info | grep "Server Version"
+ Server Version: 19.03.5
+
+$ docker run --rm alpine:3.9 whoami
+Unable to find image 'alpine:3.9' locally
+# pulling image messages
+root
+dojo@ebc220b9655f(inception-dojo):/dojo/work$ docker images
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+alpine              3.9                 78a2ce922f86        7 months ago        5.55MB
+```
+
+There is also an Alpine dind Docker image. Use it in the following way:
+```
+$ cat Dojofile.dind-alpine
+DOJO_DOCKER_IMAGE="kudulab/inception-dojo:alpine-dind-0.1.2"
+DOJO_DOCKER_OPTIONS="--privileged"
+```
+
 ## Why was Dojo created? Dojo benefits
 
 Docker and containerization has revolutionized application lifecycle by creating a common standard. Dojo uses Docker to provide a similar standard for environments, providing environments as code. Dojo allows environments to be versioned, released as a Docker image and used in the Infrastructure As Code manner.
