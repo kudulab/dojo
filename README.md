@@ -125,10 +125,15 @@ $ sudo docker ps -a
 CONTAINER ID        IMAGE                        COMMAND                  CREATED             STATUS                     PORTS               NAMES
 2a1529381f9f        kudulab/ansible-dojo:1.5.0   "/usr/bin/tini -g --…"   7 seconds ago       Up 6 seconds                                   dojo-dojo-2020-12-18_08-19-32-69068479
 ```
-The above command listed the Docker container, we are currently running in.
+The above command listed the Docker container, we are currently running in. The [docker-ansible-dojo](https://github.com/kudulab/docker-ansible-dojo) Dojo Docker image was used.
 
+Using this method is not suitable to run Dojo in Dojo. But, you may want to use it:
+  * when you want to provision a container on your host, and you want to invoke Ansible (or other provisioning tool) from another container on the same host,
+  * when you want to build a Docker image on your host, and you want to invoke Packer (or other similar tool) from another container on the same host.
 
-The second method is to **run a separate Docker Daemon inside of a Docker container**. E.g.:
+------
+
+The second method is to **run a separate Docker Daemon inside of a Docker container**. We can use [docker-inception-dojo](https://github.com/kudulab/docker-inception-dojo) Dojo Docker image:
 ```
 $ cat Dojofile.dind-ubuntu18
 DOJO_DOCKER_IMAGE="kudulab/inception-dojo:ubuntu18-dind-0.1.2"
@@ -166,6 +171,9 @@ $ cat Dojofile.dind-alpine
 DOJO_DOCKER_IMAGE="kudulab/inception-dojo:alpine-dind-0.1.2"
 DOJO_DOCKER_OPTIONS="--privileged"
 ```
+
+This method is suitable for running Dojo in Dojo. Dojo e2e tests use this method to test various Docker commands in a clean, separate Docker container. This way, such tests cannot affect Docker containers or images on Docker host (they have a safe environment to run in).
+
 
 ## Why was Dojo created? Dojo benefits
 
