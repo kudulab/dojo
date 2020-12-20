@@ -136,7 +136,7 @@ Using this method is not suitable to run Dojo in Dojo. But, you may want to use 
 The second method is to **run a separate Docker Daemon inside of a Docker container**. We can use [docker-inception-dojo](https://github.com/kudulab/docker-inception-dojo) Dojo Docker image:
 ```
 $ cat Dojofile.dind-ubuntu18
-DOJO_DOCKER_IMAGE="kudulab/inception-dojo:ubuntu18-dind-0.1.2"
+DOJO_DOCKER_IMAGE="kudulab/inception-dojo:ubuntu18-dind-0.1.3"
 DOJO_DOCKER_OPTIONS="--privileged"
 ```
 
@@ -168,7 +168,7 @@ alpine              3.9                 78a2ce922f86        7 months ago        
 There is also an Alpine dind Docker image. Use it in the following way:
 ```
 $ cat Dojofile.dind-alpine
-DOJO_DOCKER_IMAGE="kudulab/inception-dojo:alpine-dind-0.1.2"
+DOJO_DOCKER_IMAGE="kudulab/inception-dojo:alpine-dind-0.1.3"
 DOJO_DOCKER_OPTIONS="--privileged"
 ```
 
