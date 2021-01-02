@@ -1,47 +1,31 @@
 # Dojo
 
-Dojo helps you to execute builds and operations in [docker](https://docker.com) containers.
+A tool to keep environment as code.
+
+Dojo helps to compile code and run other operations in [Docker](https://docker.com) containers.
 
 The Dojo project consists of:
- * `dojo` - a golang executable, which leverages `docker` and `docker-compose`
- * A specification and helper scripts for building [*dojo* docker images](#docker-images)
+ * `dojo` - a golang executable (CLI), which leverages `docker` and `docker-compose`
+ * A specification and helper scripts for building [Dojo Docker images](#docker-images)
 
-## Why?
+Dojo works on **Linux or Mac**. Dojo is continuously tested only on Linux.
 
-Docker and containerization has revolutionized application lifecycle by creating a common standard for server applications. Every server software can be released as a docker image.
-Dojo builds a similar standard for development environments, every environment should be versioned and released as a docker image.
+## Table of contents
 
-Why Dojo exists and what problems it solves?
- * Dojo was created to **shorten setup time of development environment** to near-zero.
- * Dojo makes **executing builds in docker** much easier than bare `docker run` by taking care of many little details. (See [lower why](#Why-not-just-docker-run))
- * Dojo lets each project define its **development environment as code** and lock it in source control like a dependency. See [Dojofile](#dojofile)
-
-Problems solved by Dojo and surrounding practices:
-1. **Works on my machine** - with Dojo, each host (a developer's workstation or a CI agent) gets a **consistent, reproducible** environment delivered by a docker image.
-1. **Configuration management** - with Dojo, any development environment is built from a [Dockerfile](https://docs.docker.com/engine/reference/builder/), which is versioned and released as a docker image.  Therefore the provisioning of the environment is stated in several commands, providing both documentation and a setup script in the single source of truth.
-1. **Tools** on CI agents or developer's laptop over time may **mismatch with project's required setup** - With Dojo the **environment is pulled as docker image** just before the operation to be executed, therefore hosts don't need to be provisioned repeatedly to keep up with changing projects.
-
-## Who is it for?
-
-1. **as-code practitioners** - If you like *as-code philosophy* (infrastructure-as-code, pipelines-as-code) then you'll like Dojo, which provides **development and operations environment as code**.
-1. Consultants, DevOps Engineers, **anyone jumping between projects and languages often**. With Dojo, getting the *right environment* for a project takes as long as the `docker pull`.
-1. **Polyglot software houses**, especially where CI agents are shared by a variety of projects.
-1. If you are already running builds with docker, then Dojo will make your scripts shorter and your life easier.
-
-By adopting Dojo you would be shifting responsibility for the development environment closer to the developers.
-A dojo docker image becomes a contract of what is a **correct environment** for a project **at a particular commit** (see [Dojofile](#dojofile)).
-
-# Table of contents
-
-1. [Quickstart](#quickstart)
 1. [Installation](#installation)
-1. [Dojofile](#dojofile)
+1. [Quickstart](#quickstart)
+   * [Java example](#java-example)
+   * [Golang example](#golang-example)
+   * [AWS example](#aws-example)
+   * [Docker in Docker example](#docker-in-docker-dind-example)
+1. [Why?](#why-was-dojo-created-dojo-benefits)
 1. [Docker images](#docker-images)
     * [Requirements](#image-requirements-and-best-practices)
     * [Building images](#image-scripts) with `Dockerfile`
         * Typical Dockerfile for [debian and ubuntu](#typical-debian-dockerfile)
         * Typical Dockerfile for [alpine](#typical-alpine-dockerfile)
 1. [Secrets distribution](#secrets)
+1. [Dojofile](#dojofile)
 1. [Drivers](#drivers)
     * [docker](#docker-driver)
     * [docker-compose](#docker-compose-driver)
@@ -54,29 +38,39 @@ A dojo docker image becomes a contract of what is a **correct environment** for 
 1. [Development](#Development)
 1. [License](#License)
 
-# Quickstart
+## Installation
 
-1. [Install docker](https://docs.docker.com/install/), if you haven't already.
-2. Install Dojo, it is a self-contained binary, so just place it somewhere on the `PATH`. You can also use use brew: `brew install kudulab/homebrew-dojo-osx/dojo`.
+### Dependencies
+The following must be installed for Dojo to run:
+* Bash
+* [Docker](https://docs.docker.com/) - you must be able to run a local Docker daemon that can execute Linux Docker containers
+* [Docker-Compose](https://github.com/docker/compose) >=1.7.1 (only if using Dojo driver: docker-compose)
 
-#### On Linux
-```bash
-DOJO_VERSION=0.10.2
-wget -O dojo https://github.com/kudulab/dojo/releases/download/${DOJO_VERSION}/dojo_linux_amd64
-sudo mv dojo /usr/local/bin
-sudo chmod +x /usr/local/bin/dojo
+### The Dojo binary
+There is only 1 binary file to install. Installation options (choose one):
+* with homebrew:
+```
+brew install kudulab/homebrew-dojo-osx/dojo
+```
+* a manual install:
+```sh
+version="0.10.3"
+# on Linux:
+wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_linux_amd64
+# or on Mac:
+wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_darwin_amd64
+chmod +x /tmp/dojo
+sudo mv /tmp/dojo /usr/bin/dojo
+```
+* build the binary file yourself, see [Development](#development)
+
+## Quickstart
+First, follow the [instructions](#installation) to install Dojo. Dojo CLI will be available to use in this way:
+```
+dojo <flags> [--] <CMD>
 ```
 
-#### Using brew - on OSX or Linux
-```bash
-DOJO_VERSION=0.10.2
-wget -O dojo https://github.com/kudulab/dojo/releases/download/${DOJO_VERSION}/dojo_darwin_amd64
-mv dojo /usr/local/bin
-chmod +x /usr/local/bin/dojo
-```
-
-Done. Now you have sufficient environment to build any project which leverages dojo images.
-
+### Java Example
 Let's build this [java project](https://github.com/tomzo/gocd-yaml-config-plugin) using dojo:
 
 ```bash
@@ -87,12 +81,12 @@ dojo "gradle test jar"
 
 The output should start with a docker command that was executed:
 ```console
-tomzo@073c1c477b1f:/tmp/gocd-yaml-config-plugin$ dojo "gradle test jar"
-2019/04/28 14:01:40 [ 1]  INFO: (main.main) Dojo version 0.3.2
-2019/04/28 14:01:40 [17]  INFO: (main.DockerDriver.HandleRun) docker command will be:
- docker run --rm -v /tmp/gocd-yaml-config-plugin:/dojo/work -v /home/tomzo:/dojo/identity:ro --env-file=/tmp/dojo-environment-dojo-gocd-yaml-config-plugin-2019-04-28_14-01-40-89074376 -v /tmp/.X11-unix:/tmp/.X11-unix -ti --name=dojo-gocd-yaml-config-plugin-2019-04-28_14-01-40-89074376 kudulab/openjdk-dojo:1.0.1 "gradle test jar"
-Unable to find image 'kudulab/openjdk-dojo:1.0.1' locally
-1.0.1: Pulling from kudulab/openjdk-dojo
+/tmp/gocd-yaml-config-plugin$ dojo "gradle test jar"
+2020/12/09 07:40:28 [ 1]  INFO: (main.main) Dojo version 0.10.3
+2020/12/09 07:40:28 [ 4]  INFO: (main.DockerDriver.HandleRun) docker command will be:
+ docker run --rm -v /tmp/gocd-yaml-config-plugin:/dojo/work -v /home/tomzo:/dojo/identity:ro --env-file=/tmp/dojo-environment-dojo-gocd-yaml-config-plugin-2020-12-09_07-40-50-60121947 -v /tmp/.X11-unix:/tmp/.X11-unix -ti --name=dojo-gocd-yaml-config-plugin-2020-12-09_07-40-50-60121947 kudulab/openjdk-dojo:1.4.1 "gradle test jar"
+Unable to find image 'kudulab/openjdk-dojo:1.4.1' locally
+1.4.1: Pulling from kudulab/openjdk-dojo
 ```
 Then you should see `docker pull` output and after creating the container, all tests being executed.
 The build artifacts land in `build/libs/`, because that is how gradle behaves. These artifacts are available on our docker host.
@@ -100,46 +94,143 @@ Things to notice:
  * We have pulled [`kudulab/openjdk-dojo` docker image](https://github.com/kudulab/docker-openjdk-dojo) and created container from it.
  * Current directory `/tmp/gocd-yaml-config-plugin` was [mounted](https://docs.docker.com/storage/volumes/) to `/dojo/work`
  * Home directory on host `/home/tomzo` was [mounted](https://docs.docker.com/storage/volumes/) as readonly to `/dojo/identity`
- * After `gradle test jar` has finished, the docker container has exited and was removed. This is because we provided a command to `dojo`.
+ * After `gradle test jar` has finished running non-interactively, the docker container has exited and was removed. This is because we provided a command to `dojo`.
 
-Every dojo image supports an interactive mode. In the above example, we can also run `dojo` at the root of the project to get dropped into an interactive shell.
+Every dojo image supports 2 modes: an interactive mode and non-interactive mode. In order to run interactively, run `dojo` without any command:
+```console
+/tmp/gocd-yaml-config-plugin$ dojo
+```
+
 Then we can work in the container for longer time, very much like in a [vagrant VM](#vs-vagrant).
 Thanks to the mounted directory from the host, we can work on the project files using any other tools on our host, while container with java tools shares the same files.
 
-This is a quickstart preview to give you a sense of how you would work with dojo. A more complete guide is being developed in this [readme](#table-of-contents) and an upcoming documentation site.
+This is a quickstart preview to give you a sense of how you would work with dojo. Read on for more examples. There is also a documentation site coming.
 
-# Installation
+### Golang Example
+Let's build this project (Dojo) using `dojo`:
 
-### Prerequisites
-
-You must be able to run a local docker daemon that can execute linux docker containers.
-In practice this means Dojo works on **Linux or Mac**.
-Dojo is continuously tested only on Linux.
-
-### Dependencies
-The following must be installed for Dojo to run:
-* Bash
-* [Docker](https://docs.docker.com/)
-* [Docker-Compose](https://github.com/docker/compose) >=1.7.1 (only if using Dojo driver: docker-compose)
-
-### The binary
-There is only 1 binary file to install:
-On OSX and Linux, you can install with homebrew:
-```
-brew install kudulab/homebrew-dojo-osx/dojo
-```
-A manual install is another option:
-```sh
-version="0.10.2"
-# on Linux:
-wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_linux_amd64
-# or on Darwin:
-# wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_darwin_amd64
-chmod +x /tmp/dojo
-mv /tmp/dojo /usr/bin/dojo
+```bash
+git clone https://github.com/kudulab/dojo.git
+cd dojo
+dojo -c Dojofile.build "./tasks deps && ./tasks build"
 ```
 
-Alternatively, you can build the binary file yourself, see [Development](#development).
+Here we used Dojo flag `-c Dojofile.build`. This way we instructed dojo CLI which Dojofile to use. Dojofile keeps information about the Docker Image. [Dojofile.build](https://github.com/kudulab/dojo/blob/master/Dojofile.build) uses [kudulab/golang-dojo](https://github.com/kudulab/docker-golang-dojo) Docker image.
+
+### AWS Example
+
+There are also Dojo Docker images which bundle a tool (or group of tools), e.g. awscli. Example usage:
+```
+$ nano Dojofile
+$ cat Dojofile
+DOJO_DOCKER_IMAGE="kudulab/aws-dojo:0.6.0"
+$ dojo
+# now we run interactively in the Dojo Docker container
+dojo@407490ab35cb(aws-dojo):/dojo/work$ aws ec2 describe-instances --filters "Name=tag:Name,Values=ec2-ansible-test"
+{
+    "Reservations": []
+}
+```
+
+To exit the container, type `exit`.
+
+### Docker in Docker (dind) Example
+
+There are 2 methods.
+
+The first method is to **use the Docker Daemon from host**. E.g.:
+```
+$ cat Dojofile.docker-from-host
+DOJO_DOCKER_IMAGE="kudulab/ansible-dojo:1.5.0"
+# we use docker daemon from host
+DOJO_DOCKER_OPTIONS="-v /var/run/docker.sock:/var/run/docker.sock"
+```
+
+```
+$ dojo -c Dojofile.docker-from-host
+# now we run in Docker container
+$ sudo docker ps -a
+CONTAINER ID        IMAGE                        COMMAND                  CREATED             STATUS                     PORTS               NAMES
+2a1529381f9f        kudulab/ansible-dojo:1.5.0   "/usr/bin/tini -g --…"   7 seconds ago       Up 6 seconds                                   dojo-dojo-2020-12-18_08-19-32-69068479
+```
+The above command listed the Docker container, we are currently running in. The [docker-ansible-dojo](https://github.com/kudulab/docker-ansible-dojo) Dojo Docker image was used.
+
+Using this method is not suitable to run Dojo in Dojo. But, you may want to use it:
+  * when you want to provision a container on your host, and you want to invoke Ansible (or other provisioning tool) from another container on the same host,
+  * when you want to build a Docker image on your host, and you want to invoke Packer (or other similar tool) from another container on the same host.
+
+------
+
+The second method is to **run a separate Docker Daemon inside of a Docker container**. We can use [docker-inception-dojo](https://github.com/kudulab/docker-inception-dojo) Dojo Docker image:
+```
+$ cat Dojofile.dind-ubuntu18
+DOJO_DOCKER_IMAGE="kudulab/inception-dojo:ubuntu18-dind-0.1.3"
+DOJO_DOCKER_OPTIONS="--privileged"
+```
+
+```
+$ dojo -c Dojofile.dind-ubuntu18
+# now we run in the Docker container
+# no containers are running inside the current Docker container:
+$ docker ps -a
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+$ ps aux | grep docker
+root         198  0.0  0.0    200     4 pts/0    S    07:59   0:00 s6-supervise docker
+root         201  0.5  0.5 1493132 83252 ?       Ssl  07:59   0:00 dockerd --host=unix:///var/run/docker.sock --log-level=error
+root         240  0.5  0.2 1203480 43064 ?       Ssl  07:59   0:00 containerd --config /var/run/docker/containerd/containerd.toml --log-level error
+dojo         346  0.0  0.0  13212  1096 pts/0    S+   08:00   0:00 grep --color=auto docker
+$ docker --version
+Docker version 19.03.5, build 633a0ea838
+$ docker info | grep "Server Version"
+ Server Version: 19.03.5
+
+$ docker run --rm alpine:3.9 whoami
+Unable to find image 'alpine:3.9' locally
+# pulling image messages
+root
+dojo@ebc220b9655f(inception-dojo):/dojo/work$ docker images
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+alpine              3.9                 78a2ce922f86        7 months ago        5.55MB
+```
+
+There is also an Alpine dind Docker image. Use it in the following way:
+```
+$ cat Dojofile.dind-alpine
+DOJO_DOCKER_IMAGE="kudulab/inception-dojo:alpine-dind-0.1.3"
+DOJO_DOCKER_OPTIONS="--privileged"
+```
+
+This method is suitable for running Dojo in Dojo. Dojo e2e tests use this method to test various Docker commands in a clean, separate Docker container. This way, such tests cannot affect Docker containers or images on Docker host (they have a safe environment to run in).
+
+
+## Why was Dojo created? Dojo benefits
+
+Docker and containerization has revolutionized application lifecycle by creating a common standard. Dojo uses Docker to provide a similar standard for environments, providing environments as code. Dojo allows environments to be versioned, released as a Docker image and used in the Infrastructure As Code manner.
+
+Why was Dojo created? Dojo benefits:
+* to **shorten setup time of development environment** to near-zero
+* to **have environment parity** - environment consistent between multiple developers or between a developer and a CI server (fixes **works on my machine** problem)
+* to **have easily reproducible environments** (if your environment changed and you experience configuration drift, you can just recreate a Dojo Docker container)
+* to **treat environment as code** and lock it in source control of a project. The environment of a project is thus specified in one place, in [Dojofile](#dojofile)
+* to **execute commands in docker** much more easily than with bare `docker run`. Dojo takes care of many little details. (See [lower why](#Why-not-just-docker-run))
+
+Problems solved by Dojo and surrounding practices:
+1. **Works on my machine** - with Dojo, each host (a developer's workstation or a CI agent) gets a **consistent, reproducible** environment delivered by a docker image.
+1. **Configuration management** - with Dojo, any development environment is built from a [Dockerfile](https://docs.docker.com/engine/reference/builder/), which is versioned and released as a docker image.  Therefore the provisioning of the environment is stated in several commands, providing both documentation and a setup script in the single source of truth.
+1. Tools on CI agents or developer's laptop over time may mismatch with project's required setup - With Dojo the environment is pulled as docker image just before the operation to be executed, therefore **hosts don't need to be provisioned repeatedly to keep up with changing projects**.
+
+## Who is it for?
+
+1. **as-code practitioners** - If you like *as-code philosophy* (infrastructure-as-code, pipelines-as-code) then you'll like Dojo, which provides **development and operations environment as code**.
+1. Consultants, DevOps Engineers, **anyone jumping between projects and languages often**. With Dojo, getting the *right environment* for a project takes as long as the `docker pull`.
+1. **Polyglot software houses**, especially where CI agents are shared by a variety of projects.
+1. If you are already running builds with docker, then Dojo will make your scripts shorter and your life easier.
+
+By adopting Dojo you would be shifting responsibility for the development environment closer to the developers.
+A dojo docker image becomes a contract of what is a **correct environment** for a project **at a particular commit** (see [Dojofile](#dojofile)).
+
+
+
 
 # Docker images
 
@@ -342,13 +433,13 @@ DOJO_DOCKER_IMAGE="image_name[:tag]"
 ```
 For example, a java project might have following `Dojofile`:
 ```toml
-DOJO_DOCKER_IMAGE="kudulab/openjdk-dojo:1.0.1"
+DOJO_DOCKER_IMAGE="kudulab/openjdk-dojo:1.4.1"
 ```
 
 We recommend to:
  * add `Dojofile` at the root of the project
  * add `Dojofile` to the source control
- * use unambiguous docker tags, such as `kudulab/openjdk-dojo:1.0.1` rather than `kudulab/openjdk-dojo:latest`. This guarantees that current commit will be always built in the same image, which helps with reproducible builds.
+ * use unambiguous docker tags, such as `kudulab/openjdk-dojo:1.4.1` rather than `kudulab/openjdk-dojo:latest`. This guarantees that current commit will be always built in the same image, which helps with reproducible builds.
 
 ### Dojofile options
 
@@ -502,7 +593,7 @@ Dojo with `docker-compose` driver is a very powerful tool. Some examples when it
 In order to use `docker-compose` driver, a Dojofile would include:
 ```toml
 DOJO_DRIVER="docker-compose"
-DOJO_DOCKER_IMAGE="kudulab/openjdk-dojo:1.0.1"
+DOJO_DOCKER_IMAGE="kudulab/openjdk-dojo:1.4.1"
 DOJO_DOCKER_COMPOSE_FILE="docker-compose.yml"
 ```
 
