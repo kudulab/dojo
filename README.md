@@ -10,6 +10,34 @@ The Dojo project consists of:
 
 Dojo works on **Linux or Mac**. Dojo is continuously tested only on Linux.
 
+## Table of contents
+
+1. [Installation](#installation)
+1. [Quickstart](#quickstart)
+   * [Java example](#java-example)
+   * [Golang example](#golang-example)
+   * [AWS example](#aws-example)
+   * [Docker in Docker example](#docker-in-docker-dind-example)
+1. [Why?](#why-was-dojo-created-dojo-benefits)
+1. [Docker images](#docker-images)
+    * [Requirements](#image-requirements-and-best-practices)
+    * [Building images](#image-scripts) with `Dockerfile`
+        * Typical Dockerfile for [debian and ubuntu](#typical-debian-dockerfile)
+        * Typical Dockerfile for [alpine](#typical-alpine-dockerfile)
+1. [Secrets distribution](#secrets)
+1. [Dojofile](#dojofile)
+1. [Drivers](#drivers)
+    * [docker](#docker-driver)
+    * [docker-compose](#docker-compose-driver)
+1. [Behavior reference](#behavior-reference)
+    * [CLI arguments](#cli-arguments)
+    * [Home and identity directory](#home-and-identity-directory)
+    * [Handling signals](#handling-signals)
+1. [FAQ](#faq)
+1. [Comparison to other tools](#comparison-to-other-tools)
+1. [Development](#Development)
+1. [License](#License)
+
 ## Installation
 
 ### Dependencies
@@ -76,7 +104,7 @@ Every dojo image supports 2 modes: an interactive mode and non-interactive mode.
 Then we can work in the container for longer time, very much like in a [vagrant VM](#vs-vagrant).
 Thanks to the mounted directory from the host, we can work on the project files using any other tools on our host, while container with java tools shares the same files.
 
-This is a quickstart preview to give you a sense of how you would work with dojo. A more complete guide is being developed in this [readme](#table-of-contents) and an upcoming documentation site.
+This is a quickstart preview to give you a sense of how you would work with dojo. Read on for more examples. There is also a documentation site coming.
 
 ### Golang Example
 Let's build this project (Dojo) using `dojo`:
@@ -201,28 +229,7 @@ Problems solved by Dojo and surrounding practices:
 By adopting Dojo you would be shifting responsibility for the development environment closer to the developers.
 A dojo docker image becomes a contract of what is a **correct environment** for a project **at a particular commit** (see [Dojofile](#dojofile)).
 
-# Table of contents
 
-1. [Installation](#installation)
-1. [Quickstart](#quickstart)
-1. [Docker images](#docker-images)
-    * [Requirements](#image-requirements-and-best-practices)
-    * [Building images](#image-scripts) with `Dockerfile`
-        * Typical Dockerfile for [debian and ubuntu](#typical-debian-dockerfile)
-        * Typical Dockerfile for [alpine](#typical-alpine-dockerfile)
-1. [Secrets distribution](#secrets)
-1. [Dojofile](#dojofile)
-1. [Drivers](#drivers)
-    * [docker](#docker-driver)
-    * [docker-compose](#docker-compose-driver)
-1. [Behavior reference](#behavior-reference)
-    * [CLI arguments](#cli-arguments)
-    * [Home and identity directory](#home-and-identity-directory)
-    * [Handling signals](#handling-signals)
-1. [FAQ](#faq)
-1. [Comparison to other tools](#comparison-to-other-tools)
-1. [Development](#Development)
-1. [License](#License)
 
 
 # Docker images
