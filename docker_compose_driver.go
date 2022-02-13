@@ -612,7 +612,7 @@ func (dc DockerComposeDriver) getDCContainersNames(mergedConfig Config, projectN
 		cmdInfo := cmdInfoToString(cmd, stdout, stderr, exitStatus)
 		if strings.Contains(stderr, "No such container") {
 			// Workaround for issue #27: do not panic but print error level log message.
-			dc.Logger.Log("error", fmt.Sprintf("Unexpected exit status:\n#{cmdInfo}"))
+			dc.Logger.Log("error", fmt.Sprintf("Unexpected exit status:\n%s", cmdInfo))
 			return []string{}
 		} else {
 			panic(fmt.Errorf("Unexpected exit status:\n%s", cmdInfo))
@@ -625,8 +625,10 @@ func (dc DockerComposeDriver) getDCContainersNames(mergedConfig Config, projectN
 		panic(fmt.Errorf("Unexpected empty stdout: %s", cmdInfo))
 	}
 	lines := strings.Split(stdout,"\n")
-	if strings.Contains(lines[len(lines)-1], "-----") {
-		// the last line of output is the one with -----
+	if len(lines) < 2 || strings.Contains(lines[len(lines)-1], "-----") {
+		// if running on Linux or using Docker Desktop,
+		// the last line of output is the one with -----;
+		// if using Colima, there is just 1 line of output
 		dc.Logger.Log("debug", "Containers were not yet created")
 		return []string{}
 	}
