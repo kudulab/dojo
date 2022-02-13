@@ -1,10 +1,14 @@
+### 0.10.4 (2022-Feb-13)
+
+* Fix issue #31. When using Colima instead of Docker Desktop or instead of running Docker on Linux, the output of `docker-compose ps` command is different. Without this fix, Dojo panics with `slice bounds out of range` in this line: https://github.com/kudulab/dojo/blob/0.10.3/docker_compose_driver.go#L633
+
 ### 0.10.3 (2020-Dec-07)
 
-* Add workaround for issu #27. Instead of exiting with error, ignore the error with particular message and print a log message.
+* Add workaround for issue #27. Instead of exiting with error, ignore the error with particular message and print a log message.
 
 ### 0.10.2 (2020-Oct-25)
 
-* Fix image scripts - invalid permissions when running on Mac with FUSE volume driver \#21 
+* Fix image scripts - invalid permissions when running on Mac with FUSE volume driver \#21
 
 ### 0.10.1 (2020-Oct-25)
 
