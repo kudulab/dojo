@@ -17,6 +17,21 @@ function check_flavor {
   fi
 }
 
+function setup_github_credentials {
+  if [ -z "$GITHUB_CREDENTIALS" ]; then
+    echo "Error: GITHUB_CREDENTIALS not set" >&2
+    exit 1
+  fi
+  # GITHUB_CREDENTIALS should be in format of account-name:api-key
+
+  # example HTTPS URL: https://github.com/user/repo.git
+  # example SSH URL: git@github.com:user/repo.git
+  OLD_URL=$(git remote get-url origin)
+  NEW_URL=$(echo $OLD_URL | sed "s|git@github.com:|https://$GITHUB_CREDENTIALS@github.com/|g")
+  git remote set-url origin $NEW_URL
+  echo "GitHub new remote was set"
+}
+
 command="$1"
 case "${command}" in
     deps)
@@ -96,15 +111,19 @@ const DojoVersion = \"${next_version}\"
         ;;
     release)
         version="$(releaser::get_last_version_from_whole_changelog ${changelog_file})"
+        setup_github_credentials
         git tag "${version}"
         git push origin "${version}"
         ;;
     release_gh)
         if [ ! -f bin/dojo_linux_amd64 ]; then echo "dojo_linux_amd64 binary does not exist"; exit 1; fi
         if [ ! -f bin/dojo_darwin_amd64 ]; then echo "dojo_darwin_amd64 binary does not exist"; exit 1; fi
-        if [ -z "$GITHUB_TOKEN" ]; then echo "GITHUB_TOKEN is unset"; exit 1; fi
+
+        setup_github_credentials
+        export GITHUB_TOKEN=$(echo $GITHUB_CREDENTIALS | cut -d ":" -f 2)
         releaser::prepare_github_release_bin
         VERSION="$(releaser::get_last_version_from_whole_changelog ${changelog_file})"
+        echo "Releasing version ${VERSION}"
         GH_USER=kudulab
 
         $GHRELEASE_BIN release \
@@ -134,6 +153,9 @@ const DojoVersion = \"${next_version}\"
         DARWIN_SHA256=$(sha256sum bin/dojo_darwin_amd64 | awk '{printf $1}')
         LINUX_SHA256=$(sha256sum bin/dojo_linux_amd64 | awk '{printf $1}')
         VERSION="$(releaser::get_last_version_from_whole_changelog ${changelog_file})"
+
+        setup_github_credentials
+
         git clone git@github.com:kudulab/homebrew-dojo-osx.git homebrew-dojo-osx
         cd homebrew-dojo-osx
         cat << EOF > dojo.rb

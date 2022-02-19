@@ -1,0 +1,135 @@
+version: 2.1
+
+workflows:
+  # Environment variables required in CircleCI environment:
+  #  - GITHUB_CREDENTIALS
+  dojo:
+    jobs:
+      - build_unit
+      - e2e_alpine:
+          requires:
+            - build_unit
+      - e2e_ubuntu:
+          requires:
+            - build_unit
+      - test_images:
+          requires:
+            - build_unit
+      - release:
+          type: approval
+          requires:
+            - e2e_alpine
+            - e2e_ubuntu
+            - test_images
+          filters:
+            branches:
+              only: master
+
+jobs:
+  build_unit:
+    executor: platform
+    steps:
+      - setup
+      - run:
+          name: Install dojo
+          command: |
+            version="0.10.3"
+            wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_linux_amd64
+            chmod +x /tmp/dojo
+            sudo mv /tmp/dojo /usr/bin/dojo
+      - run:
+          command: dojo -c Dojofile.build "./tasks deps"
+      - run:
+          command: dojo -c Dojofile.build "./tasks build"
+      - run:
+          command: dojo -c Dojofile.build "./tasks unit"
+      - run:
+          command: /bin/bash -c "./tasks symlink linux"
+      - persist_to_workspace:
+          root: ~/repo
+          paths:
+            - bin/dojo*
+
+  e2e_alpine:
+    executor: platform
+    steps:
+      - setup
+      - run:
+          name: Install dojo
+          command: |
+            version="0.10.3"
+            wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_linux_amd64
+            chmod +x /tmp/dojo
+            sudo mv /tmp/dojo /usr/bin/dojo
+      - attach_workspace:
+          at: ~/repo
+      - run:
+          command: /bin/bash -c "./tasks e2e alpine"
+      - run:
+          command: /bin/bash -c "./tasks test_signals alpine"
+
+  e2e_ubuntu:
+    executor: platform
+    steps:
+      - setup
+      - run:
+          name: Install dojo
+          command: |
+            version="0.10.3"
+            wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_linux_amd64
+            chmod +x /tmp/dojo
+            sudo mv /tmp/dojo /usr/bin/dojo
+      - attach_workspace:
+          at: ~/repo
+      - run:
+          command: /bin/bash -c "./tasks e2e ubuntu18"
+      - run:
+          command: /bin/bash -c "./tasks test_signals ubuntu18"
+
+  test_images:
+    executor: platform
+    steps:
+      - setup
+      - run:
+          command: sudo git clone https://github.com/bats-core/bats-core /opt/bats-core
+      - run:
+          command: sudo git clone https://github.com/bats-core/bats-assert /opt/bats-assert
+      - run:
+          command: sudo git clone https://github.com/bats-core/bats-support /opt/bats-support
+      - attach_workspace:
+          at: ~/repo
+      - run:
+          command: /bin/bash -c "cd image_scripts && ./tasks build"
+      - run:
+          command: /bin/bash -c "cd image_scripts && ./tasks test_scripts"
+      - run:
+          command: /bin/bash -c "cd image_scripts && ./tasks e2e"
+
+  release:
+    executor: platform
+    steps:
+      - setup
+      - attach_workspace:
+          at: ~/repo
+      - run:
+          command: /bin/bash -c "./tasks verify_version"
+      - run:
+          command: /bin/bash -c "./tasks release"
+      - run:
+          command: /bin/bash -c "./tasks release_gh"
+      - run:
+          command: /bin/bash -c "./tasks homebrew_tap"
+
+commands:
+  setup:
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - "a9:26:53:09:1f:ba:44:24:4b:8e:ad:1c:bc:54:a2:95"
+
+executors:
+  platform:
+    machine:
+      image: ubuntu-2004:202101-01
+    working_directory: ~/repo
