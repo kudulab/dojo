@@ -5,21 +5,24 @@ The `src` directory provides scripts which turn a usual docker image into a dojo
 ## Usage
 Add the following directive in Dockerfile.
 
+Please replace `TODO` with the latest Dojo version.
+
 ### Debian/Ubuntu
 ```
+ENV DOJO_VERSION=TODO
 RUN apt-get update && \
   DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
   sudo git ca-certificates wget && \
-  git clone --depth 1 -b 0.1.0 http://gogs.ai-traders.com/dojo/dojo.git /tmp/dojo_git && \
+  git clone --depth 1 -b ${DOJO_VERSION} https://github.com/kudulab/dojo.git /tmp/dojo_git && \
   /tmp/dojo_git/image_scripts/src/install.sh && \
   rm -r /tmp/dojo_git
 ```
 
 ### Alpine
 ```
-RUN echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories && \
-  apk add --no-cache bash shadow sudo git && \
-  git clone --depth 1 -b 0.1.0 http://gogs.ai-traders.com/dojo/dojo.git /tmp/dojo_git && \
+ENV DOJO_VERSION=TODO
+RUN apk add --no-cache bash shadow sudo git && \
+  git clone --depth 1 -b ${DOJO_VERSION} https://github.com/kudulab/dojo.git /tmp/dojo_git && \
   /tmp/dojo_git/image_scripts/src/install.sh && \
   rm -r /tmp/dojo_git
 ```
