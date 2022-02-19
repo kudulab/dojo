@@ -164,7 +164,7 @@ Using this method is not suitable to run Dojo in Dojo. But, you may want to use 
 The second method is to **run a separate Docker Daemon inside of a Docker container**. We can use [docker-inception-dojo](https://github.com/kudulab/docker-inception-dojo) Dojo Docker image:
 ```
 $ cat Dojofile.dind-ubuntu18
-DOJO_DOCKER_IMAGE="kudulab/inception-dojo:ubuntu18-dind-0.1.3"
+DOJO_DOCKER_IMAGE="kudulab/inception-dojo:ubuntu18-dind-0.2.1"
 DOJO_DOCKER_OPTIONS="--privileged"
 ```
 
@@ -196,7 +196,7 @@ alpine              3.9                 78a2ce922f86        7 months ago        
 There is also an Alpine dind Docker image. Use it in the following way:
 ```
 $ cat Dojofile.dind-alpine
-DOJO_DOCKER_IMAGE="kudulab/inception-dojo:alpine-dind-0.1.3"
+DOJO_DOCKER_IMAGE="kudulab/inception-dojo:alpine-dind-0.2.1"
 DOJO_DOCKER_OPTIONS="--privileged"
 ```
 
@@ -341,7 +341,7 @@ For alpine images a typical dockerfile has following structure:
 FROM alpine:3.9
 
 # Install common Dojo scripts
-ENV DOJO_VERSION=0.10.2
+ENV DOJO_VERSION=0.10.4
 RUN echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories && \
   apk add --no-cache tini bash shadow sudo git && \
   git clone --depth 1 -b ${DOJO_VERSION} https://github.com/kudulab/dojo.git /tmp/dojo_git &&\
@@ -871,6 +871,8 @@ Run these commands in `dojo` (use previous version of dojo to build a next one):
 
 Run integration tests, (this uses [inception-dojo](https://github.com/kudulab/docker-inception-dojo) docker image):
 ```
+./tasks symlink linux
+# or instead, if you're running on Mac: ./tasks symlink linux
 ./tasks e2e alpine
 ./tasks e2e ubuntu18
 ```
