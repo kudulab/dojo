@@ -54,7 +54,7 @@ brew install kudulab/homebrew-dojo-osx/dojo
 ```
 * a manual install:
 ```sh
-version="0.10.3"
+version="0.10.4"
 # on Linux:
 wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_linux_amd64
 # or on Mac:
@@ -82,7 +82,7 @@ dojo "gradle test jar"
 The output should start with a docker command that was executed:
 ```console
 /tmp/gocd-yaml-config-plugin$ dojo "gradle test jar"
-2020/12/09 07:40:28 [ 1]  INFO: (main.main) Dojo version 0.10.3
+2020/12/09 07:40:28 [ 1]  INFO: (main.main) Dojo version 0.10.4
 2020/12/09 07:40:28 [ 4]  INFO: (main.DockerDriver.HandleRun) docker command will be:
  docker run --rm -v /tmp/gocd-yaml-config-plugin:/dojo/work -v /home/tomzo:/dojo/identity:ro --env-file=/tmp/dojo-environment-dojo-gocd-yaml-config-plugin-2020-12-09_07-40-50-60121947 -v /tmp/.X11-unix:/tmp/.X11-unix -ti --name=dojo-gocd-yaml-config-plugin-2020-12-09_07-40-50-60121947 kudulab/openjdk-dojo:1.4.1 "gradle test jar"
 Unable to find image 'kudulab/openjdk-dojo:1.4.1' locally
@@ -263,7 +263,7 @@ We have also established several **best practices** for dojo image development:
 Dojo provides [several scripts](image_scripts/src) to be used inside dojo images to meet most of above requirements. Scripts can be installed in a `Dockerfile` with:
 
 ```dockerfile
-ENV DOJO_VERSION=0.10.2
+ENV DOJO_VERSION=0.10.4
 RUN git clone --depth 1 -b ${DOJO_VERSION} https://github.com/kudulab/dojo.git /tmp/dojo_git &&\
   /tmp/dojo_git/image_scripts/src/install.sh && \
   rm -r /tmp/dojo_git
@@ -293,7 +293,7 @@ ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 RUN chmod +x /tini
 
 # Install common Dojo scripts
-ENV DOJO_VERSION=0.10.2
+ENV DOJO_VERSION=0.10.4
 RUN apt-get update && \
   DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
   sudo git ca-certificates && \
