@@ -7,7 +7,7 @@ DOJO_PATH="../bin/dojo"
 
 @test "/usr/bin/entrypoint.sh file exists and is executable" {
     # the -c below is needed, because our entrypoint is "bash"
-    run /bin/bash -c "${DOJO_PATH} --config=Dojofile.to_be_tested_scripts -- -c \"test -x /usr/bin/entrypoint.sh\""
+    run /bin/bash -c "${DOJO_PATH} --config=Dojofile.to_be_tested_scripts -- -c \"ls -la /usr/bin/entrypoint.sh && test -x /usr/bin/entrypoint.sh\""
     # this is printed on test failure
     echo "output: $output"
     assert_equal "$status" 0
@@ -19,13 +19,13 @@ DOJO_PATH="../bin/dojo"
     assert_equal "$status" 0
 }
 @test "/etc/dojo.d/scripts/50-fix-uid-gid.sh file exists and is executable" {
-    run /bin/bash -c "${DOJO_PATH} --config=Dojofile.to_be_tested_scripts -- -c \"test -x /etc/dojo.d/scripts/50-fix-uid-gid.sh\""
+    run /bin/bash -c "${DOJO_PATH} --config=Dojofile.to_be_tested_scripts -- -c \"ls -la /etc/dojo.d/scripts/50-fix-uid-gid.sh && test -x /etc/dojo.d/scripts/50-fix-uid-gid.sh\""
     # this is printed on test failure
     echo "output: $output"
     assert_equal "$status" 0
 }
 @test "/etc/dojo.d/scripts/90-run-user.sh file exists and is executable" {
-    run /bin/bash -c "${DOJO_PATH} --config=Dojofile.to_be_tested_scripts -- -c \"test -x /etc/dojo.d/scripts/90-run-user.sh\""
+    run /bin/bash -c "${DOJO_PATH} --config=Dojofile.to_be_tested_scripts -- -c \"ls -la /etc/dojo.d/scripts/90-run-user.sh && test -x /etc/dojo.d/scripts/90-run-user.sh\""
     # this is printed on test failure
     echo "output: $output"
     assert_equal "$status" 0
