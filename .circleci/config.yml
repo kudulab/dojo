@@ -31,6 +31,12 @@ workflows:
           filters:
             branches:
               only: master
+      - homebrew_tap:
+          requires:
+            - release
+          filters:
+            branches:
+              only: master
 
 jobs:
   build_unit:
@@ -124,6 +130,12 @@ jobs:
           command: /bin/bash -c "./tasks release"
       - run:
           command: /bin/bash -c "./tasks release_gh"
+  homebrew_tap:
+    executor: platform
+    steps:
+      - setup
+      - attach_workspace:
+          at: ~/repo
       - run:
           command: /bin/bash -c "./tasks homebrew_tap"
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -Ee
 
-RELEASER_VERSION="2.1.0"
+RELEASER_VERSION="2.1.3"
 RELEASER_FILE="ops/releaser-${RELEASER_VERSION}"
 
 mkdir -p ops
@@ -126,26 +126,28 @@ const DojoVersion = \"${next_version}\"
         echo "Releasing version ${VERSION}"
         GH_USER=kudulab
 
+        echo "Creating a GitHub release"
         $GHRELEASE_BIN release \
           --user $GH_USER \
           --repo dojo \
           --tag $VERSION \
           --name $VERSION \
           --description "$(./tasks generate_release_notes ${VERSION})"
-
+        echo "Uploading assets (1/2)"
         $GHRELEASE_BIN upload \
           --user $GH_USER \
           --repo dojo \
           --tag $VERSION \
           --name "dojo_linux_amd64" \
           --file bin/dojo_linux_amd64
-
+        echo "Uploading assets (2/2)"
         $GHRELEASE_BIN upload \
           --user $GH_USER \
           --repo dojo \
           --tag $VERSION \
           --name "dojo_darwin_amd64" \
           --file bin/dojo_darwin_amd64
+        echo "Success"
         ;;
     homebrew_tap)
         if [ ! -f bin/dojo_darwin_amd64 ]; then echo "dojo_darwin_amd64 binary does not exist"; exit 1; fi
