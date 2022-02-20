@@ -6,11 +6,14 @@ DOJO_PATH="../bin/dojo"
 # All the dojo scripts are installed, but dojo entrypoint was not run.
 
 @test "/usr/bin/entrypoint.sh file exists and is executable" {
-    # the -c below is needed, because our entrypoint is "bash"
-    run /bin/bash -c "${DOJO_PATH} --config=Dojofile.to_be_tested_scripts -- -c \"ls -la /usr/bin/entrypoint.sh && test -x /usr/bin/entrypoint.sh\""
+    # the -c below is needed, because our entrypoint is "bash";
+    # also we cannot use "test -x" when running on circleci as it
+    # returns the same exit code no matter if file is executable or not
+    run /bin/bash -c "${DOJO_PATH} --config=Dojofile.to_be_tested_scripts -- -c \"stat -c '%A' /usr/bin/entrypoint.sh | grep -o x | wc -l\""
     # this is printed on test failure
     echo "output: $output"
     assert_equal "$status" 0
+    assert_line --partial "3"
 }
 @test "/etc/dojo.d, /etc/dojo.d/scripts, /etc/dojo.d/variables drectories exist" {
     run /bin/bash -c "${DOJO_PATH} --config=Dojofile.to_be_tested_scripts -- -c \"test -d /etc/dojo.d && test -d /etc/dojo.d/scripts && test -d /etc/dojo.d/variables\""
@@ -19,22 +22,25 @@ DOJO_PATH="../bin/dojo"
     assert_equal "$status" 0
 }
 @test "/etc/dojo.d/scripts/50-fix-uid-gid.sh file exists and is executable" {
-    run /bin/bash -c "${DOJO_PATH} --config=Dojofile.to_be_tested_scripts -- -c \"ls -la /etc/dojo.d/scripts/50-fix-uid-gid.sh && test -x /etc/dojo.d/scripts/50-fix-uid-gid.sh\""
+    run /bin/bash -c "${DOJO_PATH} --config=Dojofile.to_be_tested_scripts -- -c \"stat -c '%A' /etc/dojo.d/scripts/50-fix-uid-gid.sh | grep -o x | wc -l\""
     # this is printed on test failure
     echo "output: $output"
     assert_equal "$status" 0
+    assert_line --partial "3"
 }
 @test "/etc/dojo.d/scripts/90-run-user.sh file exists and is executable" {
-    run /bin/bash -c "${DOJO_PATH} --config=Dojofile.to_be_tested_scripts -- -c \"ls -la /etc/dojo.d/scripts/90-run-user.sh && test -x /etc/dojo.d/scripts/90-run-user.sh\""
+    run /bin/bash -c "${DOJO_PATH} --config=Dojofile.to_be_tested_scripts -- -c \"stat -c '%A' /etc/dojo.d/scripts/90-run-user.sh | grep -o x | wc -l\""
     # this is printed on test failure
     echo "output: $output"
     assert_equal "$status" 0
+    assert_line --partial "3"
 }
 @test "/etc/dojo.d/scripts/29-not-executable-file.sh is NOT executable" {
-    run /bin/bash -c "${DOJO_PATH} --config Dojofile.to_be_tested_scripts -- -c \"test -x /etc/dojo.d/scripts/29-not-executable-file.sh\""
+    run /bin/bash -c "${DOJO_PATH} --config Dojofile.to_be_tested_scripts -- -c \"stat -c '%A' /etc/dojo.d/scripts/29-not-executable-file.sh | grep -o x | wc -l\""
     # this is printed on test failure
     echo "output: $output"
-    assert_equal "$status" 1
+    assert_equal "$status" 0
+    assert_line --partial "0"
 }
 
 # Let's run the dojo entrypoint.
