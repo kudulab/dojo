@@ -184,8 +184,8 @@ Docker version 19.03.5, build 633a0ea838
 $ docker info | grep "Server Version"
  Server Version: 19.03.5
 
-$ docker run --rm alpine:3.9 whoami
-Unable to find image 'alpine:3.9' locally
+$ docker run --rm alpine:3.15 whoami
+Unable to find image 'alpine:3.15' locally
 # pulling image messages
 root
 dojo@ebc220b9655f(inception-dojo):/dojo/work$ docker images
@@ -338,7 +338,7 @@ cd "${dojo_work}"
 For alpine images a typical dockerfile has following structure:
 
 ```dockerfile
-FROM alpine:3.9
+FROM alpine:3.15
 
 # Install common Dojo scripts
 ENV DOJO_VERSION=0.10.4
@@ -687,7 +687,7 @@ Usage of dojo <flags> [--] <CMD>:
   -identity-dir-outer string
     	Directory on host, to be mounted into a docker container to /dojo/identity. Default: $HOME
   -image string
-    	Docker image name and tag, e.g. alpine:3.8
+    	Docker image name and tag, e.g. alpine:3.15
   -interactive string
     	Set to false if you want to force not interactive docker run
   -preserve-env-to-all string
@@ -749,15 +749,15 @@ is printed, press Ctrl+C. You may also test pressing Ctrl+C more times.
 
 1. driver: docker, container's PID 1 process **not** preserving signals:
 ```
-dojo --image=alpine:3.8 -i=false sh -c "echo 'will sleep' && sleep 1d"
+dojo --image=alpine:3.15 -i=false sh -c "echo 'will sleep' && sleep 1d"
 ```
 2. driver: docker, container's PID 1 process preserving signals:
 ```
-dojo --docker-options="--init" --image=alpine:3.8 -i=false sh -c "echo 'will sleep' && sleep 1d"
+dojo --docker-options="--init" --image=alpine:3.15 -i=false sh -c "echo 'will sleep' && sleep 1d"
 ```
 3. driver: docker-compose:
 ```
-dojo --driver=docker-compose --dcf=./test/test-files/itest-dc.yaml -i=false --image=alpine:3.8 sh -c "echo 'will sleep' && sleep 1d"
+dojo --driver=docker-compose --dcf=./test/test-files/itest-dc.yaml -i=false --image=alpine:3.15 sh -c "echo 'will sleep' && sleep 1d"
 ```
 
 ### Preserving exported Bash functions [#17](https://github.com/kudulab/dojo/issues/17)

@@ -68,7 +68,7 @@ case "${command}" in
         ;;
     e2e_invalid_environment)
         echo "Running task: e2e_invalid_environment"
-        docker run -t --rm -v ${PWD}/bin/dojo:/usr/bin/dojo alpine:3.9 "/usr/bin/dojo" 2>&1 | grep "Error while verifying if Bash is installed" && true
+        docker run -t --rm -v ${PWD}/bin/dojo:/usr/bin/dojo alpine:3.15 "/usr/bin/dojo" 2>&1 | grep "Error while verifying if Bash is installed" && true
         ;;
     e2e)
         check_flavor $2

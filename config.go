@@ -89,7 +89,7 @@ func getCLIConfig() Config {
 	flagSet.StringVar(&driver, "d", "", usageDriver+" (shorthand)")
 
 	var image string
-	const usageImage         = "Docker image name and tag, e.g. alpine:3.8"
+	const usageImage         = "Docker image name and tag, e.g. alpine:3.15"
 	flagSet.StringVar(&image, "image", "", usageImage)
 
 	// this is not bool, because we need to know if it was set or not
