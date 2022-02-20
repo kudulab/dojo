@@ -29,7 +29,7 @@ done
 # or source any files or wait for linux daemons
 for SCRIPT in /etc/dojo.d/scripts/* ; do
 	if [ -f ${SCRIPT} ] ; then
-    dojo_entrypoint_log_info "Sourcing: ${SCRIPT}"
+    dojo_entrypoint_log_info "Running: ${SCRIPT}"
 		chmod +x ${SCRIPT}
 		${SCRIPT}
 	fi

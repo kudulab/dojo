@@ -1,3 +1,7 @@
+### 0.10.5 (2022-Feb-20)
+
+* Update a log message in entrypoint about sourcing the scripts
+
 ### 0.10.4 (2022-Feb-13)
 
 * Fix issue #31. When using Colima instead of Docker Desktop or instead of running Docker on Linux, the output of `docker-compose ps` command is different. Without this fix, Dojo panics with `slice bounds out of range` in this line: https://github.com/kudulab/dojo/blob/0.10.3/docker_compose_driver.go#L633
