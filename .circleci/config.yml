@@ -15,12 +15,19 @@ workflows:
       - test_images:
           requires:
             - build_unit
-      - release:
+      - hold:
           type: approval
           requires:
-            - e2e_alpine
+            - build_unit
             - e2e_ubuntu
+            - e2e_alpine
             - test_images
+          filters:
+            branches:
+              only: master
+      - release:
+          requires:
+            - hold
           filters:
             branches:
               only: master
