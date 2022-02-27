@@ -47,14 +47,14 @@ jobs:
       - run:
           name: Install dojo
           command: |
-            version="0.10.3"
+            version="0.10.5"
             wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_linux_amd64
             chmod +x /tmp/dojo
             sudo mv /tmp/dojo /usr/bin/dojo
       - run:
-          command: dojo -c Dojofile.build "./tasks build"
+          command: /bin/bash -c "./tasks build"
       - run:
-          command: dojo -c Dojofile.build "./tasks unit"
+          command: /bin/bash -c "./tasks unit"
       - run:
           command: /bin/bash -c "./tasks symlink linux"
       - persist_to_workspace:
@@ -69,7 +69,7 @@ jobs:
       - run:
           name: Install dojo
           command: |
-            version="0.10.3"
+            version="0.10.5"
             wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_linux_amd64
             chmod +x /tmp/dojo
             sudo mv /tmp/dojo /usr/bin/dojo
@@ -87,7 +87,7 @@ jobs:
       - run:
           name: Install dojo
           command: |
-            version="0.10.3"
+            version="0.10.5"
             wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_linux_amd64
             chmod +x /tmp/dojo
             sudo mv /tmp/dojo /usr/bin/dojo

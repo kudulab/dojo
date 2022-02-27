@@ -34,12 +34,15 @@ function setup_github_credentials {
 
 command="$1"
 case "${command}" in
-    build)
+    _build)
         rm -rf bin/dojo
         # disable the use of cgo with: CGO_ENABLED=0
         (set -x; GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -o bin/dojo_darwin_amd64 ./; )
         (set -x; GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bin/dojo_linux_amd64 ./; )
         # to get a list supported golang platforms: go tool dist list
+        ;;
+    build)
+        dojo -c Dojofile.build "./tasks _build"
         ;;
     symlink)
         if [[ -n "$2" ]]; then
@@ -53,11 +56,14 @@ case "${command}" in
         ln -s dojo_${os_suffix}_amd64 ./bin/dojo
         chmod +x ./bin/dojo
         ;;
-    unit)
+    _unit)
         (set -x; go test -v -race ./... | sed ''/PASS/s//$(printf "\033[32mPASS\033[0m")/'' | sed ''/FAIL/s//$(printf "\033[31mFAIL\033[0m")/''; )
         ;;
-    e2e_py)
-        echo "Running task: e2e_py"
+    unit)
+        dojo -c Dojofile.build "./tasks _unit"
+        ;;
+    _e2e)
+        echo "Running task: e2e"
         if [[ ! -f "bin/dojo" ]]; then
           echo "Error: File bin/dojo not found. Please run either './tasks symlink linux' or ./tasks symlink darwin' depending on your OS"
           exit 1
@@ -69,7 +75,7 @@ case "${command}" in
         ;;
     e2e)
         check_flavor $2
-        dojo -c Dojofile.e2e-$2 "./tasks e2e_py"
+        dojo -c Dojofile.e2e-$2 "./tasks _e2e"
         ;;
     test_signals)
         check_flavor $2

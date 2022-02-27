@@ -123,7 +123,7 @@ There are also Dojo Docker images which bundle a tool (or group of tools), e.g. 
 ```
 $ nano Dojofile
 $ cat Dojofile
-DOJO_DOCKER_IMAGE="kudulab/aws-dojo:0.6.0"
+DOJO_DOCKER_IMAGE="kudulab/aws-dojo:0.7.0"
 $ dojo
 # now we run interactively in the Dojo Docker container
 dojo@407490ab35cb(aws-dojo):/dojo/work$ aws ec2 describe-instances --filters "Name=tag:Name,Values=ec2-ansible-test"
@@ -861,24 +861,68 @@ If we extend this concept, then we soon realize that the project did not define 
 In any sensible organization, configuration management is used to provision the CI-agents and developer's workstation building the project. It is one level better than the README, but still the definition of the environment exists outside the project and there is no reference to it.
 The `Dojofile` is the *lock* file which allows to store this reference in source control. When you run `dojo <command>`, then the environment is fetched, just like a dependency manager would fetch all dependencies of the project.
 
-## Development
-Run these commands in `dojo` (use previous version of dojo to build a next one):
+## Contributing and Development
+
+Instructions how to update this project.
+
+1. Create a new feature branch from the `master` branch
+2. Work on your changes in that feature branch. If you want, describe you changes in [CHANGELOG.md](CHANGELOG.md)
+3. Compile the code and run tests locally, see the [2 options](#2-options) below
+4. If you are happy with the results, create a PR from your feature branch to the main branch
+
+After this, someone will read your PR, merge it and ensure version bump (using `./tasks set_version`). CI pipeline will run to automatically build and test docker image, release the project and publish the docker image.
+
+### 2 options
+You may either use Dojo to develop Dojo, or use your local environment
+
+You may take a look at the [CICD pipeline config](.circleci/config.yaml) and at the [tasks](tasks) file. The tasks file has the same purpose as Makefile or Rakefile.
+
+#### Option 1: Using Dojo to develop Dojo
+1. Please ensure you have the [runtime dependencies](#dependencies) installed
+2. Compile the code and run unit tests:
 ```
-./tasks build
-./tasks unit
+$ dojo -c Dojofile.build
+./tasks _build
+./tasks _unit
+./tasks symlink linux
+# or instead, if you're running on Mac: ./tasks symlink darwin
 ```
 
-Run integration tests, (this uses [inception-dojo](https://github.com/kudulab/docker-inception-dojo) docker image):
+  or
+  ```
+  ./tasks build
+  ./tasks unit
+
+  ./tasks symlink linux
+  # or instead, if you're running on Mac: ./tasks symlink darwin
+  ```
+
+3. Run end to end tests:
 ```
-./tasks symlink linux
-# or instead, if you're running on Mac: ./tasks symlink linux
-./tasks e2e alpine
 ./tasks e2e ubuntu18
+./tasks e2e alpine
 ```
+
+#### Option 2: Using local environment to develop Dojo
+1. Please ensure you have the [runtime dependencies](#dependencies) installed
+2. Please install the development dependencies:
+  * Golang
+  * Python
+3. Now you can compile and test Dojo:
+
+  ```
+  ./tasks _build
+  ./tasks _unit
+
+  ./tasks symlink linux
+  # or instead, if you're running on Mac: ./tasks symlink darwin
+  ./tasks _e2e
+  ```
+
 
 ## License
 
-Copyright 2019 Ewa Czechowska, Tomasz Sętkowski
+Copyright 2019-2022 Ava Czechowska, Tom Setkowski
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
