@@ -1,3 +1,7 @@
+### 0.11.0 (2022-Feb-27)
+
+* Compile Dojo using Golang 1.17.7 thanks to using Docker image kudulab/golang-dojo:2.0.0
+
 ### 0.10.5 (2022-Feb-20)
 
 * Update a log message in entrypoint about sourcing the scripts
