@@ -24,8 +24,14 @@ def run_shell(command):
     return subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
 
 
-def run_dojo(args, env=None):
+def get_dojo_exe():
     dojo_exe = os.path.join(test_dir, '..', '..', 'bin', 'dojo')
+    dojo_exe_absolute_path = os.path.abspath(dojo_exe)
+    return dojo_exe_absolute_path
+
+
+def run_dojo(args, env=None):
+    dojo_exe = get_dojo_exe()
     return run_command(dojo_exe, args, env)
 
 
