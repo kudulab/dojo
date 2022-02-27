@@ -63,14 +63,9 @@ case "${command}" in
         pip3 install -r test/requirements.txt
         pytest test --verbose
         ;;
-    e2e_invalid_environment)
-        echo "Running task: e2e_invalid_environment"
-        docker run -t --rm -v ${PWD}/bin/dojo:/usr/bin/dojo alpine:3.15 "/usr/bin/dojo" 2>&1 | grep "Error while verifying if Bash is installed" && true
-        ;;
     e2e)
         check_flavor $2
         dojo -c Dojofile.e2e-$2 "./tasks e2e_py"
-        ./tasks e2e_invalid_environment
         ;;
     test_signals)
         check_flavor $2
