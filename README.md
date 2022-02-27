@@ -112,7 +112,7 @@ Let's build this project (Dojo) using `dojo`:
 ```bash
 git clone https://github.com/kudulab/dojo.git
 cd dojo
-dojo -c Dojofile.build "./tasks deps && ./tasks build"
+dojo -c Dojofile.build "./tasks build"
 ```
 
 Here we used Dojo flag `-c Dojofile.build`. This way we instructed dojo CLI which Dojofile to use. Dojofile keeps information about the Docker Image. [Dojofile.build](https://github.com/kudulab/dojo/blob/master/Dojofile.build) uses [kudulab/golang-dojo](https://github.com/kudulab/docker-golang-dojo) Docker image.
@@ -864,7 +864,6 @@ The `Dojofile` is the *lock* file which allows to store this reference in source
 ## Development
 Run these commands in `dojo` (use previous version of dojo to build a next one):
 ```
-./tasks deps
 ./tasks build
 ./tasks unit
 ```

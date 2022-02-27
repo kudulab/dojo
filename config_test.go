@@ -248,13 +248,18 @@ func Test_getMergedConfig(t *testing.T){
 		DockerImage: "img",
 	}
 	config3 := getDefaultConfig("somefile")
+	currentDirectory, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
 	mergedConfig := getMergedConfig(config1, config2, config3)
 	assert.Equal(t, "dummy", mergedConfig.Action)
 	assert.Equal(t, "somefile", mergedConfig.ConfigFile)
 	assert.Equal(t, "false", mergedConfig.Debug)
 	assert.Equal(t, "mydriver", mergedConfig.Driver)
 	assert.Equal(t, "true", mergedConfig.RemoveContainers)
-	assert.Contains(t, mergedConfig.WorkDirOuter, "/src/dojo")
+	assert.Contains(t, mergedConfig.WorkDirOuter, currentDirectory)
 	assert.Equal(t, "/dojo/work", mergedConfig.WorkDirInner)
 	assert.Equal(t, "/tmp/myhome", mergedConfig.IdentityDirOuter)
 	assert.Equal(t, "img", mergedConfig.DockerImage)

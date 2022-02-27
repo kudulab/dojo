@@ -52,8 +52,6 @@ jobs:
             chmod +x /tmp/dojo
             sudo mv /tmp/dojo /usr/bin/dojo
       - run:
-          command: dojo -c Dojofile.build "./tasks deps"
-      - run:
           command: dojo -c Dojofile.build "./tasks build"
       - run:
           command: dojo -c Dojofile.build "./tasks unit"

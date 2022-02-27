@@ -34,9 +34,6 @@ function setup_github_credentials {
 
 command="$1"
 case "${command}" in
-    deps)
-        glide install
-        ;;
     build)
         rm -rf bin/dojo
         # disable the use of cgo with: CGO_ENABLED=0
