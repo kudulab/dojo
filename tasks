@@ -58,6 +58,10 @@ case "${command}" in
         ;;
     e2e_py)
         echo "Running task: e2e_py"
+        if [[ ! -f "bin/dojo" ]]; then
+          echo "Error: File bin/dojo not found. Please run either './tasks symlink linux' or ./tasks symlink darwin' depending on your OS"
+          exit 1
+        fi
         python3 -m venv venv
         source venv/bin/activate
         pip3 install -r test/requirements.txt
