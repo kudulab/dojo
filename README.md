@@ -35,7 +35,7 @@ Dojo works on **Linux or Mac**. Dojo is continuously tested only on Linux.
     * [Handling signals](#handling-signals)
 1. [FAQ](#faq)
 1. [Comparison to other tools](#comparison-to-other-tools)
-1. [Development](#Development)
+1. [Contributing and Development](#contributing-and-development)
 1. [License](#License)
 
 ## Installation
@@ -867,19 +867,20 @@ Instructions how to update this project.
 
 1. Create a new feature branch from the `master` branch
 2. Work on your changes in that feature branch. If you want, describe you changes in [CHANGELOG.md](CHANGELOG.md)
-3. Compile the code and run tests locally, see the [2 options](#2-options) below
+3. Compile the code and run tests locally, see the [2 options](#2-options-to-develop-Dojo) below
 4. If you are happy with the results, create a PR from your feature branch to the main branch
 
 After this, someone will read your PR, merge it and ensure version bump (using `./tasks set_version`). CI pipeline will run to automatically build and test docker image, release the project and publish the docker image.
 
-### 2 options
+### 2 options to develop Dojo
 You may either use Dojo to develop Dojo, or use your local environment
 
-You may take a look at the [CICD pipeline config](.circleci/config.yaml) and at the [tasks](tasks) file. The tasks file has the same purpose as Makefile or Rakefile.
+You may take a look at the [CICD pipeline config](.circleci/config.yml) and at the [tasks](tasks) file. The tasks file has the same purpose as Makefile or Rakefile.
 
 #### Option 1: Using Dojo to develop Dojo
 1. Please ensure you have the [runtime dependencies](#dependencies) installed
-2. Compile the code and run unit tests:
+2. Please install [Dojo](#installation)
+3. Compile the code and run unit tests:
 ```
 $ dojo -c Dojofile.build
 ./tasks _build
@@ -897,7 +898,7 @@ $ dojo -c Dojofile.build
   # or instead, if you're running on Mac: ./tasks symlink darwin
   ```
 
-3. Run end to end tests:
+4. Run end to end tests:
 ```
 ./tasks e2e ubuntu18
 ./tasks e2e alpine
@@ -908,6 +909,7 @@ $ dojo -c Dojofile.build
 2. Please install the development dependencies:
   * Golang
   * Python
+
 3. Now you can compile and test Dojo:
 
   ```
