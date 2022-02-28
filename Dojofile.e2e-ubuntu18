@@ -1,2 +1,2 @@
-DOJO_DOCKER_IMAGE="kudulab/inception-dojo:ubuntu18-dind-0.2.1"
+DOJO_DOCKER_IMAGE="kudulab/inception-dojo:ubuntu18-dind-0.3.0"
 DOJO_DOCKER_OPTIONS="--privileged"
