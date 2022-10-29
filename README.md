@@ -1,8 +1,10 @@
 # Dojo
 
-A tool to keep environment as code.
+A CLI tool to keep **environment as code**.
 
-Dojo helps to compile code and run other operations in [Docker](https://docker.com) containers.
+Dojo ensures you have a proper, versioned, well-defined, reproducible **environment to run your operations in**. What operations? These could be software lifecycle operations (e.g. code compilation, running unit tests) or other admin commands (e.g. creating backups, uploading files).
+
+How does it work? Dojo locally orchestrates [Docker](https://docker.com) containers. Environment is defined by Docker images. Dojo adds a few standards for the Docker images and also takes care of creating and removing the containers.
 
 The Dojo project consists of:
  * `dojo` - a golang executable (CLI), which leverages `docker` and `docker-compose`
@@ -18,6 +20,7 @@ Dojo works on **Linux or Mac**. Dojo is continuously tested only on Linux.
    * [Golang example](#golang-example)
    * [AWS example](#aws-example)
    * [Docker in Docker example](#docker-in-docker-dind-example)
+1. [Features](#features)
 1. [Why?](#why-was-dojo-created-dojo-benefits)
 1. [Docker images](#docker-images)
     * [Requirements](#image-requirements-and-best-practices)
@@ -202,6 +205,41 @@ DOJO_DOCKER_OPTIONS="--privileged"
 
 This method is suitable for running Dojo in Dojo. Dojo e2e tests use this method to test various Docker commands in a clean, separate Docker container. This way, such tests cannot affect Docker containers or images on Docker host (they have a safe environment to run in).
 
+### Public alpine image
+
+You can try any public Docker image. Example with an alpine image:
+```
+$ nano Dojofile
+$ cat Dojofile
+DOJO_DOCKER_IMAGE="alpine:3.16"
+$ dojo
+# now we run interactively in the Dojo Docker container
+/ # whoami
+root
+/ # pwd
+/
+/ # apk -h
+apk-tools 2.12.9, compiled for x86_64.
+```
+
+To exit the container, type `exit`.
+
+## Features
+
+You can use Dojo with any Docker image, but some features are only supported with custom Dojo Docker images.
+
+| Feature | Works with custom Dojo Docker images | Works with any image |
+| - | - | - |
+| Dojofile | Yes | Yes |
+| Starting, stopping, removing containers | Yes | Yes |
+| Signals support | Yes | Yes |
+| Support for running interactively and non-interactively | Yes | Yes |
+| All drivers support (Docker, Docker-compose) | Yes | Yes |
+| Preserving environment variables | Yes | Yes |
+| Custom startup scripts for a container | Yes | No |
+| Running as a custom user, not `root` | Yes | No |
+| Running in `/dojo/work` directory | Yes | No |
+| Ensuring proper UID and GID for custom user (to match file permissions) | Yes | No |
 
 ## Why was Dojo created? Dojo benefits
 
@@ -234,7 +272,7 @@ A dojo docker image becomes a contract of what is a **correct environment** for 
 
 # Docker images
 
-A dojo docker image is responsible for setup of the development environment when container is created.
+A dojo docker image is responsible for providing the proper environment for running your operations.
 
 You can find complete examples of [open source "dojo images" on github](https://github.com/topics/dojo-image). Or you can build your own image starting from minimal example [snippets below](#image-scripts).
 
@@ -384,7 +422,7 @@ cd "${dojo_work}"
 
 Every organization manages secrets distribution differently. Dojo is agnostic towards the secret management. This section is an overview of several possibilities on how to deliver secrets into dojo containers.
 
-#### Don't add secrets to the image
+#### Don't hardcode secrets in the image
 
 I hope this is obvious.
 
