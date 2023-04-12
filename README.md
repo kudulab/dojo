@@ -57,7 +57,7 @@ brew install kudulab/homebrew-dojo-osx/dojo
 ```
 * a manual install:
 ```sh
-version="0.10.5"
+version="0.11.0"
 # on Linux:
 wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_linux_amd64
 # or on Mac:
@@ -66,6 +66,8 @@ chmod +x /tmp/dojo
 sudo mv /tmp/dojo /usr/bin/dojo
 ```
 * build the binary file yourself, see [Development](#development)
+
+You may find out what is the latest Dojo version [here](https://github.com/kudulab/dojo/releases).
 
 ## Quickstart
 First, follow the [instructions](#installation) to install Dojo. Dojo CLI will be available to use in this way:
