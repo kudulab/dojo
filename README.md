@@ -10,7 +10,11 @@ The Dojo project consists of:
  * `dojo` - a golang executable (CLI), which leverages `docker` and `docker-compose`
  * A specification and helper scripts for building [Dojo Docker images](#docker-images)
 
-Dojo works on **Linux or Mac**. Dojo is continuously tested only on Linux.
+
+## Operating Systems
+* Dojo works on **Linux, Mac, and [Windows Subsystem for Linux
+ (WSL)](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux)**
+* Dojo is continuously tested only on Linux
 
 ## Table of contents
 
@@ -76,7 +80,7 @@ dojo <flags> [--] <CMD>
 ```
 
 ### Java Example
-Let's build this [java project](https://github.com/tomzo/gocd-yaml-config-plugin) using dojo:
+Let's compile this [java project](https://github.com/tomzo/gocd-yaml-config-plugin) using dojo:
 
 ```bash
 git clone https://github.com/tomzo/gocd-yaml-config-plugin.git
@@ -84,7 +88,7 @@ cd gocd-yaml-config-plugin
 dojo "gradle test jar"
 ```
 
-The output should start with a docker command that was executed:
+The beginning of the output shows the docker command executed by Dojo:
 ```console
 /tmp/gocd-yaml-config-plugin$ dojo "gradle test jar"
 2020/12/09 07:40:28 [ 1]  INFO: (main.main) Dojo version 0.10.5
@@ -93,23 +97,22 @@ The output should start with a docker command that was executed:
 Unable to find image 'kudulab/openjdk-dojo:1.4.1' locally
 1.4.1: Pulling from kudulab/openjdk-dojo
 ```
-Then you should see `docker pull` output and after creating the container, all tests being executed.
+Then, there is the `docker pull` output. Then, the container is created  and the java tests are executed.
 The build artifacts land in `build/libs/`, because that is how gradle behaves. These artifacts are available on our docker host.
 Things to notice:
  * We have pulled [`kudulab/openjdk-dojo` docker image](https://github.com/kudulab/docker-openjdk-dojo) and created container from it.
- * Current directory `/tmp/gocd-yaml-config-plugin` was [mounted](https://docs.docker.com/storage/volumes/) to `/dojo/work`
+ * Current directory `/tmp/gocd-yaml-config-plugin` was [mounted](https://docs.docker.com/storage/volumes/) to `/dojo/work`. This means that the same and only copy of our project files is available on the Docker host and in the container. If you create more containers with Dojo, `/dojo/work` will be also available there.
  * Home directory on host `/home/tomzo` was [mounted](https://docs.docker.com/storage/volumes/) as readonly to `/dojo/identity`
  * After `gradle test jar` has finished running non-interactively, the docker container has exited and was removed. This is because we provided a command to `dojo`.
 
-Every dojo image supports 2 modes: an interactive mode and non-interactive mode. In order to run interactively, run `dojo` without any command:
+
+#### Interactive mode
+Dojo images are supposed to support 2 modes: an interactive mode and non-interactive mode. In order to run interactively, run `dojo` without any command:
 ```console
 /tmp/gocd-yaml-config-plugin$ dojo
 ```
 
-Then we can work in the container for longer time, very much like in a [vagrant VM](#vs-vagrant).
-Thanks to the mounted directory from the host, we can work on the project files using any other tools on our host, while container with java tools shares the same files.
-
-This is a quickstart preview to give you a sense of how you would work with dojo. Read on for more examples. There is also a documentation site coming.
+This allows us to work in the container for longer time, very much like in a [vagrant VM](#vs-vagrant). You will have to manually exit from the container.
 
 ### Golang Example
 Let's build this project (Dojo) using `dojo`:
@@ -209,7 +212,7 @@ This method is suitable for running Dojo in Dojo. Dojo e2e tests use this method
 
 ### Public alpine image
 
-You can try any public Docker image. Example with an alpine image:
+You can use Dojo with any Docker image, it does not have to be a Dojo Docker image. Example with an alpine image:
 ```
 $ nano Dojofile
 $ cat Dojofile
@@ -288,7 +291,7 @@ A dojo docker image becomes a contract of what is a **correct environment** for 
 
 
 
-# Docker images
+# Dojo Docker images
 
 A dojo docker image is responsible for providing the environment for running your operations.
 
