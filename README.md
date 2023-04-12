@@ -252,10 +252,12 @@ You can use Dojo with any Docker image, but some features are only supported wit
 | Support for running interactively and non-interactively | Yes | Yes |
 | All drivers support (Docker, Docker-compose) | Yes | Yes |
 | Preserving environment variables | Yes | Yes |
+| Having the $HOME directory mounted as `/dojo/identity` in a Docker container | Yes | Yes |
+| Having the current directory mounted as `/dojo/work` in a Docker container | Yes | Yes |
+| Defaulting to `/dojo/work` as a current directory in a Docker container | Yes | No |
 | Custom startup scripts for a container | Yes | No |
 | Running as a custom user, not `root` | Yes | No |
-| Running in `/dojo/work` directory | Yes | No |
-| Ensuring proper UID and GID for custom user (to match file permissions) | Yes | No |
+| Handling permissions of files between host and container | Yes | No |
 
 ## Why was Dojo created? Dojo benefits
 
