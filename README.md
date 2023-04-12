@@ -2,7 +2,7 @@
 
 A CLI tool to keep **environment as code**.
 
-Dojo ensures you have a proper, versioned, well-defined, reproducible **environment to run your operations in**. What operations? These could be software lifecycle operations (e.g. code compilation, running unit tests) or other admin commands (e.g. creating backups, uploading files).
+Dojo ensures that you have a versioned, well-defined, reproducible **environment to run your operations in**. What operations? These could be software lifecycle operations (e.g. code compilation, running unit tests) or other admin operations (e.g. creating backups, uploading files).
 
 How does it work? Dojo locally orchestrates [Docker](https://docker.com) containers. Environment is defined by Docker images. Dojo adds a few standards for the Docker images and also takes care of creating and removing the containers.
 
@@ -272,7 +272,7 @@ A dojo docker image becomes a contract of what is a **correct environment** for 
 
 # Docker images
 
-A dojo docker image is responsible for providing the proper environment for running your operations.
+A dojo docker image is responsible for providing the environment for running your operations.
 
 You can find complete examples of [open source "dojo images" on github](https://github.com/topics/dojo-image). Or you can build your own image starting from minimal example [snippets below](#image-scripts).
 
