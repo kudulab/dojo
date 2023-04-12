@@ -245,7 +245,7 @@ To exit the container, type `exit`.
 
 ## Features
 
-You can use Dojo with any Docker image, but some features are only supported with custom Dojo Docker images.
+You can use Dojo with any Docker image, but some features are only supported with custom Dojo Docker images. Therefore running Dojo without a Dojo Docker image is not recommended.
 
 | Feature | Works with custom Dojo Docker images | Works with any image |
 | - | - | - |
@@ -257,10 +257,10 @@ You can use Dojo with any Docker image, but some features are only supported wit
 | Preserving environment variables | Yes | Yes |
 | Having the $HOME directory mounted as `/dojo/identity` in a Docker container | Yes | Yes |
 | Having the current directory mounted as `/dojo/work` in a Docker container | Yes | Yes |
-| Defaulting to `/dojo/work` as a current directory in a Docker container | Yes | No |
+| Defaulting to `/dojo/work` as a start directory in a Docker container | Yes | No. A random image usually enters `/`. |
 | Custom startup scripts for a container | Yes | No |
-| Running as a custom user, not `root` | Yes | No |
-| Handling permissions of files between host and container | Yes | No |
+| Running as a custom user, not `root`. | Yes | No. Most images by default use root user inside the image, therefore any files created in the container will be owned by root. |
+| Handling mismatch between UID/GID of the user on the host and UID/GID inside the container. It's for keeping artifacs and project files owned by the same user during the entire project lifecycle. | Yes | No. A random image usually runs as root, even if not, then still chances of UID/GID match with `/dojo/work` bind-mount are low. |
 
 ## Why was Dojo created? Dojo benefits
 
@@ -854,12 +854,9 @@ Due to using Sudo in Dojo images standard entrypoint, exported bash functions ar
 
 ### Will Dojo work with any docker image?
 
-It will run, but this is not recommended and won't be very convenient because:
- * Most images by default use `root` user inside the image, therefore any files created in the container will be owned by root.
- * `Dojo` mounts current directory into `/dojo/work`, a correct dojo image would by default enter `/dojo/work`. A random image usually enters `/`.
- * A correct dojo image would setup current user inside docker container to match with UID and GID of the owner of `/dojo/work` mount. A random image usually runs as root, even if not, then still chances of UID/GID match with `/dojo/work` are low.
+It will run, but this is not recommended. Please see [Features](#features).
 
-### Why not just docker run?
+### Why not just run `docker run`?
 
 You may be using `docker run` or `docker-compose run` already for your builds. For example: `docker run -ti --volume $PWD:/build openjdk:8u212 gradle test`.
 There are several issues which are not solved out of the box by these tools, in fact all of them are reasons why dojo was created:
