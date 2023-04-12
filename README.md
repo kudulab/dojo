@@ -880,6 +880,10 @@ To point which `Dojofile` should be used, pass `-c` option to `dojo`:
 dojo -c Dojofile-nodejs npm install
 ```
 
+### How to fix `docker: invalid ip address: 7007`
+
+It may happen that you run `dojo` and it fails with an error similar to `docker: invalid ip address: 7007`. Please try changing your files line endings. You may consider using a tool like [dos2unix](https://linux.die.net/man/1/dos2unix) for this purpose. Example command could be: `dos2unix ./Dojofile`.
+
 ## Comparison to other tools
 
 ### vs. Batect
