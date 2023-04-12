@@ -220,6 +220,20 @@ root
 /
 / # apk -h
 apk-tools 2.12.9, compiled for x86_64.
+/ # ls -la /dojo/work/
+# Dojo mounts your current directory from your host (e.g. laptop) to /dojo/work inside a Docker container
+total 348
+drwxrwxr-x   12 1000     1000          4096 Apr 12 06:15 .
+drwxr-xr-x    4 root     root            34 Apr 12 06:15 ..
+-rw-rw-r--    1 1000     1000         45515 Apr 12 06:11 README.md
+/ # ls -la /dojo/identity/
+# Dojo mounts your $HOME directory from your host (e.g. laptop) to /dojo/identity inside a Docker container
+total 62752
+drwxr-xr-x   73 1000     1000         12288 Apr 12 01:32 .
+drwxr-xr-x    4 root     root            34 Apr 12 06:15 ..
+drwxrwxr-x    3 1000     1000          4096 Jun 13  2022 .Azure
+drwxrwxr-x   12 1000     1000          4096 Apr  3 23:05 .atom
+drwxrwxr-x    2 1000     1000          4096 Oct  2  2021 .aws
 ```
 
 To exit the container, type `exit`.
