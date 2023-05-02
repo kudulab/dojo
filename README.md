@@ -1,14 +1,20 @@
 # Dojo
 
-A tool to keep environment as code.
+A CLI tool to keep **environment as code**.
 
-Dojo helps to compile code and run other operations in [Docker](https://docker.com) containers.
+Dojo ensures that you have a versioned, well-defined, reproducible **environment to run your operations in**. What operations? These could be software lifecycle operations (e.g. code compilation, running unit tests) or other admin operations (e.g. creating backups, uploading files).
+
+How does it work? Dojo locally orchestrates [Docker](https://docker.com) containers. Environment is defined by Docker images. Dojo adds a few standards for the Docker images and also takes care of creating and removing the containers.
 
 The Dojo project consists of:
  * `dojo` - a golang executable (CLI), which leverages `docker` and `docker-compose`
  * A specification and helper scripts for building [Dojo Docker images](#docker-images)
 
-Dojo works on **Linux or Mac**. Dojo is continuously tested only on Linux.
+
+## Operating Systems
+* Dojo works on **Linux, Mac, and [Windows Subsystem for Linux
+ (WSL)](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux)**
+* Dojo is continuously tested only on Linux
 
 ## Table of contents
 
@@ -18,6 +24,7 @@ Dojo works on **Linux or Mac**. Dojo is continuously tested only on Linux.
    * [Golang example](#golang-example)
    * [AWS example](#aws-example)
    * [Docker in Docker example](#docker-in-docker-dind-example)
+1. [Features](#features)
 1. [Why?](#why-was-dojo-created-dojo-benefits)
 1. [Docker images](#docker-images)
     * [Requirements](#image-requirements-and-best-practices)
@@ -54,7 +61,7 @@ brew install kudulab/homebrew-dojo-osx/dojo
 ```
 * a manual install:
 ```sh
-version="0.10.5"
+version="0.11.0"
 # on Linux:
 wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_linux_amd64
 # or on Mac:
@@ -64,6 +71,8 @@ sudo mv /tmp/dojo /usr/bin/dojo
 ```
 * build the binary file yourself, see [Development](#development)
 
+You may find out what is the latest Dojo version [here](https://github.com/kudulab/dojo/releases).
+
 ## Quickstart
 First, follow the [instructions](#installation) to install Dojo. Dojo CLI will be available to use in this way:
 ```
@@ -71,7 +80,7 @@ dojo <flags> [--] <CMD>
 ```
 
 ### Java Example
-Let's build this [java project](https://github.com/tomzo/gocd-yaml-config-plugin) using dojo:
+Let's compile this [java project](https://github.com/tomzo/gocd-yaml-config-plugin) using dojo:
 
 ```bash
 git clone https://github.com/tomzo/gocd-yaml-config-plugin.git
@@ -79,7 +88,7 @@ cd gocd-yaml-config-plugin
 dojo "gradle test jar"
 ```
 
-The output should start with a docker command that was executed:
+The beginning of the output shows the docker command executed by Dojo:
 ```console
 /tmp/gocd-yaml-config-plugin$ dojo "gradle test jar"
 2020/12/09 07:40:28 [ 1]  INFO: (main.main) Dojo version 0.10.5
@@ -88,23 +97,22 @@ The output should start with a docker command that was executed:
 Unable to find image 'kudulab/openjdk-dojo:1.4.1' locally
 1.4.1: Pulling from kudulab/openjdk-dojo
 ```
-Then you should see `docker pull` output and after creating the container, all tests being executed.
+Then, there is the `docker pull` output. Then, the container is created  and the java tests are executed.
 The build artifacts land in `build/libs/`, because that is how gradle behaves. These artifacts are available on our docker host.
 Things to notice:
  * We have pulled [`kudulab/openjdk-dojo` docker image](https://github.com/kudulab/docker-openjdk-dojo) and created container from it.
- * Current directory `/tmp/gocd-yaml-config-plugin` was [mounted](https://docs.docker.com/storage/volumes/) to `/dojo/work`
+ * Current directory `/tmp/gocd-yaml-config-plugin` was [mounted](https://docs.docker.com/storage/volumes/) to `/dojo/work`. This means that the same and only copy of our project files is available on the Docker host and in the container. If you create more containers with Dojo, `/dojo/work` will be also available there.
  * Home directory on host `/home/tomzo` was [mounted](https://docs.docker.com/storage/volumes/) as readonly to `/dojo/identity`
  * After `gradle test jar` has finished running non-interactively, the docker container has exited and was removed. This is because we provided a command to `dojo`.
 
-Every dojo image supports 2 modes: an interactive mode and non-interactive mode. In order to run interactively, run `dojo` without any command:
+
+#### Interactive mode
+Dojo images are supposed to support 2 modes: an interactive mode and non-interactive mode. In order to run interactively, run `dojo` without any command:
 ```console
 /tmp/gocd-yaml-config-plugin$ dojo
 ```
 
-Then we can work in the container for longer time, very much like in a [vagrant VM](#vs-vagrant).
-Thanks to the mounted directory from the host, we can work on the project files using any other tools on our host, while container with java tools shares the same files.
-
-This is a quickstart preview to give you a sense of how you would work with dojo. Read on for more examples. There is also a documentation site coming.
+This allows us to work in the container for longer time, very much like in a [vagrant VM](#vs-vagrant). You will have to manually exit from the container.
 
 ### Golang Example
 Let's build this project (Dojo) using `dojo`:
@@ -202,6 +210,57 @@ DOJO_DOCKER_OPTIONS="--privileged"
 
 This method is suitable for running Dojo in Dojo. Dojo e2e tests use this method to test various Docker commands in a clean, separate Docker container. This way, such tests cannot affect Docker containers or images on Docker host (they have a safe environment to run in).
 
+### Public alpine image
+
+You can use Dojo with any Docker image, it does not have to be a Dojo Docker image. Example with an alpine image:
+```
+$ nano Dojofile
+$ cat Dojofile
+DOJO_DOCKER_IMAGE="alpine:3.16"
+$ dojo
+# now we run interactively in the Dojo Docker container
+/ # whoami
+root
+/ # pwd
+/
+/ # apk -h
+apk-tools 2.12.9, compiled for x86_64.
+/ # ls -la /dojo/work/
+# Dojo mounts your current directory from your host (e.g. laptop) to /dojo/work inside a Docker container
+total 348
+drwxrwxr-x   12 1000     1000          4096 Apr 12 06:15 .
+drwxr-xr-x    4 root     root            34 Apr 12 06:15 ..
+-rw-rw-r--    1 1000     1000         45515 Apr 12 06:11 README.md
+/ # ls -la /dojo/identity/
+# Dojo mounts your $HOME directory from your host (e.g. laptop) to /dojo/identity inside a Docker container
+total 62752
+drwxr-xr-x   73 1000     1000         12288 Apr 12 01:32 .
+drwxr-xr-x    4 root     root            34 Apr 12 06:15 ..
+drwxrwxr-x    3 1000     1000          4096 Jun 13  2022 .Azure
+drwxrwxr-x   12 1000     1000          4096 Apr  3 23:05 .atom
+drwxrwxr-x    2 1000     1000          4096 Oct  2  2021 .aws
+```
+
+To exit the container, type `exit`.
+
+## Features
+
+You can use Dojo with any Docker image, but some features are only supported with custom Dojo Docker images. Therefore running Dojo without a Dojo Docker image is not recommended.
+
+| Feature | Works with custom Dojo Docker images | Works with any image |
+| - | - | - |
+| Dojofile | Yes | Yes |
+| Starting, stopping, removing containers | Yes | Yes |
+| Signals support | Yes | Yes |
+| Support for running interactively and non-interactively | Yes | Yes |
+| All drivers support (Docker, Docker-compose) | Yes | Yes |
+| Preserving environment variables | Yes | Yes |
+| Having the $HOME directory mounted as `/dojo/identity` in a Docker container | Yes | Yes |
+| Having the current directory mounted as `/dojo/work` in a Docker container | Yes | Yes |
+| Defaulting to `/dojo/work` as a start directory in a Docker container | Yes | No. A random image usually enters `/`. |
+| Custom startup scripts for a container | Yes | No |
+| Running as a custom user, not `root`. | Yes | No. Most images by default use root user inside the image, therefore any files created in the container will be owned by root. |
+| Handling mismatch between UID/GID of the user on the host and UID/GID inside the container. It's for keeping artifacs and project files owned by the same user during the entire project lifecycle. | Yes | No. A random image usually runs as root, even if not, then still chances of UID/GID match with `/dojo/work` bind-mount are low. |
 
 ## Why was Dojo created? Dojo benefits
 
@@ -232,9 +291,9 @@ A dojo docker image becomes a contract of what is a **correct environment** for 
 
 
 
-# Docker images
+# Dojo Docker images
 
-A dojo docker image is responsible for setup of the development environment when container is created.
+A dojo docker image is responsible for providing the environment for running your operations.
 
 You can find complete examples of [open source "dojo images" on github](https://github.com/topics/dojo-image). Or you can build your own image starting from minimal example [snippets below](#image-scripts).
 
@@ -384,7 +443,7 @@ cd "${dojo_work}"
 
 Every organization manages secrets distribution differently. Dojo is agnostic towards the secret management. This section is an overview of several possibilities on how to deliver secrets into dojo containers.
 
-#### Don't add secrets to the image
+#### Don't hardcode secrets in the image
 
 I hope this is obvious.
 
@@ -795,12 +854,9 @@ Due to using Sudo in Dojo images standard entrypoint, exported bash functions ar
 
 ### Will Dojo work with any docker image?
 
-It will run, but this is not recommended and won't be very convenient because:
- * Most images by default use `root` user inside the image, therefore any files created in the container will be owned by root.
- * `Dojo` mounts current directory into `/dojo/work`, a correct dojo image would by default enter `/dojo/work`. A random image usually enters `/`.
- * A correct dojo image would setup current user inside docker container to match with UID and GID of the owner of `/dojo/work` mount. A random image usually runs as root, even if not, then still chances of UID/GID match with `/dojo/work` are low.
+It will run, but this is not recommended. Please see [Features](#features).
 
-### Why not just docker run?
+### Why not just run `docker run`?
 
 You may be using `docker run` or `docker-compose run` already for your builds. For example: `docker run -ti --volume $PWD:/build openjdk:8u212 gradle test`.
 There are several issues which are not solved out of the box by these tools, in fact all of them are reasons why dojo was created:
@@ -823,6 +879,12 @@ To point which `Dojofile` should be used, pass `-c` option to `dojo`:
 ```bash
 dojo -c Dojofile-nodejs npm install
 ```
+
+### How to fix `docker: invalid ip address: 7007`
+
+It may happen that you run `dojo` and it fails with an error similar to `docker: invalid ip address: 7007`. Please try changing your files line endings. You may consider using a tool like [dos2unix](https://linux.die.net/man/1/dos2unix) for this purpose. Example command could be: `dos2unix ./Dojofile`.
+
+We ran into this problem when using Dojo on WSL.
 
 ## Comparison to other tools
 
