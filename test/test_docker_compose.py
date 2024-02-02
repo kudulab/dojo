@@ -55,6 +55,33 @@ def test_docker_compose_run_when_exit_zero():
     test_dc_containers_are_removed()
     test_dc_network_is_removed()
 
+def test_docker_compose_run_has_tty_on():
+    clean_up_dc_containers()
+    clean_up_dc_network()
+    clean_up_dc_dojofile()
+    result = run_dojo("--driver=docker-compose --dcf=./test/test-files/itest-dc.yaml --debug=true --test=true --image=alpine:3.15 whoami".split(' '))
+    assert 'docker-compose' in result.stderr
+    stderr_lines = result.stderr.split('\n')
+    for line in stderr_lines:
+        if 'docker-compose' in line:
+            if ' run ' in line:
+                # it seems that docker-compose >=2 adds '-T', while
+                # docker-compose <2 does not;
+                # let's test that dojo unifies this behaviour
+                # (we don't want the -T option set as this may
+                # mess up with stdout and stderr returned by dojo)
+                assert ' -T ' not in line
+
+    assert result.returncode == 0
+    assert 'Exit status from run command: 0' in result.stderr
+
+    dojo_combined_output_str =  "stdout:\n{0}\nstderror:\n{1}".format(result.stdout, result.stderr)
+    assert_no_warnings_or_errors(result.stderr, dojo_combined_output_str)
+    assert_no_warnings_or_errors(result.stdout, dojo_combined_output_str)
+    test_dc_dojofile_is_removed()
+    test_dc_containers_are_removed()
+    test_dc_network_is_removed()
+
 
 def test_docker_compose_run_command_output_capture():
     clean_up_dc_containers()
