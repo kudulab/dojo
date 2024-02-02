@@ -153,5 +153,5 @@ commands:
 executors:
   platform:
     machine:
-      image: ubuntu-2004:202101-01
+      image: ubuntu-2204:2023.07.2
     working_directory: ~/repo
