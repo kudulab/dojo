@@ -97,6 +97,8 @@ func main() {
 		driver = NewDockerDriver(shellService, fileService, logger)
 	} else {
 		driver = NewDockerComposeDriver(shellService, fileService, logger)
+		// cast the driver object into the DockerComposeDriver struct type
+		driver.(DockerComposeDriver).setDCVersion()
 	}
 
 	envService := NewEnvService()

@@ -12,9 +12,10 @@ import (
 type DockerComposeDriver struct {
 	ShellService ShellServiceInterface
 	FileService  FileServiceInterface
-	Logger *Logger
+	Logger       *Logger
 	// This channel is closed when the stop action is started
-	Stopping 	 chan bool
+	Stopping                       chan bool
+	DockerComposeVersionLaterThan2 bool
 }
 
 func NewDockerComposeDriver(shellService ShellServiceInterface, fs FileServiceInterface, logger *Logger) DockerComposeDriver {
@@ -29,11 +30,33 @@ func NewDockerComposeDriver(shellService ShellServiceInterface, fs FileServiceIn
 	}
 	stopping := make(chan bool)
 	return DockerComposeDriver{
-		ShellService: shellService,
-		FileService: fs,
-		Logger: logger,
-		Stopping: stopping,
+		ShellService:                   shellService,
+		FileService:                    fs,
+		Logger:                         logger,
+		Stopping:                       stopping,
+		DockerComposeVersionLaterThan2: false,
 	}
+}
+
+func GetDockerComposeVersion(shellService ShellServiceInterface) string {
+	cmd := "docker-compose version --short"
+	stdout, stderr, es, _ := shellService.RunGetOutput(cmd, true)
+	if es != 0 || stderr != "" || stdout == "" {
+		cmdInfo := cmdInfoToString(cmd, stdout, stderr, es)
+		panic(fmt.Errorf("Unexpected error: %s", cmdInfo))
+	}
+	stdout = strings.TrimSuffix(stdout, "\n")
+	return stdout
+}
+
+func (dc DockerComposeDriver) setDCVersion() {
+	dcVersion := GetDockerComposeVersion(dc.ShellService)
+	dockerComposeVersionLaterThan2 := false
+	if strings.HasPrefix(dcVersion, "2") {
+		dockerComposeVersionLaterThan2 = true
+	}
+	dc.DockerComposeVersionLaterThan2 = dockerComposeVersionLaterThan2
+	dc.Logger.Log("debug", fmt.Sprintf("Docker-compose version is: %s", dcVersion))
 }
 
 func (dc DockerComposeDriver) parseDCFileVersion(contents string) (float64, error) {
