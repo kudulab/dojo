@@ -9,9 +9,8 @@ import (
 	"syscall"
 )
 
-
 func handleConfig(logger *Logger) Config {
-	configFromCLI:= getCLIConfig()
+	configFromCLI := getCLIConfig()
 	// debug option can be set on CLI only
 	if configFromCLI.Debug == "true" {
 		logger.SetLogLevel("debug")
@@ -68,13 +67,13 @@ func handleSignal(logger *Logger, mergedConfig Config, runID string, driver Dojo
 }
 
 func verifyBashInstalled(logger Logger) {
-	cmd := exec.Command( "bash", "--version", "1>/dev/null")
+	cmd := exec.Command("bash", "--version", "1>/dev/null")
 	// do not print stdout of the above command, do not do this: cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 
 	err := cmd.Run()
-	if err != nil  {
+	if err != nil {
 		logger.Log("error", fmt.Sprintf("Error while verifying if Bash is installed. Please make sure Bash is installed. Error: %s", err))
 		os.Exit(1)
 	}
@@ -93,12 +92,12 @@ func main() {
 	fileService := NewFileService(logger)
 	shellService := NewBashShellService(logger)
 	var driver DojoDriverInterface
-	if mergedConfig.Driver == "docker"{
+	if mergedConfig.Driver == "docker" {
 		driver = NewDockerDriver(shellService, fileService, logger)
 	} else {
-		driver = NewDockerComposeDriver(shellService, fileService, logger)
-		// cast the driver object into the DockerComposeDriver struct type
-		driver.(DockerComposeDriver).setDCVersion()
+		dcVersion := GetDockerComposeVersion(shellService)
+		logger.Log("debug", fmt.Sprintf("Docker-compose version is: %s", dcVersion))
+		driver = NewDockerComposeDriver(shellService, fileService, logger, dcVersion)
 	}
 
 	envService := NewEnvService()
@@ -122,7 +121,7 @@ func main() {
 	signalChannel := registerSignalChannel()
 
 	// main work goroutine
-	go func(){
+	go func() {
 		// run and stop the containers
 		exitstatus := driver.HandleRun(mergedConfig, runID, envService)
 		doneChannel <- exitstatus
