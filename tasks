@@ -12,7 +12,7 @@ source $RELEASER_FILE
 
 function check_flavor {
   if [ -z "$1" ]; then
-    echo "Must specify flavor: alpine or ubuntu18"
+    echo "Must specify flavor: alpine or ubuntu"
     exit 2
   fi
 }

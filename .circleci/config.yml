@@ -94,9 +94,9 @@ jobs:
       - attach_workspace:
           at: ~/repo
       - run:
-          command: /bin/bash -c "./tasks e2e ubuntu18"
+          command: /bin/bash -c "./tasks e2e ubuntu"
       - run:
-          command: /bin/bash -c "./tasks test_signals ubuntu18"
+          command: /bin/bash -c "./tasks test_signals ubuntu"
 
   test_images:
     executor: platform
