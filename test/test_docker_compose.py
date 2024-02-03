@@ -196,7 +196,7 @@ def test_docker_compose_pull():
     result = run_dojo('--driver=docker-compose --dcf=./test/test-files/itest-dc.yaml --debug=true --action=pull --image=alpine:3.15'.split(' '))
     dojo_combined_output_str =  "stdout:\n{0}\nstderror:\n{1}".format(result.stdout, result.stderr)
     assert 'Dojo version' in result.stderr, dojo_combined_output_str
-    assert 'pulling' in result.stderr, dojo_combined_output_str
+    assert 'Pulling' in result.stderr, dojo_combined_output_str
     assert "Exit status from pull command: 0" in result.stderr, dojo_combined_output_str
     assert_no_warnings_or_errors(result.stderr, dojo_combined_output_str)
     assert_no_warnings_or_errors(result.stdout, dojo_combined_output_str)
@@ -209,7 +209,7 @@ def test_docker_compose_pull_when_no_such_image_exists():
     assert 'repository does not exist or may require \'docker login\'' in result.stderr, dojo_combined_output_str
     assert "Exit status from pull command: 1" in result.stderr, dojo_combined_output_str
     assert "" == result.stdout, dojo_combined_output_str
-    assert result.returncode == 1
+    assert result.returncode == 18
 
 
 def test_docker_compose_dojo_work_variables():
@@ -235,7 +235,7 @@ def test_docker_compose_dojo_work_variables():
     test_dc_network_is_removed()
 
 
-def test_docker_compose_run_shows_nondefault_containers_logs_when_all_constainers_succeeded():
+def test_docker_compose_run_shows_nondefault_containers_logs_when_all_containers_succeeded():
     clean_up_dc_containers()
     clean_up_dc_network()
     clean_up_dc_dojofile()
