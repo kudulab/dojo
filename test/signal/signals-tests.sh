@@ -31,6 +31,9 @@ function run_test_process_and_send_signal() {
        fi
 
       test_process_output=$(cat "${test_file}")
+      # by default `ps -p` works on ubuntu, but not on alpine;
+      # on alpine you have to install this package: apk add --no-cache procps;
+      # this was done in kudulab/inception-dojo:alpine-0.6.1 docker image
       if ps -p $pid > /dev/null; then
         # the need-to-wait-more case
         echo "The test process with $pid is running, so let's wait 1 s now, so that the container can produce the string: \"${kill_after_this_string}\". Then, we can kill the test process."
@@ -56,10 +59,10 @@ function run_test_process_and_send_signal() {
     test_process_exit_status=$?
     log_test "The test process is finished"
 
-    log_test "-----------------------------"
-    test_process_output=$(cat "${test_file}")
-    log_test "Output from ${test_file}: ${test_process_output}"
-    log_test "-----------------------------"
+    log_test "----------------------------------------------------------"
+    output=$(cat "${test_file}")
+    log_test "Output from ${test_file}: ${output}"
+    log_test "----------------------------------------------------------"
     log_test "Exit status: ${test_process_exit_status}"
 }
 
@@ -98,11 +101,12 @@ function string_not_contains() {
 # This especially happens when you just created this container, e.g.
 # when running dojo in dojo (like in this test).
 function wait_for_the_docker_daemon_to_be_running() {
-  while (! docker ps ); do
+  while (! docker ps > /dev/null ); do
     # Docker takes a few seconds to initialize
     echo "Waiting for the Docker daemon to launch..."
     sleep 1
   done
+  echo "Docker daemon is running now"
 }
 
 # Test 1.: driver=docker, container's entrypoint does not preserve signals
@@ -113,10 +117,12 @@ this_test_exit_status=0
 run_test_process_and_send_signal "./bin/dojo --debug=true --test=true --image=alpine:3.19 -i=false sh -c \"echo 'will sleep' && sleep 1d\"" "will sleep"
 
 ## Test checks
+log_test "----------------------------------------------------------"
+log_test "Now let's run some checks basing on the output from the file" >&2
 test_value "${test_process_exit_status}" "2"
 output_test_exit_status=$?
 this_test_exit_status=$((this_test_exit_status+output_test_exit_status))
-string_contains "${output}" "Caught signal: terminated"
+string_contains "${output}" "Caught signal 1: terminated"
 # docker stop will take 10s, because sh does not preserves signals (from docker stop cli command to the docker container)
 string_contains "${output}" "Stopping on signal"
 string_contains "${output}" "docker stop testdojorunid"
@@ -131,9 +137,10 @@ echo "This test status: ${this_test_exit_status}"
 # rm -f "${test_file}"
 log_test "----------------------------------------------------------"
 
-if [[ "${this_test_exit_status}" != "${0}" ]]; then
+if [[ "${this_test_exit_status}" != "0" ]]; then
   log_test "Failure"
-  exit ${this_test_exit_status}
+else
+  log_test "Success"
 fi
 
-log_test "Success"
+exit ${this_test_exit_status}

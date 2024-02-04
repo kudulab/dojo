@@ -1,2 +1,2 @@
-DOJO_DOCKER_IMAGE="kudulab/inception-dojo:alpine-0.6.0"
+DOJO_DOCKER_IMAGE="kudulab/inception-dojo:alpine-0.6.1"
 DOJO_DOCKER_OPTIONS="--privileged"
