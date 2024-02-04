@@ -1,7 +1,6 @@
 #!/bin/bash
 
 test_file="dojo-signal-test-output"
-test_file=$(realpath "${test_file}")
 
 function log_test() {
   echo "Signal test: $1"
@@ -112,7 +111,7 @@ function wait_for_the_docker_daemon_to_be_running() {
 
 ## Setup
 if [[ "${test_file}" == "" ]]; then
-  log_test "test_file variable was unset; this happens on Alpine when running `readlink -f`"
+  log_test "test_file variable was unset; this happens on Alpine when running 'readlink -f' or 'realpath'"
   exit 1
 fi
 set -x; rm -f "${test_file}"; touch "${test_file}"; set +x;
