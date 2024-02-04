@@ -83,7 +83,7 @@ function string_not_contains() {
 
 # Test 1.: driver=docker, container's entrypoint does not preserve signals
 this_test_exit_status=0
-run_test_process_and_send_signal "./bin/dojo --debug=true --test=true --image=alpine:3.15 -i=false sh -c \"echo 'will sleep' && sleep 1d\"" "will sleep"
+run_test_process_and_send_signal "./bin/dojo --debug=true --test=true --image=alpine:3.19 -i=false sh -c \"echo 'will sleep' && sleep 1d\"" "will sleep"
 test_value "${test_process_exit_status}" "2"
 output_test_exit_status=$?
 this_test_exit_status=$((this_test_exit_status+output_test_exit_status))
