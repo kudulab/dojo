@@ -1,16 +1,11 @@
 #!/bin/bash
 
 test_file="dojo-signal-test-output"
-test_file=$(readlink -f "${test_file}")
+test_file=$(realpath "${test_file}")
 
 function log_test() {
   echo "Signal test: $1"
 }
-
-if [[ "${test_file}" == "" ]]; then
-  log_test "test_file variable was unset; this happens on Alpine when running in a subshell"
-  exit 1
-fi
 
 function run_test_process_and_send_signal() {
     local test_process=${1?test_process not set}
@@ -21,7 +16,6 @@ function run_test_process_and_send_signal() {
     # Start job in the background writing to a new file
     test_process_exit_status=0
     output=""
-    set -x; rm -f "${test_file}"; touch "${test_file}"; set +x;
     ${test_process} >"${test_file}" 2>"${test_file}" &
     local pid=$!
     # local pgid=$(ps -o pgid ${pid} | tail -1 | tr -d " ")
@@ -117,6 +111,12 @@ function wait_for_the_docker_daemon_to_be_running() {
 # Test 1.: driver=docker, container's entrypoint does not preserve signals
 
 ## Setup
+if [[ "${test_file}" == "" ]]; then
+  log_test "test_file variable was unset; this happens on Alpine when running `readlink -f`"
+  exit 1
+fi
+set -x; rm -f "${test_file}"; touch "${test_file}"; set +x;
+
 wait_for_the_docker_daemon_to_be_running
 this_test_exit_status=0
 run_test_process_and_send_signal "./bin/dojo --debug=true --test=true --image=alpine:3.19 -i=false sh -c \"echo 'will sleep' && sleep 1d\"" "will sleep"
