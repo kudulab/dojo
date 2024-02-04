@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -12,12 +13,13 @@ import (
 type DockerComposeDriver struct {
 	ShellService ShellServiceInterface
 	FileService  FileServiceInterface
-	Logger *Logger
+	Logger       *Logger
 	// This channel is closed when the stop action is started
-	Stopping 	 chan bool
+	Stopping             chan bool
+	DockerComposeVersion string
 }
 
-func NewDockerComposeDriver(shellService ShellServiceInterface, fs FileServiceInterface, logger *Logger) DockerComposeDriver {
+func NewDockerComposeDriver(shellService ShellServiceInterface, fs FileServiceInterface, logger *Logger, version string) DockerComposeDriver {
 	if shellService == nil {
 		panic(errors.New("shellService was nil"))
 	}
@@ -29,50 +31,68 @@ func NewDockerComposeDriver(shellService ShellServiceInterface, fs FileServiceIn
 	}
 	stopping := make(chan bool)
 	return DockerComposeDriver{
-		ShellService: shellService,
-		FileService: fs,
-		Logger: logger,
-		Stopping: stopping,
+		ShellService:         shellService,
+		FileService:          fs,
+		Logger:               logger,
+		Stopping:             stopping,
+		DockerComposeVersion: version,
 	}
+}
+
+func GetDockerComposeVersion(shellService ShellServiceInterface) string {
+	cmd := "docker-compose version --short"
+	stdout, stderr, es, _ := shellService.RunGetOutput(cmd, true)
+	if es != 0 || stderr != "" || stdout == "" {
+		cmdInfo := cmdInfoToString(cmd, stdout, stderr, es)
+		panic(fmt.Errorf("Unexpected error: %s", cmdInfo))
+	}
+	stdout = strings.TrimSuffix(stdout, "\n")
+	return stdout
+}
+
+func isDCVersionLaterThan2(dcVersion string) bool {
+	if strings.HasPrefix(dcVersion, "2") || strings.HasPrefix(dcVersion, "v2") {
+		return true
+	}
+	return false
 }
 
 func (dc DockerComposeDriver) parseDCFileVersion(contents string) (float64, error) {
 	firstLine := strings.Split(contents, "\n")[0]
-	if !strings.HasPrefix(firstLine,"version") {
+	if !strings.HasPrefix(firstLine, "version") {
 		return 0, fmt.Errorf("First line of docker-compose file did not start with: version")
 	}
 	versionQuoted := strings.Split(firstLine, ":")[1]
 	versionQuoted = strings.Trim(versionQuoted, " ")
-	versionQuoted = strings.TrimSuffix(versionQuoted,"\n")
+	versionQuoted = strings.TrimSuffix(versionQuoted, "\n")
 	versionQuoted = strings.Trim(versionQuoted, "\"")
 	versionQuoted = strings.Trim(versionQuoted, "'")
 	version, err := strconv.ParseFloat(versionQuoted, 64)
 	if err != nil {
 		return 0, err
 	}
-	return version,nil
+	return version, nil
 }
 func (dc DockerComposeDriver) verifyDCFile(fileContents string, filePath string) (float64, error) {
 	version, err := dc.parseDCFileVersion(fileContents)
 	if err != nil {
-		return 0,err
+		return 0, err
 	}
 	if version < 2 || version >= 3 {
-		return 0,fmt.Errorf("docker-compose file: %s should contain version number >=2 and <3, current version: %v", filePath, version)
+		return 0, fmt.Errorf("docker-compose file: %s should contain version number >=2 and <3, current version: %v", filePath, version)
 	}
 	requiredStr := "default:"
-	if ! strings.Contains(fileContents, requiredStr) {
-		return 0,fmt.Errorf("docker-compose file: %s does not contain: %s. Please add a default service", filePath, requiredStr)
+	if !strings.Contains(fileContents, requiredStr) {
+		return 0, fmt.Errorf("docker-compose file: %s does not contain: %s. Please add a default service", filePath, requiredStr)
 	}
 	return version, nil
 }
-
 
 func (dc DockerComposeDriver) getDCGeneratedFilePath(dcfilePath string) string {
 	return dcfilePath + ".dojo"
 }
 
-func (dc DockerComposeDriver) generateDCFileContentsWithEnv(expContainers []string,	config Config, envFile string,
+func (dc DockerComposeDriver) generateDCFileContentsWithEnv(expContainers []string, config Config, envFile string,
 	envFileMultiLine string, envFileBashFunctions string) string {
 	contents := fmt.Sprintf(
 		`    volumes:
@@ -138,7 +158,7 @@ func (dc DockerComposeDriver) ConstructDockerComposeCommandRun(config Config, pr
 	}
 	if config.Interactive == "false" {
 		cmd += " -T"
-	} else if config.Interactive == "true"  {
+	} else if config.Interactive == "true" {
 		// nothing
 	} else if !shellIsInteractive {
 		cmd += " -T"
@@ -161,6 +181,11 @@ func (dc DockerComposeDriver) ConstructDockerComposeCommandStop(config Config, p
 func (dc DockerComposeDriver) ConstructDockerComposeCommandPs(config Config, projectName string) string {
 	cmd := dc.ConstructDockerComposeCommandPart1(config, projectName)
 	cmd += " ps"
+	if isDCVersionLaterThan2(dc.DockerComposeVersion) {
+		// We need to all the option `--all` to include the output about the default container.
+		// We can use the json format now. It was unavailable in previous versions.
+		cmd += " --format json --all"
+	}
 	return cmd
 }
 func (dc DockerComposeDriver) ConstructDockerComposeCommandDown(config Config, projectName string) string {
@@ -173,14 +198,14 @@ func (dc DockerComposeDriver) ConstructDockerComposeCommandDown(config Config, p
 // https://go101.org/article/channel-closing.html
 func isChannelClosed(ch <-chan bool) bool {
 	select {
-	case <- ch:
+	case <-ch:
 		return true
 	default:
 	}
 	return false
 }
 
-func (dc DockerComposeDriver) checkAllContainersRunning(containerIDs []string) (bool) {
+func (dc DockerComposeDriver) checkAllContainersRunning(containerIDs []string) bool {
 	for _, id := range containerIDs {
 		running := dc.checkContainerIsRunning(id)
 		if !running {
@@ -190,7 +215,7 @@ func (dc DockerComposeDriver) checkAllContainersRunning(containerIDs []string) (
 	return true
 }
 
-func (dc DockerComposeDriver) checkContainerIsRunning(containerID string) (bool) {
+func (dc DockerComposeDriver) checkContainerIsRunning(containerID string) bool {
 	containerInfo, err := getContainerInfo(dc.ShellService, containerID)
 	if err != nil {
 		panic(err)
@@ -228,7 +253,7 @@ func (dc DockerComposeDriver) getExpectedContainers(mergedConfig Config, runID s
 //
 // When docker-compose containers start, docker-compose ps may return not all the containers, because some of them
 // may be not created yet. Thus, we have to know the number of containers specified in docker-compose config file - expContainersCount.
-func (dc DockerComposeDriver) waitForContainersToBeRunning(mergedConfig Config, runID string, expContainersCount int) ([]string) {
+func (dc DockerComposeDriver) waitForContainersToBeRunning(mergedConfig Config, runID string, expContainersCount int) []string {
 	dc.Logger.Log("debug", fmt.Sprintf("Start waiting for containers to be initally running, %s", runID))
 
 	for {
@@ -290,7 +315,7 @@ func (dc DockerComposeDriver) watchContainers(mergedConfig Config, runID string,
 					ci := cmdInfoToString(cmd, stdout, stderr, exitStatus)
 					dc.Logger.Log("info", fmt.Sprintf("Started: %s\n  %s", name, ci))
 				} else if mergedConfig.ExitBehavior == "abort" {
-					if strings.Contains(name, "_default_") {
+					if strings.Contains(name, "_default_") || strings.Contains(name, "-default-") {
 						dc.Logger.Log("debug", "Stop watching containers. Default container stopped.")
 						return
 					}
@@ -325,10 +350,10 @@ func safelyCloseChannel(ch chan bool) (justClosed bool) {
 	return true // <=> justClosed = true; return
 }
 
-func (dc DockerComposeDriver) getNonDefaultContainersInfos(containersNames []string) ([]*ContainerInfo) {
+func (dc DockerComposeDriver) getNonDefaultContainersInfos(containersNames []string) []*ContainerInfo {
 	containerInfos := make([]*ContainerInfo, 0)
 	for _, containerName := range containersNames {
-		if strings.Contains(containerName, "_default_") {
+		if strings.Contains(containerName, "_default_") || strings.Contains(containerName, "-default-") {
 			continue
 		} else {
 			containerInfo, err := getContainerInfo(dc.ShellService, containerName)
@@ -341,10 +366,10 @@ func (dc DockerComposeDriver) getNonDefaultContainersInfos(containersNames []str
 	return containerInfos
 }
 
-func (dc DockerComposeDriver) getNonDefaultContainersLogs(containerInfos []*ContainerInfo){
+func (dc DockerComposeDriver) getNonDefaultContainersLogs(containerInfos []*ContainerInfo) {
 	for _, containerInfo := range containerInfos {
 		containerName := containerInfo.Name
-		if strings.Contains(containerName, "_default_") {
+		if strings.Contains(containerName, "_default_") || strings.Contains(containerName, "-default-") {
 			continue
 		} else {
 			cmd := fmt.Sprintf("docker logs %s", containerName)
@@ -368,7 +393,6 @@ func checkIfAnyContainerFailed(nonDefaultContainerInfos []*ContainerInfo, defaul
 	anyContainerFailed = (defaultContainerExitCode != 0) || anyContainerFailed
 	return anyContainerFailed
 }
-
 
 func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envService EnvServiceInterface) int {
 	warnGeneral(dc.FileService, mergedConfig, envService, dc.Logger)
@@ -404,7 +428,9 @@ func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envSe
 	containersInfos := dc.getNonDefaultContainersInfos(containersNames)
 	anyContainerFailed := checkIfAnyContainerFailed(containersInfos, exitStatus)
 	if mergedConfig.PrintLogs == "always" || (mergedConfig.PrintLogs == "failure" && anyContainerFailed) {
+		dc.Logger.Log("debug", fmt.Sprintf("Getting non default containers logs"))
 		dc.getNonDefaultContainersLogs(containersInfos)
+		dc.Logger.Log("debug", fmt.Sprintf("Got logs from %s containers", fmt.Sprint(len(containersInfos))))
 		for _, v := range containersInfos {
 			containerInfo := v
 			status := containerInfo.Status
@@ -577,10 +603,9 @@ func (dc DockerComposeDriver) HandleMultipleSignal(mergedConfig Config, runID st
 	return es
 }
 
-
 func (dc DockerComposeDriver) getDefaultContainerID(containersNames []string) string {
 	for _, containerName := range containersNames {
-		if strings.Contains(containerName, "_default_") {
+		if strings.Contains(containerName, "_default_") || strings.Contains(containerName, "-default-") {
 			contanerInfo, err := getContainerInfo(dc.ShellService, containerName)
 			if !contanerInfo.Exists {
 				return ""
@@ -595,18 +620,28 @@ func (dc DockerComposeDriver) getDefaultContainerID(containersNames []string) st
 	panic(fmt.Errorf("default container not found. Were the containers created?"))
 }
 
-// example output of docker-compose ps:
-//Name                        Command               State   Ports
-//------------------------------------------------------------------------
-//edudocker_abc_1           /bin/sh -c while true; do  ...   Up
-//edudocker_def_1           /bin/sh -c while true; do  ...   Up
-//edudocker_default_run_1   sh -c echo 'will sleep' && ...   Up
+// Example output of `docker-compose ps` command, when using docker-compose <2:
+// Name                        Command               State   Ports
+// ------------------------------------------------------------------------
+// edudocker_abc_1           /bin/sh -c while true; do  ...   Up
+// edudocker_def_1           /bin/sh -c while true; do  ...   Up
+// edudocker_default_run_1   sh -c echo 'will sleep' && ...   Up
+//
+// All the containers, including the default one, are included in the output.
+//
+// Example output of `docker-compose ps` command, when using docker-compose >2:
+// NAME                  IMAGE         COMMAND                  SERVICE   CREATED         STATUS         PORTS
+// testdojorunid-abc-1   alpine:3.19   "/bin/sh -c 'while t…"   abc       6 seconds ago   Up 5 seconds
+//
+// The output for docker-compose >2 does not show the default container. In order to have it included, we need to run `ps --all`
+//
 // Returns: container names, error
-func (dc DockerComposeDriver) getDCContainersNames(mergedConfig Config, projectName string) ([]string) {
+func (dc DockerComposeDriver) getDCContainersNames(mergedConfig Config, projectName string) []string {
 	if projectName == "" {
 		panic("projectName was empty")
 	}
 	cmd := dc.ConstructDockerComposeCommandPs(mergedConfig, projectName)
+
 	stdout, stderr, exitStatus, _ := dc.ShellService.RunGetOutput(cmd, true)
 	if exitStatus != 0 {
 		cmdInfo := cmdInfoToString(cmd, stdout, stderr, exitStatus)
@@ -618,13 +653,32 @@ func (dc DockerComposeDriver) getDCContainersNames(mergedConfig Config, projectN
 			panic(fmt.Errorf("Unexpected exit status:\n%s", cmdInfo))
 		}
 	}
+
+	if isDCVersionLaterThan2(dc.DockerComposeVersion) {
+		jsonOutputArr, err := ParseDCPSOutPut_DCVersion2(stdout)
+		if err != "" {
+			// It seems that nothing in this function needs to panic.
+			// Even if there are errors, the main functionality could still work, but additional features
+			// (such as printing logs to file) would be affected.
+			dc.Logger.Log("error", err)
+			return []string{}
+		}
+		containersNames := make([]string, 0)
+		for _, container := range jsonOutputArr {
+			containersNames = append(containersNames, container.Name)
+		}
+		return containersNames
+	}
+
+	// getting container names while using docker-compose <2
+
 	stdout = strings.TrimSuffix(stdout, "\n")
 	if stdout == "" {
 		// this happens only in unit tests, when I forget to mock docker-compose ps command
 		cmdInfo := cmdInfoToString(cmd, stdout, stderr, exitStatus)
 		panic(fmt.Errorf("Unexpected empty stdout: %s", cmdInfo))
 	}
-	lines := strings.Split(stdout,"\n")
+	lines := strings.Split(stdout, "\n")
 	if len(lines) < 2 || strings.Contains(lines[len(lines)-1], "-----") {
 		// if running on Linux or using Docker Desktop,
 		// the last line of output is the one with -----;
@@ -640,4 +694,58 @@ func (dc DockerComposeDriver) getDCContainersNames(mergedConfig Config, projectN
 		containersNames = append(containersNames, containerName)
 	}
 	return containersNames
+}
+
+type DC2PSOutput struct {
+	Command    string `json:"Command"`
+	CreatedAt  string `json:"CreatedAt"`
+	ExitCode   int    `json:"ExitCode"`
+	Health     string `json:"Health"`
+	ID         string `json:"ID"`
+	Image      string `json:"Image"`
+	Labels     string `json:"Labels"`
+	Name       string `json:"Name"`
+	Names      string `json:"Names"`
+	Networks   string `json:"Networks"`
+	Ports      string `json:"Ports"`
+	Project    string `json:"Project"`
+	Publishers string `json:"Publishers"`
+	RunningFor string `json:"RunningFor"`
+	Service    string `json:"Service"`
+	Size       string `json:"Size"`
+	State      string `json:"State"`
+	Status     string `json:"Status"`
+}
+
+// Parses the output of the `docker-compose ps --format json --all` command, into json.
+//
+// Example of running the ps command, when using docker-compose: 2.24.5:
+// $ docker-compose -f ./test/test-files/itest-dc.yaml -f ./test/test-files/itest-dc.yaml.dojo -p testdojorunid ps --format json --all
+// {"Command":"\"/bin/sh -c 'while t…\"","CreatedAt":"2024-02-03 21:03:46 +0000 UTC","ExitCode":0,"Health":"","ID":"2d5c5b0343d0","Image":"alpine:3.19","Labels":"com.docker.compose.depends_on=,com.docker.compose.image=sha256:05455a08881ea9cf0e752bc48e61bbd71a34c029bb13df01e40e3e70e0d007bd,com.docker.compose.version=2.24.5,com.docker.compose.service=abc,com.docker.compose.config-hash=270e27422cb1e6a4c1713ae22a3ffca0e8aa50ec0f06fe493fa4f83a17bd29e9,com.docker.compose.container-number=1,com.docker.compose.oneoff=False,com.docker.compose.project=testdojorunid,com.docker.compose.project.config_files=/dojo/work/test/test-files/itest-dc.yaml,/dojo/work/test/test-files/itest-dc.yaml.dojo,com.docker.compose.project.working_dir=/dojo/work/test/test-files","LocalVolumes":"0","Mounts":"/tmp/test-dojo…,/tmp/test-dojo…","Name":"testdojorunid-abc-1","Names":"testdojorunid-abc-1","Networks":"testdojorunid_default","Ports":"","Project":"testdojorunid","Publishers":null,"RunningFor":"3 seconds ago","Service":"abc","Size":"0B","State":"running","Status":"Up 2 seconds"}
+// {"Command":"\"/bin/sh -c 'while t…\"","CreatedAt":"2024-02-03 21:03:46 +0000 UTC","ExitCode":0,"Health":"","ID":"b2ed210567c3","Image":"alpine:3.19","Labels":"com.docker.compose.project=testdojorunid,com.docker.compose.project.config_files=/dojo/work/test/test-files/itest-dc.yaml,/dojo/work/test/test-files/itest-dc.yaml.dojo,com.docker.compose.project.working_dir=/dojo/work/test/test-files,com.docker.compose.depends_on=,com.docker.compose.container-number=1,com.docker.compose.image=sha256:05455a08881ea9cf0e752bc48e61bbd71a34c029bb13df01e40e3e70e0d007bd,com.docker.compose.oneoff=False,com.docker.compose.service=def,com.docker.compose.version=2.24.5,com.docker.compose.config-hash=270e27422cb1e6a4c1713ae22a3ffca0e8aa50ec0f06fe493fa4f83a17bd29e9","LocalVolumes":"0","Mounts":"/tmp/test-dojo…,/tmp/test-dojo…","Name":"testdojorunid-def-1","Names":"testdojorunid-def-1","Networks":"testdojorunid_default","Ports":"","Project":"testdojorunid","Publishers":null,"RunningFor":"3 seconds ago","Service":"def","Size":"0B","State":"running","Status":"Up 2 seconds"}
+// {"Command":"\"sh -c 'sleep 10'\"","CreatedAt":"2024-02-03 21:03:47 +0000 UTC","ExitCode":0,"Health":"","ID":"af4817fede41","Image":"alpine:3.15","Labels":"com.docker.compose.version=2.24.5,com.docker.compose.container-number=1,com.docker.compose.depends_on=abc:service_started:true,def:service_started:true,com.docker.compose.oneoff=True,com.docker.compose.project=testdojorunid,com.docker.compose.slug=742bcbb0e4bc05b21928a8d17be4ea9bb12a6775fd40692dd59c74a460279eb8,com.docker.compose.config-hash=462afacb4521d13580c2096c7b00b98970f07fe841e408c4c5a95a4a46839eaa,com.docker.compose.image=sha256:32b91e3161c8fc2e3baf2732a594305ca5093c82ff4e0c9f6ebbd2a879468e1d,com.docker.compose.project.config_files=/dojo/work/test/test-files/itest-dc.yaml,/dojo/work/test/test-files/itest-dc.yaml.dojo,com.docker.compose.project.working_dir=/dojo/work/test/test-files,com.docker.compose.service=default","LocalVolumes":"0","Mounts":"/home/dojo,/dojo/work,/tmp/test-dojo…,/tmp/test-dojo…,/tmp/.X11-unix,/tmp/dojo-ites…","Name":"testdojorunid-default-run-742bcbb0e4bc","Names":"testdojorunid-default-run-742bcbb0e4bc","Networks":"testdojorunid_default","Ports":"","Project":"testdojorunid","Publishers":null,"RunningFor":"2 seconds ago","Service":"default","Size":"0B","State":"running","Status":"Up 1 second"}
+func ParseDCPSOutPut_DCVersion2(output string) ([]DC2PSOutput, string) {
+	var output_as_jsons []DC2PSOutput
+
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		var one_output_as_json DC2PSOutput
+		err := json.Unmarshal([]byte(line), &one_output_as_json)
+		if err != nil {
+			return []DC2PSOutput{},
+				fmt.Errorf("Error when decoding the JSON response from docker-compose ps command: %s", err).Error()
+		}
+		if one_output_as_json.State == "" {
+			// This means that something went wrong, e.g. docker-compose ps output is now different
+			// than expected.
+			return []DC2PSOutput{},
+				fmt.Errorf("Error when decoding the JSON response from docker-compose ps command: container State was an empty string. More details: %#v", one_output_as_json).Error()
+		}
+		output_as_jsons = append(output_as_jsons, one_output_as_json)
+	}
+
+	return output_as_jsons, ""
 }

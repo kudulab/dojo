@@ -94,22 +94,18 @@ jobs:
       - attach_workspace:
           at: ~/repo
       - run:
-          command: /bin/bash -c "./tasks e2e ubuntu18"
+          command: /bin/bash -c "./tasks e2e ubuntu"
       - run:
-          command: /bin/bash -c "./tasks test_signals ubuntu18"
+          command: /bin/bash -c "./tasks test_signals ubuntu"
 
   test_images:
     executor: platform
     steps:
       - setup
-      - run:
-          command: sudo git clone https://github.com/bats-core/bats-core /opt/bats-core
-      - run:
-          command: sudo git clone https://github.com/bats-core/bats-assert /opt/bats-assert
-      - run:
-          command: sudo git clone https://github.com/bats-core/bats-support /opt/bats-support
       - attach_workspace:
           at: ~/repo
+      - run:
+          command: /bin/bash -c "cd image_scripts && sudo ./tasks install_bats"
       - run:
           command: /bin/bash -c "cd image_scripts && ./tasks build"
       - run:
@@ -153,5 +149,5 @@ commands:
 executors:
   platform:
     machine:
-      image: ubuntu-2004:202101-01
+      image: ubuntu-2204:2024.01.1
     working_directory: ~/repo

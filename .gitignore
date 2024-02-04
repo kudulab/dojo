@@ -141,3 +141,5 @@ dmypy.json
 
 test/test-files/custom-dir-env-var
 /ops/
+
+dojo-signal-test-output
