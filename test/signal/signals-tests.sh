@@ -3,6 +3,11 @@
 test_file="dojo-signal-test-output"
 test_file=$(readlink -f "${test_file}")
 
+if [[ "${test_file}" == "" ]]; then
+  log_test "test_file variable was unset; this happens on Alpine when running in a subshell"
+  exit 1
+fi
+
 function log_test() {
   echo "Signal test: $1"
 }
@@ -16,7 +21,7 @@ function run_test_process_and_send_signal() {
     # Start job in the background writing to a new file
     test_process_exit_status=0
     output=""
-    (set -x; rm -f "${test_file}"; touch "${test_file}"; )
+    set -x; rm -f "${test_file}"; touch "${test_file}"; set +x;
     ${test_process} >"${test_file}" 2>"${test_file}" &
     local pid=$!
     # local pgid=$(ps -o pgid ${pid} | tail -1 | tr -d " ")
