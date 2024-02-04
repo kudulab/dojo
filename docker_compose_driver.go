@@ -635,7 +635,7 @@ func (dc DockerComposeDriver) getDefaultContainerID(containersNames []string) st
 //
 // The output for docker-compose >2 does not show the default container. In order to have it included, we need to run `ps --all`
 //
-// Returns: container names, error
+// Returns: container names
 func (dc DockerComposeDriver) getDCContainersNames(mergedConfig Config, projectName string) []string {
 	if projectName == "" {
 		panic("projectName was empty")
@@ -647,6 +647,10 @@ func (dc DockerComposeDriver) getDCContainersNames(mergedConfig Config, projectN
 		cmdInfo := cmdInfoToString(cmd, stdout, stderr, exitStatus)
 		if strings.Contains(stderr, "No such container") {
 			// Workaround for issue #27: do not panic but print error level log message.
+			// This happens rarely and seems similar to
+			// https://github.com/docker/compose/issues/9534 and
+			// https://github.com/docker/compose/issues/10373
+			// and this makes the tests such as test_docker_compose_run_preserves_bash_functions flaky
 			dc.Logger.Log("error", fmt.Sprintf("Unexpected exit status:\n%s", cmdInfo))
 			return []string{}
 		} else {
