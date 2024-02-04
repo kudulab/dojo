@@ -68,7 +68,6 @@ def test_docker_compose_run_command_output_capture():
     assert "Exit status from cleaning: 0" in result.stderr, dojo_combined_output_str
     assert "Exit status from signals: 0" in result.stderr, dojo_combined_output_str
     assert "Dojo version" in result.stderr
-    assert "Containers created" in result.stderr
 
 
 def test_docker_compose_run_when_exit_non_zero():
@@ -251,6 +250,7 @@ def test_docker_compose_run_shows_nondefault_containers_logs_when_all_containers
     assert 'Dojo version' in result.stderr, dojo_combined_output_str
     assert result.returncode == 0
     assert 'echo 1; sleep 1; echo 2; sleep 1;' in result.stderr, dojo_combined_output_str
+    assert "Containers created" in result.stderr
     assert 'Exit status from run command: 0' in result.stderr, dojo_combined_output_str
     # Docker-compose >2 names the containers using dashes instead of underscores (while underscores
     # were used by Docker-compose <2), so we cannot test for containers' names if we want to
