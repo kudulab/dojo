@@ -1,3 +1,7 @@
+### 0.12.1 (2024-Feb-05)
+
+* Fix https://github.com/kudulab/dojo/issues/37 - support the case when the current directory contains special characters
+
 ### 0.12.0 (2024-Feb-04)
 
 * Compile Dojo using Golang 1.21.6 thanks to using Docker image kudulab/golang-dojo:2.1.0

@@ -8,6 +8,7 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -113,6 +114,9 @@ func getRunIDGenerateFromCurrentDir(currentDirectory string) string {
 	// the currentDirectory contains capital letters and docker-compose project names do not welcome
 	// capital letters
 	runID = strings.ToLower(runID)
+	//runID = strings.ReplaceAll(runID, " ", "")
+	// remove any special characters
+	runID = regexp.MustCompile(`[^a-zA-Z0-9\-]+`).ReplaceAllString(runID, "")
 	return runID
 }
 

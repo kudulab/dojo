@@ -106,11 +106,21 @@ func Test_getRunID(t *testing.T) {
 }
 
 func Test_getRunIDGenerateFromCurrentDir(t *testing.T) {
+	// lower case letters only
 	runID := getRunIDGenerateFromCurrentDir("mydir")
 	assert.True(t, strings.HasPrefix(runID, "dojo-mydir-"))
 
+	// lower case and upper case letters
 	runID = getRunIDGenerateFromCurrentDir("mYdIR")
 	assert.True(t, strings.HasPrefix(runID, "dojo-mydir-"))
+
+	// lower case and upper case letters and spaces
+	runID = getRunIDGenerateFromCurrentDir("mYdIR with spaces")
+	assert.True(t, strings.HasPrefix(runID, "dojo-mydirwithspaces-"))
+
+	// lower case and upper case letters and spaces and special characters
+	runID = getRunIDGenerateFromCurrentDir("mYdIR wi#th s(3paces")
+	assert.True(t, strings.HasPrefix(runID, "dojo-mydirwiths3paces-"))
 }
 
 func getTestConfig() Config {
