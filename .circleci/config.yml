@@ -76,9 +76,9 @@ jobs:
       - attach_workspace:
           at: ~/repo
       - run:
-          command: /bin/bash -c "./tasks e2e alpine"
-      - run:
           command: /bin/bash -c "./tasks test_signals alpine"
+      - run:
+          command: /bin/bash -c "./tasks e2e alpine"
 
   e2e_ubuntu:
     executor: platform
@@ -94,9 +94,9 @@ jobs:
       - attach_workspace:
           at: ~/repo
       - run:
-          command: /bin/bash -c "./tasks e2e ubuntu"
-      - run:
           command: /bin/bash -c "./tasks test_signals ubuntu"
+      - run:
+          command: /bin/bash -c "./tasks e2e ubuntu"
 
   test_images:
     executor: platform

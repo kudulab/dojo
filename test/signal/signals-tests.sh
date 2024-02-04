@@ -1,6 +1,7 @@
 #!/bin/bash
 
 test_file="dojo-signal-test-output"
+test_file=$(readlink -f "${test_file}")
 
 function log_test() {
   echo "Signal test: $1"
@@ -10,6 +11,7 @@ function run_test_process_and_send_signal() {
     local test_process=${1?test_process not set}
     local kill_after_this_string=${2?kill_after_this_string not set}
     log_test "Will run test process: ${test_process}"
+    log_test "Logging into this file: ${test_file}"
 
     # Start job in the background writing to a new file
     test_process_exit_status=0
@@ -19,19 +21,32 @@ function run_test_process_and_send_signal() {
     local pid=$!
     # local pgid=$(ps -o pgid ${pid} | tail -1 | tr -d " ")
     log_test "Initiated test process with PID: ${pid}, PGID: ${pgid}"
+    local iteration_counter=0
 
     while true; do
+      # the success
        if [[ $(grep "command will be" -c ${test_file}) == 1 ]] && [[ $(grep "${kill_after_this_string}" -c ${test_file}) == 4 ]]; then
-            log_test "Can kill the process now"
+            log_test "Dojo created the container and the container printed out the expected string. So we can kill the process now"
             break;
        fi
-       test_process_output=$(cat "${test_file}")
-       if [[ $(echo $test_process_output | wc -l) == "1" ]] && [[ "${test_process_output}" == *"No such file or directory"* ]]; then
-            log_test "Error while running the test process: ${test_process_output}"
-            exit 1;
-       fi
-       log_test "Waiting 1s, if string appears: \"${kill_after_this_string}\" will kill the test process"
-       sleep 1
+
+      test_process_output=$(cat "${test_file}")
+      if ps -p $pid > /dev/null; then
+        # the need-to-wait-more case
+        echo "The test process with $pid is running, so let's wait 1 s now, so that the container can produce the string: \"${kill_after_this_string}\". Then, we can kill the test process."
+        sleep 1
+      else
+        # the failure
+        log_test "Error while running the test process. The test process with $pid is no longer running:"
+        log_test "Output from ${test_file}: ${test_process_output}"
+        exit 1;
+      fi
+      if [ "${iteration_counter}" == "30" ]; then
+        log_test "This takes suspiciously long. Let's read the ${test_file}"
+        log_test "Output from ${test_file}: ${test_process_output}"
+        # TODO: maybe just break here and cleanup;
+      fi
+      ((iteration_counter++))
     done
 
     # Kill the dojo process. If we kill the whole process group, no cleanup is done.
@@ -41,10 +56,9 @@ function run_test_process_and_send_signal() {
     test_process_exit_status=$?
     log_test "The test process is finished"
 
-    output=$(cat "${test_file}")
-    log_test "Output from test process:"
     log_test "-----------------------------"
-    echo "${output}"
+    test_process_output=$(cat "${test_file}")
+    log_test "Output from ${test_file}: ${test_process_output}"
     log_test "-----------------------------"
     log_test "Exit status: ${test_process_exit_status}"
 }
@@ -80,10 +94,25 @@ function string_not_contains() {
     return 0
   fi
 }
+# Sometimes it may happen, that the docker service/daemon is not yet running.
+# This especially happens when you just created this container, e.g.
+# when running dojo in dojo (like in this test).
+function wait_for_the_docker_daemon_to_be_running() {
+  while (! docker ps ); do
+    # Docker takes a few seconds to initialize
+    echo "Waiting for the Docker daemon to launch..."
+    sleep 1
+  done
+}
 
 # Test 1.: driver=docker, container's entrypoint does not preserve signals
+
+## Setup
+wait_for_the_docker_daemon_to_be_running
 this_test_exit_status=0
 run_test_process_and_send_signal "./bin/dojo --debug=true --test=true --image=alpine:3.19 -i=false sh -c \"echo 'will sleep' && sleep 1d\"" "will sleep"
+
+## Test checks
 test_value "${test_process_exit_status}" "2"
 output_test_exit_status=$?
 this_test_exit_status=$((this_test_exit_status+output_test_exit_status))
@@ -97,12 +126,14 @@ string_contains "${output}" "Exit status from signals: 2"
 output_test_exit_status=$?
 this_test_exit_status=$((this_test_exit_status+output_test_exit_status))
 echo "This test status: ${this_test_exit_status}"
-rm -f "${test_file}"
+# Let's not remove that file, so that we can look at it later for
+# troubleshooting if needed:
+# rm -f "${test_file}"
 log_test "----------------------------------------------------------"
 
 if [[ "${this_test_exit_status}" != "${0}" ]]; then
+  log_test "Failure"
   exit ${this_test_exit_status}
 fi
-
 
 log_test "Success"
