@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"hash/maphash"
 	"io"
 	"log"
 	"math/rand"
@@ -91,18 +92,28 @@ func getRunID(test string) string {
 		if err != nil {
 			panic(err)
 		}
-		currentDirectorySplit := strings.Split(currentDirectory, "/")
-		currentDirectoryLastPart := currentDirectorySplit[len(currentDirectorySplit)-1]
-
-		currentTime := time.Now().Format("2006-01-02_15-04-05")
-		// run ID must contain a random number. Using time is insufficient, because e.g. 2 CI agents may be started
-		// in the same second for the same project.
-		rand.Seed(time.Now().UnixNano())
-		randomNumber := rand.Intn(99999999)
-		return fmt.Sprintf("dojo-%s-%v-%v", currentDirectoryLastPart, currentTime, randomNumber)
+		return getRunIDGenerateFromCurrentDir(currentDirectory)
 	} else {
 		return "testdojorunid"
 	}
+}
+
+func getRunIDGenerateFromCurrentDir(currentDirectory string) string {
+	currentDirectorySplit := strings.Split(currentDirectory, "/")
+	currentDirectoryLastPart := currentDirectorySplit[len(currentDirectorySplit)-1]
+
+	currentTime := time.Now().Format("2006-01-02_15-04-05")
+	// run ID must contain a random number. Using time is insufficient, because e.g. 2 CI agents may be started
+	// in the same second for the same project.
+	// https://stackoverflow.com/a/73251027
+	r := rand.New(rand.NewSource(int64(new(maphash.Hash).Sum64())))
+	randomNumber := r.Int()
+	runID := fmt.Sprintf("dojo-%s-%v-%v", currentDirectoryLastPart, currentTime, randomNumber)
+	// replace all the upper case letters to lower case letters, this is to support the case when
+	// the currentDirectory contains capital letters and docker-compose project names do not welcome
+	// capital letters
+	runID = strings.ToLower(runID)
+	return runID
 }
 
 func cmdInfoToString(cmd string, stdout string, stderr string, exitStatus int) string {
@@ -129,12 +140,12 @@ func removeWhiteSpaces(str string) string {
 }
 
 type ContainerInfo struct {
-	ID     string
+	ID       string
 	Name     string
-	Status string
+	Status   string
 	ExitCode string
-	Exists bool
-	Logs string
+	Exists   bool
+	Logs     string
 }
 
 // Returns: container ID, status , whether or not a container exists, error
@@ -155,10 +166,10 @@ func getContainerInfo(shellService ShellServiceInterface, containerNameOrID stri
 	status := strings.TrimSuffix(stdout, "\n")
 	outputArr := strings.Split(status, " ")
 	return &ContainerInfo{
-		ID:     outputArr[0],
+		ID:       outputArr[0],
 		Name:     strings.TrimPrefix(outputArr[1], "/"),
-		Status: outputArr[2],
+		Status:   outputArr[2],
 		ExitCode: outputArr[3],
-		Exists: true,
+		Exists:   true,
 	}, nil
 }

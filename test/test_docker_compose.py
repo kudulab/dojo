@@ -393,3 +393,23 @@ def test_docker_compose_run_shows_nondefault_containers_logs_when_all_constainer
     clean_up_dojo_logs_file(logs_file_dcver1)
     clean_up_dojo_logs_file(logs_file_dcver2)
 
+
+
+def test_docker_compose_run_in_directory_with_capital_letters():
+    clean_up_dc_containers()
+    clean_up_dc_network()
+    clean_up_dc_dojofile()
+
+    dojo_exe = os.path.join(test_dir, '..', '..', 'bin', 'dojo')
+    dojo_exe_absolute_path = os.path.abspath(dojo_exe)
+    dojo_args = ['--driver=docker-compose', '--dcf=./itest-dc.yaml', '--debug=true', '--image=alpine:3.19', 'sh', '-c', "printenv HOME"]
+    result = subprocess.run([dojo_exe] + dojo_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False, cwd='test/test-files/DirWithUpperCaseLetters')
+    result.stdout = decode_utf8(result.stdout)
+    result.stderr = decode_utf8(result.stderr)
+
+    dojo_combined_output_str =  "stdout:\n{0}\nstderror:\n{1}".format(result.stdout, result.stderr)
+    assert result.stdout == '/root\n', dojo_combined_output_str
+    assert "Exit status from run command: 0" in result.stderr, dojo_combined_output_str
+    assert "Exit status from cleaning: 0" in result.stderr, dojo_combined_output_str
+    assert "Exit status from signals: 0" in result.stderr, dojo_combined_output_str
+    assert "Dojo version" in result.stderr

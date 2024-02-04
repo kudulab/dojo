@@ -105,6 +105,14 @@ func Test_getRunID(t *testing.T) {
 	assert.Equal(t, lowerCaseRunID, runID)
 }
 
+func Test_getRunIDGenerateFromCurrentDir(t *testing.T) {
+	runID := getRunIDGenerateFromCurrentDir("mydir")
+	assert.True(t, strings.HasPrefix(runID, "dojo-mydir-"))
+
+	runID = getRunIDGenerateFromCurrentDir("mYdIR")
+	assert.True(t, strings.HasPrefix(runID, "dojo-mydir-"))
+}
+
 func getTestConfig() Config {
 	config := getDefaultConfig("somefile")
 	config.DockerImage = "img:1.2.3"
@@ -129,7 +137,7 @@ func Test_getContainerInfo(t *testing.T) {
 	commandsReactions := make(map[string]interface{}, 0)
 	fakeOutput := `1234 /name1 running 133`
 	commandsReactions["docker inspect --format='{{.Id}} {{.Name}} {{.State.Status}} {{.State.ExitCode}}' 1234"] =
-		[]string{fakeOutput, "", "0" }
+		[]string{fakeOutput, "", "0"}
 	shell := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
 	info, err := getContainerInfo(shell, "1234")
 	assert.Equal(t, "1234", info.ID)
@@ -144,7 +152,7 @@ func Test_getContainerInfo_NoSuchObject(t *testing.T) {
 	logger := NewLogger("debug")
 	commandsReactions := make(map[string]interface{}, 0)
 	commandsReactions["docker inspect --format='{{.Id}} {{.Name}} {{.State.Status}} {{.State.ExitCode}}' 1234"] =
-		[]string{"", "Error: No such object: 1234", "1" }
+		[]string{"", "Error: No such object: 1234", "1"}
 	shell := NewMockedShellServiceNotInteractive2(logger, commandsReactions)
 	info, err := getContainerInfo(shell, "1234")
 	assert.Equal(t, "", info.ID)
