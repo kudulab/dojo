@@ -102,14 +102,10 @@ jobs:
     executor: platform
     steps:
       - setup
-      - run:
-          command: sudo git clone https://github.com/bats-core/bats-core /opt/bats-core
-      - run:
-          command: sudo git clone https://github.com/bats-core/bats-assert /opt/bats-assert
-      - run:
-          command: sudo git clone https://github.com/bats-core/bats-support /opt/bats-support
       - attach_workspace:
           at: ~/repo
+      - run:
+          command: /bin/bash -c "cd image_scripts && sudo ./tasks install_bats"
       - run:
           command: /bin/bash -c "cd image_scripts && ./tasks build"
       - run:
