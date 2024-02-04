@@ -1,4 +1,5 @@
 import os
+import os.path
 from .support.common import *
 
 
@@ -67,6 +68,7 @@ def test_docker_compose_run_command_output_capture():
     assert "Exit status from cleaning: 0" in result.stderr, dojo_combined_output_str
     assert "Exit status from signals: 0" in result.stderr, dojo_combined_output_str
     assert "Dojo version" in result.stderr
+    assert "Containers created" in result.stderr
 
 
 def test_docker_compose_run_when_exit_non_zero():
@@ -250,7 +252,36 @@ def test_docker_compose_run_shows_nondefault_containers_logs_when_all_containers
     assert result.returncode == 0
     assert 'echo 1; sleep 1; echo 2; sleep 1;' in result.stderr, dojo_combined_output_str
     assert 'Exit status from run command: 0' in result.stderr, dojo_combined_output_str
-    assert 'Here are logs of container: testdojorunid_abc_1' in result.stderr, dojo_combined_output_str
+    # Docker-compose >2 names the containers using dashes instead of underscores (while underscores
+    # were used by Docker-compose <2), so we cannot test for containers' names if we want to
+    # support both Docker-compose versions (<2 and >2)
+    assert 'Here are logs of container: ' in result.stderr, dojo_combined_output_str
+    assert 'which status is: running' in result.stderr, dojo_combined_output_str
+    assert 'iteration: 1' in result.stderr, dojo_combined_output_str
+    assert_no_warnings_or_errors(result.stderr, dojo_combined_output_str)
+    assert_no_warnings_or_errors(result.stdout, dojo_combined_output_str)
+    test_dc_dojofile_is_removed()
+    test_dc_containers_are_removed()
+    test_dc_network_is_removed()
+
+# This test reproduces the panic that used to happen in Dojo 0.11.0 when using Docker-compose 2.24.5
+# when the default container stopped or was already removed
+def test_docker_compose_run_shows_nondefault_containers_logs_when_all_containers_succeeded_while_no_sleep():
+    clean_up_dc_containers()
+    clean_up_dc_network()
+    clean_up_dc_dojofile()
+    # make the command of the default container last long enough so that the other
+    # container is started and managed to produce some output
+    result = run_dojo(['--driver=docker-compose', '--dcf=./test/test-files/itest-dc-verbose.yaml',
+                       '--print-logs=always',
+                       '--debug=true', '--test=true', '--image=alpine:3.15', '--', 'sh',
+                       '-c', "echo 1;"])
+    dojo_combined_output_str =  "stdout:\n{0}\nstderror:\n{1}".format(result.stdout, result.stderr)
+    assert 'Dojo version' in result.stderr, dojo_combined_output_str
+    assert result.returncode == 0
+    assert 'echo 1;' in result.stderr, dojo_combined_output_str
+    assert 'Exit status from run command: 0' in result.stderr, dojo_combined_output_str
+    assert 'Here are logs of container: ' in result.stderr, dojo_combined_output_str
     assert 'which status is: running' in result.stderr, dojo_combined_output_str
     assert 'iteration: 1' in result.stderr, dojo_combined_output_str
     assert_no_warnings_or_errors(result.stderr, dojo_combined_output_str)
@@ -275,7 +306,7 @@ def test_docker_compose_run_shows_nondefault_containers_logs_when_nondefault_con
     assert result.returncode == 0
     assert 'echo 1; sleep 1; echo 2; sleep 1;' in result.stderr, dojo_combined_output_str
     assert 'Exit status from run command: 0' in result.stderr, dojo_combined_output_str
-    assert 'Here are logs of container: testdojorunid_abc_1' in result.stderr, dojo_combined_output_str
+    assert 'Here are logs of container: ' in result.stderr, dojo_combined_output_str
     assert 'which exited with exitcode: 127' in result.stderr, dojo_combined_output_str
     assert 'some-non-existent-command: not found' in result.stderr, dojo_combined_output_str
     assert_no_warnings_or_errors(result.stderr, dojo_combined_output_str)
@@ -296,7 +327,7 @@ def test_docker_compose_run_shows_nondefault_containers_logs_when_default_contai
     assert 'Dojo version' in result.stderr, dojo_combined_output_str
     assert result.returncode == 127
     assert 'Exit status from run command: 127' in result.stderr, dojo_combined_output_str
-    assert 'Here are logs of container: testdojorunid_abc_1' in result.stderr, dojo_combined_output_str
+    assert 'Here are logs of container: ' in result.stderr, dojo_combined_output_str
     assert 'which status is: running' in result.stderr, dojo_combined_output_str
     assert 'iteration: 1' in result.stderr, dojo_combined_output_str
     assert_no_warnings_or_errors(result.stderr, dojo_combined_output_str)
@@ -317,8 +348,10 @@ def test_docker_compose_run_shows_nondefault_containers_logs_when_all_constainer
     clean_up_dc_containers()
     clean_up_dc_network()
     clean_up_dc_dojofile()
-    logs_file = "dojo-logs-testdojorunid_abc_1-testdojorunid.txt"
-    clean_up_dojo_logs_file(logs_file)
+    logs_file_dcver1 = "dojo-logs-testdojorunid_abc_1-testdojorunid.txt"
+    logs_file_dcver2 = "dojo-logs-testdojorunid-abc-1-testdojorunid.txt"
+    clean_up_dojo_logs_file(logs_file_dcver1)
+    clean_up_dojo_logs_file(logs_file_dcver2)
 
     # make the command of the default container last long enough so that the other
     # container is started and managed to produce some output
@@ -330,16 +363,33 @@ def test_docker_compose_run_shows_nondefault_containers_logs_when_all_constainer
     assert 'Dojo version' in result.stderr, dojo_combined_output_str
     assert result.returncode == 0
     assert 'echo 1; sleep 1; echo 2; sleep 1;' in result.stderr, dojo_combined_output_str
-    assert 'The logs of container: testdojorunid_abc_1, which status is: running, were saved to file: dojo-logs-testdojorunid_abc_1-testdojorunid.txt' in result.stderr, dojo_combined_output_str
-    with open(logs_file, "r") as file:
-        contents = file.readlines()
-        assert 'iteration: 1\n' in contents
-        assert 'stdout:\n' in contents
-        assert 'stderr:\n' in contents
+    # Docker-compose >2 names the containers using dashes instead of underscores (while underscores
+    # were used by Docker-compose <2), so we cannot test for containers' names if we want to
+    # support both Docker-compose versions (<2 and >2)
+    assert 'The logs of container:' in result.stderr, dojo_combined_output_str
+    assert 'were saved to file: ' in result.stderr, dojo_combined_output_str
+    assert 'testdojorunid.txt' in result.stderr, dojo_combined_output_str
+    if os.path.isfile(logs_file_dcver1):
+        with open(logs_file_dcver1, "r") as file:
+            contents = file.readlines()
+            assert 'iteration: 1\n' in contents
+            assert 'stdout:\n' in contents
+            assert 'stderr:\n' in contents
+    if os.path.isfile(logs_file_dcver2):
+        with open(logs_file_dcver2, "r") as file:
+            contents = file.readlines()
+            assert 'iteration: 1\n' in contents
+            assert 'stdout:\n' in contents
+            assert 'stderr:\n' in contents
+    # exactly one of these files should exist (depending on which docker-compose version we run)
+    assert (os.path.isfile(logs_file_dcver1) or os.path.isfile(logs_file_dcver2)), True
+
     assert 'iteration: 1' not in result.stderr, dojo_combined_output_str
     assert_no_warnings_or_errors(result.stderr, dojo_combined_output_str)
     assert_no_warnings_or_errors(result.stdout, dojo_combined_output_str)
     test_dc_dojofile_is_removed()
     test_dc_containers_are_removed()
     test_dc_network_is_removed()
-    clean_up_dojo_logs_file(logs_file)
+    clean_up_dojo_logs_file(logs_file_dcver1)
+    clean_up_dojo_logs_file(logs_file_dcver2)
+

@@ -315,7 +315,7 @@ func (dc DockerComposeDriver) watchContainers(mergedConfig Config, runID string,
 					ci := cmdInfoToString(cmd, stdout, stderr, exitStatus)
 					dc.Logger.Log("info", fmt.Sprintf("Started: %s\n  %s", name, ci))
 				} else if mergedConfig.ExitBehavior == "abort" {
-					if strings.Contains(name, "_default_") {
+					if strings.Contains(name, "_default_") || strings.Contains(name, "-default-") {
 						dc.Logger.Log("debug", "Stop watching containers. Default container stopped.")
 						return
 					}
@@ -353,7 +353,7 @@ func safelyCloseChannel(ch chan bool) (justClosed bool) {
 func (dc DockerComposeDriver) getNonDefaultContainersInfos(containersNames []string) []*ContainerInfo {
 	containerInfos := make([]*ContainerInfo, 0)
 	for _, containerName := range containersNames {
-		if strings.Contains(containerName, "_default_") {
+		if strings.Contains(containerName, "_default_") || strings.Contains(containerName, "-default-") {
 			continue
 		} else {
 			containerInfo, err := getContainerInfo(dc.ShellService, containerName)
@@ -369,7 +369,7 @@ func (dc DockerComposeDriver) getNonDefaultContainersInfos(containersNames []str
 func (dc DockerComposeDriver) getNonDefaultContainersLogs(containerInfos []*ContainerInfo) {
 	for _, containerInfo := range containerInfos {
 		containerName := containerInfo.Name
-		if strings.Contains(containerName, "_default_") {
+		if strings.Contains(containerName, "_default_") || strings.Contains(containerName, "-default-") {
 			continue
 		} else {
 			cmd := fmt.Sprintf("docker logs %s", containerName)
@@ -605,7 +605,7 @@ func (dc DockerComposeDriver) HandleMultipleSignal(mergedConfig Config, runID st
 
 func (dc DockerComposeDriver) getDefaultContainerID(containersNames []string) string {
 	for _, containerName := range containersNames {
-		if strings.Contains(containerName, "_default_") {
+		if strings.Contains(containerName, "_default_") || strings.Contains(containerName, "-default-") {
 			contanerInfo, err := getContainerInfo(dc.ShellService, containerName)
 			if !contanerInfo.Exists {
 				return ""

@@ -1,5 +1,7 @@
 * Compile Dojo using Golang 1.21.6 thanks to using Docker image kudulab/golang-dojo:2.1.0
-* Improve support for Docker-compose >2. New versions of Docker-compose (e.g. 2.24.5) have different output of the `docker-compose ps` command (than the old versions of Docker-compose, e.g. 1.23.2). This was affecting Dojo as in Dojo was not aware that the containers were already created and running. This, in turn, was affecting the logging collection (the `--print-logs` options). 
+* Improve support for Docker-compose >2.
+  * New versions of Docker-compose (e.g. 2.24.5) have different output of the `docker-compose ps` command (than the old versions of Docker-compose, e.g. 1.23.2). This was affecting Dojo as in Dojo was not aware that the containers were already created and running. This, in turn, was affecting the logging collection (the `--print-logs` options).
+  * Also, the default docker containers in Docker-compose >2 contain this string `-default-` (with dashes), while the older versions of Docker-compose contained this string `_default` (with underscores)
 
 ### 0.11.0 (2022-Feb-27)
 
