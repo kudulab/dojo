@@ -1,5 +1,10 @@
 FROM ubuntu:23.10
 
+# the Dojo scripts create a user with ID==1000,
+# previous ubuntu images (e.g. 20.04) seem to not have the ubuntu user,
+# so let's delete it to avoid conflicts
+RUN userdel --remove ubuntu
+
 # For Dojo:
 # * entrypoint requires sudo and bash
 RUN apt-get update && \
