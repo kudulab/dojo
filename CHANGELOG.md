@@ -1,7 +1,7 @@
 ### 0.13.0 (2024-Feb-05)
 
 * Support multiple levels of log output produced by Dojo: `silent`, `error`, `warn`, `info`, `debug`
-* Preserve log output setting into the docker containers too, to configure how much output is visible from the dojo image scripts
+* Preserve log output setting into the docker containers too, to configure how much output is visible from the dojo image scripts. (You'll need to rebuild your images for this to take effect)
 
 ### 0.12.1 (2024-Feb-05)
 
