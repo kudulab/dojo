@@ -70,8 +70,9 @@ else
     if [[ "${DOJO_LOG_LEVEL}" != "silent" ]] && [[ "${DOJO_LOG_LEVEL}" != "error" ]] && [[ "${DOJO_LOG_LEVEL}" != "warn" ]]; then
       set -x
     fi
-    ( usermod -u "${newuid}" "${owner_username}"; groupmod -g "${newgid}" "${owner_groupname}"; )
-    ( chown ${newuid}:${newgid} -R "${dojo_home}"; )
+    usermod -u "${newuid}" "${owner_username}" >&2
+    groupmod -g "${newgid}" "${owner_groupname}" >&2
+    chown ${newuid}:${newgid} -R "${dojo_home}" >&2
     if [[ "${DOJO_LOG_LEVEL}" != "silent" ]] && [[ "${DOJO_LOG_LEVEL}" != "error" ]] && [[ "${DOJO_LOG_LEVEL}" != "warn" ]]; then
       set +x
     fi
