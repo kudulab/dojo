@@ -1,3 +1,8 @@
+### 0.13.0 (2024-Feb-05)
+
+* Support multiple levels of log output produced by Dojo: `silent`, `error`, `warn`, `info`, `debug`
+* Preserve log output setting into the docker containers too, to configure how much output is visible from the dojo image scripts
+
 ### 0.12.1 (2024-Feb-05)
 
 * Fix https://github.com/kudulab/dojo/issues/37 - support the case when the current directory contains special characters

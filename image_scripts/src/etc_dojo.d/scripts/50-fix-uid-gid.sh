@@ -6,38 +6,51 @@
 # https://github.com/tomzo/docker-uid-gid-fix/blob/master/fix-uid-gid.sh
 ###########################################################################
 
+function dojo_50fixuidgid_log_info {
+  if [[ "${DOJO_LOG_LEVEL}" != "silent" ]] && [[ "${DOJO_LOG_LEVEL}" != "error" ]] && [[ "${DOJO_LOG_LEVEL}" != "warn" ]]; then
+    echo -e "$(date "+%d-%m-%Y %T") Dojo 50-fix-uid-gid info: ${1}" >&2
+  fi
+}
+function dojo_50fixuidgid_log_error {
+  if [[ "${DOJO_LOG_LEVEL}" != "silent" ]] ; then
+    echo -e "$(date "+%d-%m-%Y %T") Dojo 50-fix-uid-gid error: ${1}" >&2
+  fi
+}
+
 if [[ -z "${dojo_work}" ]]; then
-    echo "dojo_work not specified" >&2
+    dojo_50fixuidgid_log_error "dojo_work not specified"
     exit 1;
 fi
 if [[ ! -d "${dojo_work}" ]]; then
-    echo "$dojo_work does not exist, expected to be mounted as docker volume" >&2
+    dojo_50fixuidgid_log_error "$dojo_work does not exist, expected to be mounted as docker volume"
     exit 1;
 fi
 
 if [[ -z "${dojo_home}" ]]; then
-    echo "dojo_home not set" >&2
+    dojo_50fixuidgid_log_error "dojo_home not set"
     exit 1;
 fi
 
 if [[ -z "${owner_username}" ]]; then
-    echo "Username not specified"
+    dojo_50fixuidgid_log_error "Username not specified"
     exit 1;
 fi
 if [[ -z "${owner_groupname}" ]]; then
-    echo "Groupname not specified" >&2
+    dojo_50fixuidgid_log_error "Groupname not specified"
     exit 1;
 fi
 
 if ! getent passwd "${owner_username}" >/dev/null 2>&1; then
-    echo "User ${owner_username} does not exist" >&2
+    dojo_50fixuidgid_log_error "User ${owner_username} does not exist"
     exit 1;
 fi
 
 if ! getent passwd "${owner_groupname}" >/dev/null 2>&1; then
-    echo "Group ${owner_groupname} does not exist" >&2
+    dojo_50fixuidgid_log_error "Group ${owner_groupname} does not exist"
     exit 1;
 fi
+
+
 
 # use -n option which is the same as --numeric-uid-gid on Debian/Ubuntu,
 # but on Alpine, there is no --numeric-uid-gid option
@@ -48,14 +61,20 @@ olduid=$(ls -n -d ${dojo_home} | awk '{ print $3 }')
 oldgid=$(ls -n -d ${dojo_home} | awk '{ print $4 }')
 
 if [[ "${olduid}" == "${newuid}" ]] && [[ "${oldgid}" == "${newgid}" ]]; then
-    echo "olduid == newuid == ${newuid}, nothing to do" >&2
+    dojo_50fixuidgid_log_info "olduid == newuid == ${newuid}, nothing to do"
 elif [[ "0" == "${newuid}" ]] && [[ "0" == "${newgid}" ]]; then
     # We are on gRPC FUSE driver on Mac - do nothing
     # Or dojo was executed from host where current directory is owned by the root - not supported use case
-    echo "Assuming docker running with gRPC FUSE driver on Mac" >&2
+    dojo_50fixuidgid_log_info "Assuming docker running with gRPC FUSE driver on Mac"
 else
-    ( set -x; usermod -u "${newuid}" "${owner_username}"; groupmod -g "${newgid}" "${owner_groupname}"; )
-    ( set -x; chown ${newuid}:${newgid} -R "${dojo_home}"; )
+    if [[ "${DOJO_LOG_LEVEL}" != "silent" ]] && [[ "${DOJO_LOG_LEVEL}" != "error" ]] && [[ "${DOJO_LOG_LEVEL}" != "warn" ]]; then
+      set -x
+    fi
+    ( usermod -u "${newuid}" "${owner_username}"; groupmod -g "${newgid}" "${owner_groupname}"; )
+    ( chown ${newuid}:${newgid} -R "${dojo_home}"; )
+    if [[ "${DOJO_LOG_LEVEL}" != "silent" ]] && [[ "${DOJO_LOG_LEVEL}" != "error" ]] && [[ "${DOJO_LOG_LEVEL}" != "warn" ]]; then
+      set +x
+    fi
 fi
 
 # do not chown the "$dojo_work" directory, it already has proper uid and gid,

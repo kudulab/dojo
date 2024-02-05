@@ -97,6 +97,9 @@ func main() {
 	envService := NewEnvService()
 	envService.AddVariable(fmt.Sprintf("DOJO_WORK_INNER=%s", mergedConfig.WorkDirInner))
 	envService.AddVariable(fmt.Sprintf("DOJO_WORK_OUTER=%s", mergedConfig.WorkDirOuter))
+	// set the DOJO_LOG_LEVEL now,
+	// so that its value is preserved to docker containers
+	envService.AddVariable(fmt.Sprintf("DOJO_LOG_LEVEL=%s", mergedConfig.LogLevel))
 
 	shellService.SetEnvironment(envService.GetVariables())
 

@@ -11,10 +11,14 @@ green='\033[0;32m'
 green_bold='\033[1;32m'
 noformat='\033[0m'
 function dojo_entrypoint_log_info {
-  echo -e "${bold}$(date "+%d-%m-%Y %T") Dojo entrypoint info:${noformat} ${1}" >&2
+  if [[ "${DOJO_LOG_LEVEL}" != "silent" ]] && [[ "${DOJO_LOG_LEVEL}" != "error" ]] && [[ "${DOJO_LOG_LEVEL}" != "warn" ]]; then
+    echo -e "${bold}$(date "+%d-%m-%Y %T") Dojo entrypoint info:${noformat} ${1}" >&2
+  fi
 }
 function dojo_entrypoint_log_info_green {
-  echo -e "${green_bold}$(date "+%d-%m-%Y %T") Dojo entrypoint info:${green} ${1}${noformat}" >&2
+  if [[ "${DOJO_LOG_LEVEL}" != "silent" ]] && [[ "${DOJO_LOG_LEVEL}" != "error" ]] && [[ "${DOJO_LOG_LEVEL}" != "warn" ]]; then
+    echo -e "${green_bold}$(date "+%d-%m-%Y %T") Dojo entrypoint info:${green} ${1}${noformat}" >&2
+  fi
 }
 
 # source any additional scripts with environment variables

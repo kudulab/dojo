@@ -592,12 +592,13 @@ The default value is:
 ```toml
 DOJO_LOG_LEVEL="info"
 ```
-Available values: `silent`, `error`, `warn`, `info`, `debug`.
 
-*In CLI use `--log-level=info`*. 
-There is also an obsolete CLI option `--debug=true` or `--debug=false`.
+* Available values: `silent`, `error`, `warn`, `info`, `debug`.
+* If you want to minimise Dojo output, but still want to see the errors, set it to `error`.
+* Defaults to `info`
+* *In CLI use `--log-level=info`*. (There is also an obsolete CLI option `--debug=true` or `--debug=false`)
+* If these (`--debug` and `--log-level`) are set to different values, then the most verbose value wins. E.g. if `DOJO_LOG_LEVEL="info"` and `--debug=true`, then the log level will be `debug`.
 
-If these are set to different values, then the most verbose value wins. E.g. if `DOJO_LOG_LEVEL="info"` and `--debug=true`, then the log level will be `debug`.
 
 ##### Docker-compose file
 
