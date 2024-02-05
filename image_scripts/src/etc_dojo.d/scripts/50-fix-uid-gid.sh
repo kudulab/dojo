@@ -70,7 +70,9 @@ else
     if [[ "${DOJO_LOG_LEVEL}" != "silent" ]] && [[ "${DOJO_LOG_LEVEL}" != "error" ]] && [[ "${DOJO_LOG_LEVEL}" != "warn" ]]; then
       set -x
     fi
-    usermod -u "${newuid}" "${owner_username}" >&2
+
+    # silence the output of usermod, any errors should still be printed out
+    usermod -u "${newuid}" "${owner_username}" > /dev/null
     groupmod -g "${newgid}" "${owner_groupname}" >&2
     chown ${newuid}:${newgid} -R "${dojo_home}" >&2
     if [[ "${DOJO_LOG_LEVEL}" != "silent" ]] && [[ "${DOJO_LOG_LEVEL}" != "error" ]] && [[ "${DOJO_LOG_LEVEL}" != "warn" ]]; then
