@@ -176,7 +176,7 @@ func getCLIConfig() Config {
 		os.Exit(0)
 	}
 	if version {
-		// version is returned as the first log message
+		fmt.Println(fmt.Sprintf("Dojo version %s", DojoVersion))
 		os.Exit(0)
 	}
 	workDirInnerAbs := getAbsPathOrPanic(workDirInner)

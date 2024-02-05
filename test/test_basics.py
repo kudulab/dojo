@@ -4,8 +4,7 @@ from .support.common import run_dojo, run_command, get_dojo_exe
 
 def test_version_output():
     result = run_dojo(['--version'])
-    dojo_combined_output_str =  "stdout:\n{0}\nstderror:\n{1}".format(result.stdout, result.stderr)
-    assert 'Dojo version' in result.stderr, dojo_combined_output_str #TODO: (ewa) should be in stdout
+    assert 'Dojo version' in result.stdout
     assert result.returncode == 0
 
 
