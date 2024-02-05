@@ -9,9 +9,9 @@ import (
 	"testing"
 )
 
-func Test_smartJoinCommandArgs(t *testing.T){
+func Test_smartJoinCommandArgs(t *testing.T) {
 	var mytests = []struct {
-		args    []string
+		args           []string
 		expectedOutput string
 	}{
 		{[]string{"cmd"}, "cmd"},
@@ -29,7 +29,7 @@ func Test_smartJoinCommandArgs(t *testing.T){
 		// e.g. entrypoint is /bin/bash, command: -c whoami
 		{[]string{"-c", "whoami"}, "-c whoami"},
 	}
-	for _,v := range mytests {
+	for _, v := range mytests {
 		outputCmd := smartJoinCommandArgs(v.args)
 		assert.Equal(t, outputCmd, v.expectedOutput)
 	}
@@ -46,10 +46,10 @@ func Test_getAbsPathOrPanic(t *testing.T) {
 	}{
 		{"", ""},
 		{"/tmp/123", "/tmp/123"},
-		{"123", currentDirectory+"/123"},
-		{"./123", currentDirectory+"/123"},
+		{"123", currentDirectory + "/123"},
+		{"./123", currentDirectory + "/123"},
 	}
-	for _,v := range mytests {
+	for _, v := range mytests {
 		outputCmd := getAbsPathOrPanic(v.input)
 		assert.Equal(t, v.expectedOutput, outputCmd)
 	}
@@ -69,7 +69,7 @@ func Test_ensureNoOuterQuotes(t *testing.T) {
 		{"'/tmp/123", "'/tmp/123"},
 		{"/tmp/123'", "/tmp/123'"},
 	}
-	for _,v := range mytests {
+	for _, v := range mytests {
 		outputCmd := ensureNoOuterQuotes(v.input)
 		assert.Equal(t, v.expectedOutput, outputCmd, v.input)
 	}
@@ -80,44 +80,48 @@ func Test_getCLIConfig(t *testing.T) {
 	defer func() { os.Args = oldArgs }()
 
 	var flagTest = []struct {
-		flags    []string
+		flags          []string
 		expectedConfig Config
 	}{
-		{[]string{"cmd"}, Config{Action:"", ConfigFile:"", Driver:"", Debug:""}},
+		{[]string{"cmd"}, Config{Action: "", ConfigFile: "", Driver: "", LogLevel: ""}},
 
-		{[]string{"cmd", "--config=Dojofile"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:""}},
-		{[]string{"cmd", "--config", "Dojofile"}, Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:""}},
-		{[]string{"cmd", "-c", "Dojofile"}, Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:""}},
-		{[]string{"cmd", "-c=Dojofile"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:""}},
+		{[]string{"cmd", "--config=Dojofile"}, Config{Action: "", ConfigFile: "Dojofile", Driver: "", LogLevel: ""}},
+		{[]string{"cmd", "--config", "Dojofile"}, Config{Action: "", ConfigFile: "Dojofile", Driver: "", LogLevel: ""}},
+		{[]string{"cmd", "-c", "Dojofile"}, Config{Action: "", ConfigFile: "Dojofile", Driver: "", LogLevel: ""}},
+		{[]string{"cmd", "-c=Dojofile"}, Config{Action: "", ConfigFile: "Dojofile", Driver: "", LogLevel: ""}},
 
-		{[]string{"cmd", "--action", "run"}, Config{Action:"run", ConfigFile:"", Driver:"", Debug:""}},
-		{[]string{"cmd", "-a", "run"}, Config{Action:"run", ConfigFile:"", Driver:"", Debug:""}},
+		{[]string{"cmd", "--action", "run"}, Config{Action: "run", ConfigFile: "", Driver: "", LogLevel: ""}},
+		{[]string{"cmd", "-a", "run"}, Config{Action: "run", ConfigFile: "", Driver: "", LogLevel: ""}},
 
-		{[]string{"cmd", "--driver", "mydriver"}, Config{Driver:"mydriver"}},
-		{[]string{"cmd", "-d", "mydriver"}, Config{Driver:"mydriver"}},
+		{[]string{"cmd", "--driver", "mydriver"}, Config{Driver: "mydriver"}},
+		{[]string{"cmd", "-d", "mydriver"}, Config{Driver: "mydriver"}},
 
-		{[]string{"cmd", "--config=Dojofile", "bash"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", RunCommand: "bash"}},
-		{[]string{"cmd", "--config=Dojofile", "bash", "bla"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", RunCommand: "bash bla"}},
-		{[]string{"cmd", "--config=Dojofile", "bash", "-c", "bla"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", RunCommand: "bash -c bla"}},
-		{[]string{"cmd", "--config=Dojofile", "bash", "-c", "bla1 bla2"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", RunCommand: "bash -c \"bla1 bla2\""}},
-		{[]string{"cmd", "--config=Dojofile", "bash -c \"bla\""},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", RunCommand: "\"bash -c \\\"bla\\\"\""}},
-		{[]string{"cmd", "--config=Dojofile", "--", "bash"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", RunCommand: "bash"}},
-		{[]string{"cmd", "--config=Dojofile", "--", "-c", "bash"},Config{Action:"", ConfigFile:"Dojofile", Driver:"", Debug:"", RunCommand: "-c bash"}},
-		{[]string{"cmd", "bash", "--config=Dojofile"},Config{Action:"", ConfigFile:"", Driver:"", Debug:"", RunCommand: "bash --config=Dojofile"}},
-		{[]string{"cmd", "--config=Dojofile11", "bash", "--config=Dojofile"},Config{Action:"", ConfigFile:"Dojofile11", Driver:"", Debug:"", RunCommand: "bash --config=Dojofile"}},
+		{[]string{"cmd", "--config=Dojofile", "bash"}, Config{Action: "", ConfigFile: "Dojofile", Driver: "", LogLevel: "", RunCommand: "bash"}},
+		{[]string{"cmd", "--config=Dojofile", "bash", "bla"}, Config{Action: "", ConfigFile: "Dojofile", Driver: "", LogLevel: "", RunCommand: "bash bla"}},
+		{[]string{"cmd", "--config=Dojofile", "bash", "-c", "bla"}, Config{Action: "", ConfigFile: "Dojofile", Driver: "", LogLevel: "", RunCommand: "bash -c bla"}},
+		{[]string{"cmd", "--config=Dojofile", "bash", "-c", "bla1 bla2"}, Config{Action: "", ConfigFile: "Dojofile", Driver: "", LogLevel: "", RunCommand: "bash -c \"bla1 bla2\""}},
+		{[]string{"cmd", "--config=Dojofile", "bash -c \"bla\""}, Config{Action: "", ConfigFile: "Dojofile", Driver: "", LogLevel: "", RunCommand: "\"bash -c \\\"bla\\\"\""}},
+		{[]string{"cmd", "--config=Dojofile", "--", "bash"}, Config{Action: "", ConfigFile: "Dojofile", Driver: "", LogLevel: "", RunCommand: "bash"}},
+		{[]string{"cmd", "--config=Dojofile", "--", "-c", "bash"}, Config{Action: "", ConfigFile: "Dojofile", Driver: "", LogLevel: "", RunCommand: "-c bash"}},
+		{[]string{"cmd", "bash", "--config=Dojofile"}, Config{Action: "", ConfigFile: "", Driver: "", LogLevel: "", RunCommand: "bash --config=Dojofile"}},
+		{[]string{"cmd", "--config=Dojofile11", "bash", "--config=Dojofile"}, Config{Action: "", ConfigFile: "Dojofile11", Driver: "", LogLevel: "", RunCommand: "bash --config=Dojofile"}},
 
-		{[]string{"cmd", "--work-dir-outer=/tmp/bla"}, Config{WorkDirOuter:"/tmp/bla"}},
-		{[]string{"cmd", "--work-dir-inner=/tmp/bla"}, Config{WorkDirInner:"/tmp/bla"}},
-		{[]string{"cmd", "-w=/tmp/bla"}, Config{WorkDirInner:"/tmp/bla"}},
+		{[]string{"cmd", "--work-dir-outer=/tmp/bla"}, Config{WorkDirOuter: "/tmp/bla"}},
+		{[]string{"cmd", "--work-dir-inner=/tmp/bla"}, Config{WorkDirInner: "/tmp/bla"}},
+		{[]string{"cmd", "-w=/tmp/bla"}, Config{WorkDirInner: "/tmp/bla"}},
 		{[]string{"cmd", "--identity-dir-outer=/tmp/bla"}, Config{IdentityDirOuter: "/tmp/bla"}},
-		{[]string{"cmd", "--blacklist=abc,123,ABC_4"}, Config{BlacklistVariables:"abc,123,ABC_4"}},
+		{[]string{"cmd", "--blacklist=abc,123,ABC_4"}, Config{BlacklistVariables: "abc,123,ABC_4"}},
 
-		{[]string{"cmd", "--action", "run", "-c", "Dojofile"}, Config{Action:"run", ConfigFile:"Dojofile", Driver:"", Debug:""}},
-		{[]string{"cmd", "--action", "run", "-c", "Dojofile", "--driver", "mydriver"}, Config{Action:"run", ConfigFile:"Dojofile", Driver:"mydriver", Debug:""}},
-		{[]string{"cmd", "--debug=true"}, Config{Action:"", ConfigFile:"", Driver:"", Debug:"true"}},
-		{[]string{"cmd", "--debug=false"}, Config{Action:"", ConfigFile:"", Driver:"", Debug:"false"}},
-		{[]string{"cmd", "--interactive=false"}, Config{Action:"", ConfigFile:"", Driver:"", Debug:"", Interactive:"false"}},
-		{[]string{"cmd", "-i=false"}, Config{Action:"", ConfigFile:"", Driver:"", Debug:"", Interactive:"false"}},
+		{[]string{"cmd", "--action", "run", "-c", "Dojofile"}, Config{Action: "run", ConfigFile: "Dojofile", Driver: "", LogLevel: ""}},
+		{[]string{"cmd", "--action", "run", "-c", "Dojofile", "--driver", "mydriver"}, Config{Action: "run", ConfigFile: "Dojofile", Driver: "mydriver", LogLevel: ""}},
+		{[]string{"cmd", "--debug=true"}, Config{Action: "", ConfigFile: "", Driver: "", Debug: "true"}},
+		{[]string{"cmd", "--debug=false"}, Config{Action: "", ConfigFile: "", Driver: "", Debug: "false"}},
+		{[]string{"cmd", "--log-level=silent"}, Config{Action: "", ConfigFile: "", Driver: "", LogLevel: "silent"}},
+		{[]string{"cmd", "--log-level=info"}, Config{Action: "", ConfigFile: "", Driver: "", LogLevel: "info"}},
+		{[]string{"cmd", "--log-level=error"}, Config{Action: "", ConfigFile: "", Driver: "", LogLevel: "error"}},
+		{[]string{"cmd", "--log-level=debug"}, Config{Action: "", ConfigFile: "", Driver: "", LogLevel: "debug"}},
+		{[]string{"cmd", "--interactive=false"}, Config{Action: "", ConfigFile: "", Driver: "", Interactive: "false"}},
+		{[]string{"cmd", "-i=false"}, Config{Action: "", ConfigFile: "", Driver: "", LogLevel: "", Interactive: "false"}},
 		{[]string{"cmd", "--remove-containers=false"}, Config{RemoveContainers: "false"}},
 		{[]string{"cmd", "--rm=false"}, Config{RemoveContainers: "false"}},
 		{[]string{"cmd", "-print-logs=always"}, Config{PrintLogs: "always"}},
@@ -131,6 +135,7 @@ func Test_getCLIConfig(t *testing.T) {
 		assert.Equal(t, currentTest.expectedConfig.ConfigFile, config.ConfigFile, currentTest.flags)
 		assert.Equal(t, currentTest.expectedConfig.Driver, config.Driver, currentTest.flags)
 		assert.Equal(t, currentTest.expectedConfig.Debug, config.Debug, currentTest.flags)
+		assert.Equal(t, currentTest.expectedConfig.LogLevel, config.LogLevel, currentTest.flags)
 		assert.Equal(t, currentTest.expectedConfig.Interactive, config.Interactive, currentTest.flags)
 		assert.Equal(t, currentTest.expectedConfig.RunCommand, config.RunCommand, currentTest.flags)
 		assert.Equal(t, currentTest.expectedConfig.RemoveContainers, config.RemoveContainers, currentTest.flags)
@@ -145,7 +150,7 @@ func Test_getCLIConfig_undefinedFlag(t *testing.T) {
 	defer func() { os.Args = oldArgs }()
 
 	var flagTest = []struct {
-		flags    []string
+		flags          []string
 		expectedAction string
 		expectedConfig string
 	}{
@@ -157,7 +162,7 @@ func Test_getCLIConfig_undefinedFlag(t *testing.T) {
 
 		defer func() {
 			expMsg := "flag provided but not defined: -notexisting"
-			if r := recover(); !strings.Contains(r.(error).Error(),expMsg) {
+			if r := recover(); !strings.Contains(r.(error).Error(), expMsg) {
 				t.Fatalf("Panic message\ngot:  %s\nwant: %s\n", r, expMsg)
 			}
 		}()
@@ -191,16 +196,17 @@ func Test_getFileConfig(t *testing.T) {
 	logger := NewLogger("debug")
 	config := getFileConfig(logger, configFile)
 	expectedConfig := Config{
-		Action:             "",
-		DockerImage:        "docker-registry.example.com/dojo:1.3.2",
-		Driver:             "somedriver",
-		DockerOptions:      "-v /tmp/bla:/home/dojo/bla:ro -e ABC=123",
+		Action:                             "",
+		DockerImage:                        "docker-registry.example.com/dojo:1.3.2",
+		Driver:                             "somedriver",
+		DockerOptions:                      "-v /tmp/bla:/home/dojo/bla:ro -e ABC=123",
 		PreserveEnvironmentToAllContainers: "false",
-		DockerComposeFile:  "docker-compose.yml",
-		WorkDirOuter:       "/tmp/123",
-		IdentityDirOuter:   "/tmp/outer",
-		BlacklistVariables: "VAR1,VAR2,ABC",
-		Debug:              "false",
+		DockerComposeFile:                  "docker-compose.yml",
+		WorkDirOuter:                       "/tmp/123",
+		IdentityDirOuter:                   "/tmp/outer",
+		BlacklistVariables:                 "VAR1,VAR2,ABC",
+		Debug:                              "false",
+		LogLevel:                           "info",
 	}
 
 	assert.Equal(t, expectedConfig.Action, config.Action)
@@ -214,6 +220,7 @@ func Test_getFileConfig(t *testing.T) {
 	assert.Equal(t, expectedConfig.IdentityDirOuter, config.IdentityDirOuter)
 	assert.Equal(t, expectedConfig.BlacklistVariables, config.BlacklistVariables)
 	assert.Equal(t, expectedConfig.PreserveEnvironmentToAllContainers, config.PreserveEnvironmentToAllContainers)
+	assert.Equal(t, expectedConfig.LogLevel, config.LogLevel)
 	assert.Equal(t, expectedConfig.Debug, config.Debug)
 }
 func Test_getFileConfig_debug(t *testing.T) {
@@ -229,23 +236,25 @@ func Test_getFileConfig_debug(t *testing.T) {
 	logger := NewLogger("debug")
 	config := getFileConfig(logger, configFile)
 	expectedConfig := Config{
-		Action: "",
-		Debug:"true",
+		Action:   "",
+		Debug:    "true",
+		LogLevel: "debug",
 	}
 
 	assert.Equal(t, expectedConfig.Debug, config.Debug)
+	assert.Equal(t, expectedConfig.LogLevel, config.LogLevel)
 }
 
-func Test_getMergedConfig(t *testing.T){
+func Test_getMergedConfig(t *testing.T) {
 	config1 := Config{
 		Driver: "mydriver",
-		Debug: "false",
+		Debug:  "false",
 	}
 	config2 := Config{
-		Action: "dummy",
-		Debug: "true",
+		Action:           "dummy",
+		Debug:            "true",
 		IdentityDirOuter: "/tmp/myhome",
-		DockerImage: "img",
+		DockerImage:      "img",
 	}
 	config3 := getDefaultConfig("somefile")
 	currentDirectory, err := os.Getwd()
@@ -270,9 +279,9 @@ func Test_getMergedConfig(t *testing.T){
 
 func Test_verifyConfig_invalidAction(t *testing.T) {
 	config := &Config{
-		Action: "dummy",
-		Driver: "docker",
-		Debug: "true",
+		Action:   "dummy",
+		Driver:   "docker",
+		LogLevel: "true",
 	}
 	logger := NewLogger("debug")
 	err := verifyConfig(logger, config)
@@ -282,9 +291,9 @@ func Test_verifyConfig_invalidAction(t *testing.T) {
 
 func Test_verifyConfig_invalidDriver(t *testing.T) {
 	config := &Config{
-		Action: "run",
-		Driver: "mydriver",
-		Debug: "true",
+		Action:   "run",
+		Driver:   "mydriver",
+		LogLevel: "true",
 	}
 	logger := NewLogger("debug")
 	err := verifyConfig(logger, config)
@@ -294,12 +303,13 @@ func Test_verifyConfig_invalidDriver(t *testing.T) {
 
 func Test_verifyConfig_invalidPrintLogs(t *testing.T) {
 	config := &Config{
-		Action: "run",
-		Driver: "docker-compose",
-		Debug: "true",
-		RemoveContainers: "true",
+		Action:                             "run",
+		Driver:                             "docker-compose",
+		Debug:                              "true",
+		LogLevel:                           "info",
+		RemoveContainers:                   "true",
 		PreserveEnvironmentToAllContainers: "true",
-		PrintLogs: "bla",
+		PrintLogs:                          "bla",
 	}
 	logger := NewLogger("debug")
 	err := verifyConfig(logger, config)
@@ -309,13 +319,14 @@ func Test_verifyConfig_invalidPrintLogs(t *testing.T) {
 
 func Test_verifyConfig_invalidPrintLogsTarget(t *testing.T) {
 	config := &Config{
-		Action: "run",
-		Driver: "docker-compose",
-		Debug: "true",
-		RemoveContainers: "true",
+		Action:                             "run",
+		Driver:                             "docker-compose",
+		Debug:                              "true",
+		LogLevel:                           "info",
+		RemoveContainers:                   "true",
 		PreserveEnvironmentToAllContainers: "true",
-		PrintLogs: "always",
-		PrintLogsTarget: "invalid",
+		PrintLogs:                          "always",
+		PrintLogsTarget:                    "invalid",
 	}
 	logger := NewLogger("debug")
 	err := verifyConfig(logger, config)
@@ -326,16 +337,17 @@ func Test_verifyConfig_invalidPrintLogsTarget(t *testing.T) {
 func Test_verifyConfig_driverShorthandDC(t *testing.T) {
 	dcFile := "/tmp/dojo-Test_verifyConfig_driverShorthandDC.yml"
 	config := &Config{
-		Action: "run",
-		Driver: "dc",
-		Debug: "true",
-		RemoveContainers: "true",
-		DockerImage: "bla",
-		DockerComposeFile: dcFile,
+		Action:                             "run",
+		Driver:                             "dc",
+		Debug:                              "true",
+		LogLevel:                           "info",
+		RemoveContainers:                   "true",
+		DockerImage:                        "bla",
+		DockerComposeFile:                  dcFile,
 		PreserveEnvironmentToAllContainers: "true",
-		ExitBehavior: "ignore",
-		PrintLogs: "never",
-		PrintLogsTarget: "console",
+		ExitBehavior:                       "ignore",
+		PrintLogs:                          "never",
+		PrintLogsTarget:                    "console",
 	}
 	os.Create(dcFile)
 	logger := NewLogger("debug")
@@ -345,12 +357,51 @@ func Test_verifyConfig_driverShorthandDC(t *testing.T) {
 	os.Remove(dcFile)
 }
 
+func Test_verifyConfig_logLevelStrongerPrecedence1(t *testing.T) {
+	config := &Config{
+		Action:                             "run",
+		Driver:                             "docker",
+		Debug:                              "true",
+		LogLevel:                           "info",
+		RemoveContainers:                   "true",
+		DockerImage:                        "bla",
+		PreserveEnvironmentToAllContainers: "true",
+		PrintLogs:                          "never",
+		PrintLogsTarget:                    "console",
+	}
+	logger := NewLogger("debug")
+	err := verifyConfig(logger, config)
+	assert.Nil(t, err)
+	assert.Equal(t, "true", config.Debug)
+	assert.Equal(t, "debug", config.LogLevel)
+}
+
+func Test_verifyConfig_logLevelStrongerPrecedence2(t *testing.T) {
+	config := &Config{
+		Action:                             "run",
+		Driver:                             "docker",
+		Debug:                              "false",
+		LogLevel:                           "debug",
+		RemoveContainers:                   "true",
+		DockerImage:                        "bla",
+		PreserveEnvironmentToAllContainers: "true",
+		PrintLogs:                          "never",
+		PrintLogsTarget:                    "console",
+	}
+	logger := NewLogger("debug")
+	err := verifyConfig(logger, config)
+	assert.Nil(t, err)
+	assert.Equal(t, "true", config.Debug)
+	assert.Equal(t, "debug", config.LogLevel)
+}
+
 func Test_mapToConfig(t *testing.T) {
-	mymap := make(map[string]string,0)
+	mymap := make(map[string]string, 0)
 	mymap["action"] = "run"
 	mymap["config"] = "somefile"
 	mymap["driver"] = "mydriver"
 	mymap["debug"] = "maybe"
+	mymap["logLevel"] = "maybe"
 	mymap["interactive"] = "meh"
 	mymap["removeContainers"] = "true"
 	mymap["workDirInner"] = "/tmp/aaa"

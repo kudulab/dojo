@@ -170,3 +170,29 @@ func Test_getContainerInfo_NoSuchObject(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Equal(t, false, info.Exists)
 }
+
+func Test_toPrintOrNotToPrint(t *testing.T) {
+	assert.Equal(t, true, toPrintOrNotToPrint("debug", "debug"))
+	assert.Equal(t, false, toPrintOrNotToPrint("debug", "info"))
+	assert.Equal(t, false, toPrintOrNotToPrint("debug", "warn"))
+	assert.Equal(t, false, toPrintOrNotToPrint("debug", "error"))
+	assert.Equal(t, false, toPrintOrNotToPrint("debug", "silent"))
+
+	assert.Equal(t, true, toPrintOrNotToPrint("info", "debug"))
+	assert.Equal(t, true, toPrintOrNotToPrint("info", "info"))
+	assert.Equal(t, false, toPrintOrNotToPrint("info", "warn"))
+	assert.Equal(t, false, toPrintOrNotToPrint("info", "error"))
+	assert.Equal(t, false, toPrintOrNotToPrint("info", "silent"))
+
+	assert.Equal(t, true, toPrintOrNotToPrint("warn", "debug"))
+	assert.Equal(t, true, toPrintOrNotToPrint("warn", "info"))
+	assert.Equal(t, true, toPrintOrNotToPrint("warn", "warn"))
+	assert.Equal(t, false, toPrintOrNotToPrint("warn", "error"))
+	assert.Equal(t, false, toPrintOrNotToPrint("warn", "silent"))
+
+	assert.Equal(t, true, toPrintOrNotToPrint("error", "debug"))
+	assert.Equal(t, true, toPrintOrNotToPrint("error", "info"))
+	assert.Equal(t, true, toPrintOrNotToPrint("error", "warn"))
+	assert.Equal(t, true, toPrintOrNotToPrint("error", "error"))
+	assert.Equal(t, false, toPrintOrNotToPrint("error", "silent"))
+}

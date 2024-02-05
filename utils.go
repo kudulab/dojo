@@ -42,12 +42,34 @@ func getGoroutineID() uint64 {
 	return n
 }
 
+func toPrintOrNotToPrint(currentMessageLogLevel string, loggerLogLevel string) bool {
+	// this will be the most prevalent log level of messages,
+	// so let's keep it on top
+	// to make things faster
+	if currentMessageLogLevel == "debug" && loggerLogLevel != "debug" {
+		return false // do not print debug log message
+	}
+
+	// don't print any logs
+	if loggerLogLevel == "silent" {
+		return false
+	}
+
+	if currentMessageLogLevel == "warn" && loggerLogLevel == "error" {
+		return false // do not print debug log message
+	}
+	if currentMessageLogLevel == "info" && (loggerLogLevel == "error" || loggerLogLevel == "warn") {
+		return false // do not print debug log message
+	}
+	return true
+}
+
 func (l *Logger) Log(level, msg string) {
-	if level != "info" && level != "debug" && level != "warn" && level != "error" {
+	if level != "debug" && level != "info" && level != "warn" && level != "error" {
 		panic(fmt.Sprintf("Unsupported log level: %v", level))
 	}
-	if level == "debug" && l.Level != "debug" {
-		return // do not print debug log message
+	if !toPrintOrNotToPrint(level, l.Level) {
+		return
 	}
 
 	pc := make([]uintptr, 15)

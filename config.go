@@ -6,14 +6,15 @@ import (
 	"io/ioutil"
 	"os"
 	"os/user"
-	"strings"
 	"path/filepath"
+	"strings"
 )
 
 type Config struct {
 	Action             string
 	ConfigFile         string
 	Driver             string
+	LogLevel           string
 	Debug              string
 	Interactive        string
 	RemoveContainers   string
@@ -23,15 +24,15 @@ type Config struct {
 	BlacklistVariables string
 	RunCommand         string
 
-	DockerImage string
-	DockerOptions string
-	DockerComposeFile string
-	DockerComposeOptions string
+	DockerImage                        string
+	DockerOptions                      string
+	DockerComposeFile                  string
+	DockerComposeOptions               string
 	PreserveEnvironmentToAllContainers string
-	ExitBehavior string
-	Test string
-	PrintLogs string
-	PrintLogsTarget string
+	ExitBehavior                       string
+	Test                               string
+	PrintLogs                          string
+	PrintLogsTarget                    string
 }
 
 func (c Config) String() string {
@@ -39,6 +40,7 @@ func (c Config) String() string {
 	str += fmt.Sprintf("{ Action: %s }", c.Action)
 	str += fmt.Sprintf("{ ConfigFile: %s }", c.ConfigFile)
 	str += fmt.Sprintf("{ Driver: %s }", c.Driver)
+	str += fmt.Sprintf("{ LogLevel: %s }", c.LogLevel)
 	str += fmt.Sprintf("{ Debug: %s }", c.Debug)
 	str += fmt.Sprintf("{ Interactive: %s }", c.Interactive)
 	str += fmt.Sprintf("{ RemoveContainers: %s }", c.RemoveContainers)
@@ -64,58 +66,64 @@ func getCLIConfig() Config {
 	flagSet := flag.NewFlagSet("flagSet", flag.PanicOnError)
 
 	var help bool
-	const usageHelp      = "Print help and exit 0"
+	const usageHelp = "Print help and exit 0"
 	flagSet.BoolVar(&help, "help", false, usageHelp)
 	flagSet.BoolVar(&help, "h", false, usageHelp+" (shorthand)")
 
 	var version bool
-	const usageVersion      = "Print version and exit 0"
+	const usageVersion = "Print version and exit 0"
 	flagSet.BoolVar(&version, "version", false, usageVersion)
 	flagSet.BoolVar(&version, "v", false, usageVersion+" (shorthand)")
 
 	var action string
-	const usageAction      = "Action: run, pull. Default: run"
+	const usageAction = "Action: run, pull. Default: run"
 	flagSet.StringVar(&action, "action", "", usageAction)
 	flagSet.StringVar(&action, "a", "", usageAction+" (shorthand)")
 
 	var config string
-	const usageConfig         = "Config file. Default: ./Dojofile"
+	const usageConfig = "Config file. Default: ./Dojofile"
 	flagSet.StringVar(&config, "config", "", usageConfig)
 	flagSet.StringVar(&config, "c", "", usageConfig+" (shorthand)")
 
 	var driver string
-	const usageDriver         = "Driver: docker or docker-compose (dc for short). Default: docker"
+	const usageDriver = "Driver: docker or docker-compose (dc for short). Default: docker"
 	flagSet.StringVar(&driver, "driver", "", usageDriver)
 	flagSet.StringVar(&driver, "d", "", usageDriver+" (shorthand)")
 
 	var image string
-	const usageImage         = "Docker image name and tag, e.g. alpine:3.15"
+	const usageImage = "Docker image name and tag, e.g. alpine:3.15"
 	flagSet.StringVar(&image, "image", "", usageImage)
+
+	var logLevel string
+	const usageLogLevel = "Set log level to: silent, error, info, debug. Default: info"
+	flagSet.StringVar(&logLevel, "log-level", "", usageLogLevel)
+	flagSet.StringVar(&logLevel, "ll", "", usageLogLevel+" (shorthand)")
+	flagSet.StringVar(&logLevel, "loglevel", "", usageLogLevel+" (alternative)")
 
 	// this is not bool, because we need to know if it was set or not
 	var debug string
-	const usageDebug         = "Set log level to debug (verbose). Default: false"
+	const usageDebug = "Set logLevel to debug (verbose). Prefer the newer option '--log-level' instead. Default: false"
 	flagSet.StringVar(&debug, "debug", "", usageDebug)
 
 	// this is not bool, because we need to know if it was set or not
 	var interactive string
-	const usageInteractive         = "Set to false if you want to force not interactive docker run"
+	const usageInteractive = "Set to false if you want to force not interactive docker run"
 	flagSet.StringVar(&interactive, "interactive", "", usageInteractive)
 	flagSet.StringVar(&interactive, "i", "", usageInteractive)
 
 	// this is not bool, because we need to know if it was set or not
 	var removeContainers string
-	const usageRm         = "Set to true if you want to not remove docker containers. Default: true"
+	const usageRm = "Set to true if you want to not remove docker containers. Default: true"
 	flagSet.StringVar(&removeContainers, "remove-containers", "", usageRm)
 	flagSet.StringVar(&removeContainers, "rm", "", usageRm)
 
 	var workDirInner string
-	const usageWorkDirInner         = "Directory in a docker container, to which we bind mount from host. Default: /dojo/work"
+	const usageWorkDirInner = "Directory in a docker container, to which we bind mount from host. Default: /dojo/work"
 	flagSet.StringVar(&workDirInner, "work-dir-inner", "", usageWorkDirInner)
 	flagSet.StringVar(&workDirInner, "w", "", usageWorkDirInner+" (shorthand)")
 
 	var workDirOuter string
-	const usageWworkDirOuter        = "Directory on host, to be mounted into a docker container. Default: current directory"
+	const usageWworkDirOuter = "Directory on host, to be mounted into a docker container. Default: current directory"
 	flagSet.StringVar(&workDirOuter, "work-dir-outer", "", usageWworkDirOuter)
 
 	var identityDirOuter string
@@ -123,44 +131,43 @@ func getCLIConfig() Config {
 	flagSet.StringVar(&identityDirOuter, "identity-dir-outer", "", usageIdentityDirOuter)
 
 	var blacklistVariables string
-	const usageBlackilstVariables    = "List of variables, split by commas, to be blacklisted in a docker container"
+	const usageBlackilstVariables = "List of variables, split by commas, to be blacklisted in a docker container"
 	flagSet.StringVar(&blacklistVariables, "blacklist", "", usageBlackilstVariables)
 
 	var dockerOptions string
-	const usageDockerOptions         = "Options to the docker run command. E.g. \"--init\""
+	const usageDockerOptions = "Options to the docker run command. E.g. \"--init\""
 	flagSet.StringVar(&dockerOptions, "docker-options", "", usageDockerOptions)
 
 	var preserveEnvToAllContainers string
-	const preserveEnvToAll         = "Set to false, if you want to preserve current environment only to default container. Default: true (preserves to all containers)."
+	const preserveEnvToAll = "Set to false, if you want to preserve current environment only to default container. Default: true (preserves to all containers)."
 	flagSet.StringVar(&dockerOptions, "preserve-env-to-all", "", preserveEnvToAllContainers)
 
 	var dockerComposeFile string
-	const usageDCFile         = "Docker-compose file. Default: ./docker-compose.yml. Only for driver: docker-compose"
+	const usageDCFile = "Docker-compose file. Default: ./docker-compose.yml. Only for driver: docker-compose"
 	flagSet.StringVar(&dockerComposeFile, "docker-compose-file", "", usageDCFile)
 	flagSet.StringVar(&dockerComposeFile, "dcf", "", usageDCFile+" (shorthand)")
 
 	var exitBehavior string
-	const usageExitBehavior         = "How to react when a container (not the default one) exits. Possible values: ignore, abort (default), restart. Only for driver: docker-compose"
+	const usageExitBehavior = "How to react when a container (not the default one) exits. Possible values: ignore, abort (default), restart. Only for driver: docker-compose"
 	flagSet.StringVar(&exitBehavior, "exit-behavior", "", usageExitBehavior)
 
 	var printLogs string
-	const usagePrintLogs         = "Decide when to print the logs of non-default containers. Possible values: always, failure (default), never. Only for driver: docker-compose"
+	const usagePrintLogs = "Decide when to print the logs of non-default containers. Possible values: always, failure (default), never. Only for driver: docker-compose"
 	flagSet.StringVar(&printLogs, "print-logs", "", usagePrintLogs)
 
 	var printLogsTarget string
-	const usagePrintLogsTarget         = "Decide where to print the logs of non-default containers. Possible values: console (default, stderr), file. Only for driver: docker-compose"
+	const usagePrintLogsTarget = "Decide where to print the logs of non-default containers. Possible values: console (default, stderr), file. Only for driver: docker-compose"
 	flagSet.StringVar(&printLogsTarget, "print-logs-target", "", usagePrintLogsTarget)
 
 	var test string
-	const usageTest         = "Set this to true when integration testing. This turns writing env files to a test directory"
+	const usageTest = "Set this to true when integration testing. This turns writing env files to a test directory"
 	flagSet.StringVar(&test, "test", "", usageTest)
-
 
 	flagSet.Parse(os.Args[1:])
 	runCommandArr := flagSet.Args()
 	runCommand := smartJoinCommandArgs(runCommandArr)
 
-	flagSet.Usage = func () {
+	flagSet.Usage = func() {
 		fmt.Fprint(os.Stderr, "Usage of dojo <flags> [--] <CMD>:\n")
 		flagSet.PrintDefaults()
 	}
@@ -176,25 +183,26 @@ func getCLIConfig() Config {
 	workDirOuterAbs := getAbsPathOrPanic(workDirOuter)
 	identityDirOuterAbs := getAbsPathOrPanic(identityDirOuter)
 	return Config{
-		Action:             action,
-		ConfigFile:         config,
-		Driver:             driver,
-		Debug:              debug,
-		Interactive:        interactive,
-		RemoveContainers:   removeContainers,
-		WorkDirInner:       workDirInnerAbs,
-		WorkDirOuter:       workDirOuterAbs,
-		IdentityDirOuter:   identityDirOuterAbs,
-		BlacklistVariables: blacklistVariables,
-		RunCommand:         runCommand,
-		DockerImage:        image,
-		DockerOptions:      dockerOptions,
+		Action:                             action,
+		ConfigFile:                         config,
+		Driver:                             driver,
+		LogLevel:                           logLevel,
+		Debug:                              debug,
+		Interactive:                        interactive,
+		RemoveContainers:                   removeContainers,
+		WorkDirInner:                       workDirInnerAbs,
+		WorkDirOuter:                       workDirOuterAbs,
+		IdentityDirOuter:                   identityDirOuterAbs,
+		BlacklistVariables:                 blacklistVariables,
+		RunCommand:                         runCommand,
+		DockerImage:                        image,
+		DockerOptions:                      dockerOptions,
 		PreserveEnvironmentToAllContainers: preserveEnvToAllContainers,
-		DockerComposeFile:  dockerComposeFile,
-		ExitBehavior: 		exitBehavior,
-		Test: 				test,
-		PrintLogs: 			printLogs,
-		PrintLogsTarget: 	printLogsTarget,
+		DockerComposeFile:                  dockerComposeFile,
+		ExitBehavior:                       exitBehavior,
+		Test:                               test,
+		PrintLogs:                          printLogs,
+		PrintLogsTarget:                    printLogsTarget,
 	}
 }
 
@@ -214,8 +222,8 @@ func getAbsPathOrPanic(path string) string {
 // as 1 element, as docker or docker-compose run command.
 // We cannot just use strings.Join(runCommandArr, " ") because this would result in missing quotes.
 func smartJoinCommandArgs(commandArgs []string) string {
-	quotedArgs := make([]string,0)
-	for _,v := range commandArgs {
+	quotedArgs := make([]string, 0)
+	for _, v := range commandArgs {
 		//  It is safe to assume that an argument that contains white space(s) must have been (and should be) quoted
 		//  http://stackoverflow.com/a/1669493/4457564
 		//  Otherwise, this input command: -c "echo aaa"
@@ -235,7 +243,7 @@ func smartJoinCommandArgs(commandArgs []string) string {
 		}
 		quotedArgs = append(quotedArgs, updatedStr)
 	}
-	return strings.Join(quotedArgs,  " ")
+	return strings.Join(quotedArgs, " ")
 }
 
 func MapToConfig(configMap map[string]string) Config {
@@ -243,6 +251,7 @@ func MapToConfig(configMap map[string]string) Config {
 	config.Action = configMap["action"]
 	config.ConfigFile = configMap["config"]
 	config.Driver = configMap["driver"]
+	config.LogLevel = configMap["logLevel"]
 	config.Debug = configMap["debug"]
 	config.Interactive = configMap["interactive"]
 	config.RemoveContainers = configMap["removeContainers"]
@@ -263,11 +272,12 @@ func MapToConfig(configMap map[string]string) Config {
 	return config
 }
 func ConfigToMap(config Config) map[string]string {
-	configMap := make(map[string]string,0)
+	configMap := make(map[string]string, 0)
 	configMap["action"] = config.Action
 	configMap["config"] = config.ConfigFile
 	configMap["driver"] = config.Driver
 	configMap["debug"] = config.Debug
+	configMap["logLevel"] = config.LogLevel
 	configMap["interactive"] = config.Interactive
 	configMap["removeContainers"] = config.RemoveContainers
 	configMap["workDirInner"] = config.WorkDirInner
@@ -313,7 +323,7 @@ func getFileConfig(logger *Logger, pathToFile string) Config {
 		lines := strings.Split(string(contents), "\n")
 
 		for _, line := range lines {
-			if !strings.HasPrefix(line,"#") && line != "" {
+			if !strings.HasPrefix(line, "#") && line != "" {
 				// the file line is not a comment
 
 				// there may be many "=" signs in this line, let's just consider the 1st one
@@ -355,8 +365,11 @@ func getFileConfig(logger *Logger, pathToFile string) Config {
 				case "DOJO_LOG_LEVEL":
 					if value == "debug" || value == "DEBUG" {
 						config.Debug = "true"
+						// the stronger option value (the more verbose) wins
+						config.LogLevel = "debug"
 					} else {
 						config.Debug = "false"
+						config.LogLevel = value
 					}
 				}
 			}
@@ -372,25 +385,26 @@ func getDefaultConfig(configFile string) Config {
 	if err != nil {
 		panic(err)
 	}
-	currentUser, err:= user.Current()
+	currentUser, err := user.Current()
 	if err != nil {
 		panic(err)
 	}
 	defaultConfig := Config{
-		Action:             "run",
-		ConfigFile:         configFile,
-		Driver:             "docker",
-		Debug:              "false",
-		RemoveContainers:   "true",
-		WorkDirOuter:       currentDirectory,
-		WorkDirInner:       "/dojo/work",
-		IdentityDirOuter:   currentUser.HomeDir,
-		BlacklistVariables: "BASH*,HOME,USERNAME,USER,LOGNAME,PATH,TERM,SHELL,MAIL,SUDO_*,WINDOWID,SSH_*,SESSION_*,GEM_HOME,GEM_PATH,GEM_ROOT,HOSTNAME,HOSTTYPE,IFS,PPID,PWD,OLDPWD,LC*,TMPDIR",
-		DockerComposeFile:  "docker-compose.yml",
-		ExitBehavior:       "abort",
+		Action:                             "run",
+		ConfigFile:                         configFile,
+		Driver:                             "docker",
+		LogLevel:                           "info",
+		Debug:                              "false",
+		RemoveContainers:                   "true",
+		WorkDirOuter:                       currentDirectory,
+		WorkDirInner:                       "/dojo/work",
+		IdentityDirOuter:                   currentUser.HomeDir,
+		BlacklistVariables:                 "BASH*,HOME,USERNAME,USER,LOGNAME,PATH,TERM,SHELL,MAIL,SUDO_*,WINDOWID,SSH_*,SESSION_*,GEM_HOME,GEM_PATH,GEM_ROOT,HOSTNAME,HOSTTYPE,IFS,PPID,PWD,OLDPWD,LC*,TMPDIR",
+		DockerComposeFile:                  "docker-compose.yml",
+		ExitBehavior:                       "abort",
 		PreserveEnvironmentToAllContainers: "true",
-		PrintLogs: "failure",
-		PrintLogsTarget: "console",
+		PrintLogs:                          "failure",
+		PrintLogsTarget:                    "console",
 	}
 	return defaultConfig
 }
@@ -400,8 +414,8 @@ func getMergedConfig(moreImportantConfig Config, lessImportantConfig Config, lea
 	moreImportantConfigMap := ConfigToMap(moreImportantConfig)
 	lessImportantConfigMap := ConfigToMap(lessImportantConfig)
 
-	mergedConfigMap := make(map[string]string,0)
-	for k,v := range moreImportantConfigMap {
+	mergedConfigMap := make(map[string]string, 0)
+	for k, v := range moreImportantConfigMap {
 		if v != "" {
 			mergedConfigMap[k] = v
 		} else if lessImportantConfigMap[k] != "" {
@@ -427,6 +441,18 @@ func verifyConfig(logger *Logger, config *Config) error {
 	}
 	if config.Debug != "true" && config.Debug != "false" {
 		return fmt.Errorf("Invalid configuration, unsupported Debug: %s. Supported: true, false", config.Debug)
+	}
+	if config.LogLevel != "silent" && config.LogLevel != "error" && config.LogLevel != "warn" &&
+		config.LogLevel != "info" && config.LogLevel != "debug" {
+		return fmt.Errorf("Invalid configuration, unsupported LogLevel: %s. Supported: silent, error, warn, info, debug", config.LogLevel)
+	}
+	if config.Debug == "true" {
+		// the more verbose option takes precedence
+		config.LogLevel = "debug"
+	}
+	if config.LogLevel == "debug" {
+		// the more verbose option takes precedence
+		config.Debug = "true"
 	}
 	if config.DockerComposeOptions != "" && config.Driver == "docker" {
 		return fmt.Errorf("DockerComposeOptions option is unsupported for driver: docker")

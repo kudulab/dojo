@@ -11,12 +11,6 @@ import (
 
 func handleConfig(logger *Logger) Config {
 	configFromCLI := getCLIConfig()
-	// debug option can be set on CLI only
-	if configFromCLI.Debug == "true" {
-		logger.SetLogLevel("debug")
-	} else {
-		logger.SetLogLevel("info")
-	}
 	configFile := configFromCLI.ConfigFile
 	if configFile == "" {
 		configFile = "Dojofile"
@@ -39,6 +33,7 @@ func handleConfig(logger *Logger) Config {
 		logger.Log("error", err.Error())
 		os.Exit(1)
 	}
+	logger.SetLogLevel(mergedConfig.LogLevel)
 	logger.Log("debug", fmt.Sprintf("configFromCLI: %s", configFromCLI))
 	logger.Log("debug", fmt.Sprintf("configFromFile: %s", configFromFile))
 	logger.Log("debug", fmt.Sprintf("mergedConfig: %s", mergedConfig))
@@ -81,13 +76,12 @@ func verifyBashInstalled(logger Logger) {
 
 func main() {
 	logger := NewLogger("debug")
-	logger.Log("info", fmt.Sprintf("Dojo version %s", DojoVersion))
-
 	// This will either result in exit or return nothing.
 	// In the future, if we support more shells, we can decide here which shell to use.
 	verifyBashInstalled(*logger)
 
 	mergedConfig := handleConfig(logger)
+	logger.Log("info", fmt.Sprintf("Dojo version %s", DojoVersion))
 
 	fileService := NewFileService(logger)
 	shellService := NewBashShellService(logger)

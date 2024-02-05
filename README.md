@@ -592,9 +592,12 @@ The default value is:
 ```toml
 DOJO_LOG_LEVEL="info"
 ```
+Available values: `silent`, `error`, `warn`, `info`, `debug`.
 
-*In CLI use `--debug=true` or `--debug=false`*
+*In CLI use `--log-level=info`*. 
+There is also an obsolete CLI option `--debug=true` or `--debug=false`.
 
+If these are set to different values, then the most verbose value wins. E.g. if `DOJO_LOG_LEVEL="info"` and `--debug=true`, then the log level will be `debug`.
 
 ##### Docker-compose file
 
@@ -729,7 +732,7 @@ Usage of dojo <flags> [--] <CMD>:
   -dcf string
     	Docker-compose file. Default: ./docker-compose.yml. Only for driver: docker-compose (shorthand)
   -debug string
-    	Set log level to debug (verbose). Default: false
+    	Set logLevel to debug (verbose). Prefer the newer option '--log-level' instead. Default: false
   -docker-compose-file string
     	Docker-compose file. Default: ./docker-compose.yml. Only for driver: docker-compose
   -docker-options string
@@ -749,12 +752,18 @@ Usage of dojo <flags> [--] <CMD>:
     	Docker image name and tag, e.g. alpine:3.15
   -interactive string
     	Set to false if you want to force not interactive docker run
+  -ll string
+    	Set log level to: silent, error, info, debug. Default: info (shorthand)
+  -log-level string
+    	Set log level to: silent, error, info, debug. Default: info
+  -loglevel string
+    	Set log level to: silent, error, info, debug. Default: info (alternative)
   -preserve-env-to-all string
-
+    	
   -print-logs string
-      	Decide when to print the logs of non-default containers. Possible values: always, failure (default), never. Only for driver: docker-compose
+    	Decide when to print the logs of non-default containers. Possible values: always, failure (default), never. Only for driver: docker-compose
   -print-logs-target string
-      	Decide where to print the logs of non-default containers. Possible values: console (default, stderr), file. Only for driver: docker-compose
+    	Decide where to print the logs of non-default containers. Possible values: console (default, stderr), file. Only for driver: docker-compose
   -remove-containers string
     	Set to true if you want to not remove docker containers. Default: true
   -rm string
