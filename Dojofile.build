@@ -1,2 +1,2 @@
-DOJO_DOCKER_IMAGE=kudulab/golang-dojo:2.1.0
+DOJO_DOCKER_IMAGE=kudulab/golang-dojo:2.1.1
 DOJO_DOCKER_OPTIONS="--security-opt seccomp:unconfined"

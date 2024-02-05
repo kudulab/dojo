@@ -61,7 +61,7 @@ brew install kudulab/homebrew-dojo-osx/dojo
 ```
 * a manual install:
 ```sh
-version="0.11.0"
+version="0.13.0"
 # on Linux:
 wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_linux_amd64
 # or on Mac:
@@ -760,7 +760,7 @@ Usage of dojo <flags> [--] <CMD>:
   -loglevel string
     	Set log level to: silent, error, info, debug. Default: info (alternative)
   -preserve-env-to-all string
-    	
+
   -print-logs string
     	Decide when to print the logs of non-default containers. Possible values: always, failure (default), never. Only for driver: docker-compose
   -print-logs-target string

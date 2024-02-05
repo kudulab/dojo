@@ -1,5 +1,4 @@
 # this is not a public image
-DOJO_DOCKER_IMAGE="kudulab/golang-gdojo:0.2.0"
+DOJO_DOCKER_IMAGE="kudulab/golang-gdojo:0.2.1"
 DOJO_WORK_INNER="/dojo/work/src/dojo"
 DOJO_DOCKER_OPTIONS="--security-opt seccomp:unconfined"
-
