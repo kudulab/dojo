@@ -120,7 +120,7 @@ Let's build this project (Dojo) using `dojo`:
 ```bash
 git clone https://github.com/kudulab/dojo.git
 cd dojo
-dojo -c Dojofile.build "./tasks build"
+dojo -c Dojofile.build "./tasks _build" # or just ./tasks build
 ```
 
 Here we used Dojo flag `-c Dojofile.build`. This way we instructed dojo CLI which Dojofile to use. Dojofile keeps information about the Docker Image. [Dojofile.build](https://github.com/kudulab/dojo/blob/master/Dojofile.build) uses [kudulab/golang-dojo](https://github.com/kudulab/docker-golang-dojo) Docker image.
