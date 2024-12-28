@@ -18,7 +18,7 @@ def test_help_output():
 
 def test_dojo_prints_error_if_bash_not_installed():
     dojo_exe = get_dojo_exe()
-    result = run_command('docker', ['run', '-t', '--rm', '-v', f"{dojo_exe}:/usr/bin/dojo", "alpine:3.19", "/usr/bin/dojo"])
+    result = run_command('docker', ['run', '-t', '--rm', '-v', f"{dojo_exe}:/usr/bin/dojo", "alpine:3.21", "/usr/bin/dojo"])
     combined_output_str =  "stdout:\n{0}\nstderror:\n{1}".format(result.stdout, result.stderr)
     assert 'Error while verifying if Bash is installed' in result.stdout, combined_output_str
     assert result.returncode == 1

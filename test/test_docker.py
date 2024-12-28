@@ -15,11 +15,11 @@ def test_docker_container_is_removed():
 
 def test_docker_when_zero_exit():
     clean_up_docker_container()
-    result = run_dojo('--debug=true --test=true --image=alpine:3.19 whoami'.split(' '))
+    result = run_dojo('--debug=true --test=true --image=alpine:3.21 whoami'.split(' '))
     dojo_combined_output_str =  "stdout:\n{0}\nstderror:\n{1}".format(result.stdout, result.stderr)
     assert 'Dojo version' in result.stderr, dojo_combined_output_str
     assert 'root' in result.stdout, dojo_combined_output_str
-    assert 'alpine:3.19 whoami' in result.stderr, dojo_combined_output_str
+    assert 'alpine:3.21 whoami' in result.stderr, dojo_combined_output_str
     assert 'Exit status from run command: 0' in result.stderr, dojo_combined_output_str
     assert 'Exit status from cleaning: 0' in result.stderr, dojo_combined_output_str
     assert 'Exit status from signals: 0' in result.stderr, dojo_combined_output_str
@@ -32,8 +32,8 @@ def test_docker_when_zero_exit():
 def test_docker_capture_output():
     clean_up_docker_container()
     # run this one test manually: pytest --capture=fd  --verbose test/test_docker.py::test_docker_capture_output
-    # run this without pytest: ./bin/dojo --debug=true --test=true --image=alpine:3.19 sh -c "printenv HOME"
-    result = run_dojo(['--debug=true', '--test=true', '--image=alpine:3.19', 'sh', '-c', "printenv HOME"])
+    # run this without pytest: ./bin/dojo --debug=true --test=true --image=alpine:3.21 sh -c "printenv HOME"
+    result = run_dojo(['--debug=true', '--test=true', '--image=alpine:3.21', 'sh', '-c', "printenv HOME"])
     dojo_combined_output_str =  "stdout:\n{0}\nstderror:\n{1}".format(result.stdout, result.stderr)
     assert 'Dojo version' in result.stderr, dojo_combined_output_str
     assert '/root\n' == result.stdout, dojo_combined_output_str
@@ -49,7 +49,7 @@ def test_docker_capture_output():
 def test_docker_capture_output_when_unable_to_pull_image():
     clean_up_docker_container()
     # pytest --capture=fd  --verbose test/test_docker.py::test_docker_capture_output_when_unable_to_pull_image
-    # ./bin/dojo --debug=true --test=true --image=alpine:3.19 sh -c "printenv HOME && hostname"
+    # ./bin/dojo --debug=true --test=true --image=alpine:3.21 sh -c "printenv HOME && hostname"
     result = run_dojo(['--debug=true', '--test=true', '--image=no_such_image91291925129q783187314218194:abc111aaa.9981412', 'sh', '-c', "printenv HOME"])
     dojo_combined_output_str =  "stdout:\n{0}\nstderror:\n{1}".format(result.stdout, result.stderr)
     assert 'Dojo version' in result.stderr, dojo_combined_output_str
@@ -64,7 +64,7 @@ def test_docker_capture_output_when_unable_to_pull_image():
 
 def test_docker_when_non_existent_command():
     clean_up_docker_container()
-    result = run_dojo('--debug=true --test=true --image=alpine:3.19 notexistentcommand'.split(' '))
+    result = run_dojo('--debug=true --test=true --image=alpine:3.21 notexistentcommand'.split(' '))
     dojo_combined_output_str =  "stdout:\n{0}\nstderror:\n{1}".format(result.stdout, result.stderr)
     assert 'Dojo version' in result.stderr, dojo_combined_output_str
     assert 'executable file not found' in result.stderr, dojo_combined_output_str
@@ -76,7 +76,7 @@ def test_docker_when_non_existent_command():
 
 def test_docker_when_no_command():
     clean_up_docker_container()
-    result = run_dojo('--debug=true --test=true --image=alpine:3.19 -i=false'.split(' '))
+    result = run_dojo('--debug=true --test=true --image=alpine:3.21 -i=false'.split(' '))
     dojo_combined_output_str =  "stdout:\n{0}\nstderror:\n{1}".format(result.stdout, result.stderr)
     assert 'Dojo version' in result.stderr, dojo_combined_output_str
     assert 'Exit status from run command: 0' in result.stderr, dojo_combined_output_str
@@ -90,11 +90,11 @@ def test_docker_when_no_command():
 
 def test_docker_when_double_dash_command_split():
     clean_up_docker_container()
-    result = run_dojo('--debug=true --test=true --image=alpine:3.19 -- whoami'.split(' '))
+    result = run_dojo('--debug=true --test=true --image=alpine:3.21 -- whoami'.split(' '))
     dojo_combined_output_str =  "stdout:\n{0}\nstderror:\n{1}".format(result.stdout, result.stderr)
     assert 'Dojo version' in result.stderr, dojo_combined_output_str
     assert 'root' in result.stdout, dojo_combined_output_str
-    assert 'alpine:3.19 whoami' in result.stderr, dojo_combined_output_str
+    assert 'alpine:3.21 whoami' in result.stderr, dojo_combined_output_str
     assert 'Exit status from run command: 0' in result.stderr, dojo_combined_output_str
     assert 'Exit status from cleaning: 0' in result.stderr, dojo_combined_output_str
     assert 'Exit status from signals: 0' in result.stderr, dojo_combined_output_str
@@ -106,7 +106,7 @@ def test_docker_when_double_dash_command_split():
 
 def test_docker_when_shell_command():
     clean_up_docker_container()
-    result = run_dojo(['--debug=true', '--test=true', '--image=alpine:3.19', 'sh', '-c', 'echo hello'])
+    result = run_dojo(['--debug=true', '--test=true', '--image=alpine:3.21', 'sh', '-c', 'echo hello'])
     dojo_combined_output_str =  "stdout:\n{0}\nstderror:\n{1}".format(result.stdout, result.stderr)
     assert 'Dojo version' in result.stderr, dojo_combined_output_str
     assert 'hello' in result.stdout, dojo_combined_output_str
@@ -124,7 +124,7 @@ def test_docker_preserves_env_vars():
     envs = dict(os.environ)
     envs['ABC'] = 'custom_value'
     result = run_dojo(
-        ['--debug=true', '--test=true', '--image=alpine:3.19', 'sh', '-c', 'env | grep ABC'],
+        ['--debug=true', '--test=true', '--image=alpine:3.21', 'sh', '-c', 'env | grep ABC'],
         env=envs)
     dojo_combined_output_str =  "stdout:\n{0}\nstderror:\n{1}".format(result.stdout, result.stderr)
     assert 'Dojo version' in result.stderr, dojo_combined_output_str
@@ -171,7 +171,7 @@ second line"""
         # We need to source the file: /etc/dojo.d/variables/01-bash-functions.sh
         # explicitly, because the alpine docker image is not a Dojo image, i.e.
         # it does not have the Dojo entrypoint.sh.
-        ['--debug=true', '--test=true', '--image=alpine:3.19', 'sh', '-c', '"source /etc/dojo.d/variables/00-multiline-vars.sh && env | grep -A 1 ABC"'],
+        ['--debug=true', '--test=true', '--image=alpine:3.21', 'sh', '-c', '"source /etc/dojo.d/variables/00-multiline-vars.sh && env | grep -A 1 ABC"'],
         env=envs)
     dojo_combined_output_str =  "stdout:\n{0}\nstderror:\n{1}".format(result.stdout, result.stderr)
     assert 'Dojo version' in result.stderr, dojo_combined_output_str
@@ -199,7 +199,7 @@ def test_docker_preserves_bash_functions_from_env_vars():
         # Dojo entrypoint sources this file too, but then it runs sudo.
         # https://unix.stackexchange.com/questions/549140/why-doesnt-sudo-e-preserve-the-function-environment-variables-exported-by-ex
         # https://unix.stackexchange.com/a/233097
-        ['--debug=true', '--test=true', '--image=alpine:3.19', 'sh', '-c', '"apk add -U bash && bash -c \'source /etc/dojo.d/variables/01-bash-functions.sh && my_bash_func\'"'],
+        ['--debug=true', '--test=true', '--image=alpine:3.21', 'sh', '-c', '"apk add -U bash && bash -c \'source /etc/dojo.d/variables/01-bash-functions.sh && my_bash_func\'"'],
         env=envs)
     stdout_value_bytes, stderr_value_bytes = proc.communicate()
     stdout = stdout_value_bytes.decode("utf-8")
@@ -220,7 +220,7 @@ def test_docker_preserves_bash_functions_from_env_vars():
 
 def test_docker_when_custom_relative_directory():
     clean_up_docker_container()
-    result = run_dojo(['-c', 'test/test-files/Dojofile', '--debug=true', '--test=true', '--image=alpine:3.19', 'whoami'])
+    result = run_dojo(['-c', 'test/test-files/Dojofile', '--debug=true', '--test=true', '--image=alpine:3.21', 'whoami'])
     dojo_combined_output_str =  "stdout:\n{0}\nstderror:\n{1}".format(result.stdout, result.stderr)
     assert 'Dojo version' in result.stderr, dojo_combined_output_str
     assert 'root' in result.stdout, dojo_combined_output_str
@@ -239,7 +239,7 @@ def test_docker_when_nonexistent_custom_relative_directory():
         os.removedirs(os.path.join(project_root, 'test/test-files/not-existent'))
     except FileNotFoundError:
         pass
-    result = run_dojo(['-c', 'test/test-files/Dojofile.work_not_exists', '--debug=true', '--test=true', '--image=alpine:3.19', 'whoami'])
+    result = run_dojo(['-c', 'test/test-files/Dojofile.work_not_exists', '--debug=true', '--test=true', '--image=alpine:3.21', 'whoami'])
     dojo_combined_output_str =  "stdout:\n{0}\nstderror:\n{1}".format(result.stdout, result.stderr)
     assert 'Dojo version' in result.stderr, dojo_combined_output_str
     assert 'root' in result.stdout, dojo_combined_output_str
@@ -253,7 +253,7 @@ def test_docker_when_nonexistent_custom_relative_directory():
 
 
 def test_docker_pull_when_image_can_be_pulled():
-    result = run_dojo('--debug=true --action=pull --image=alpine:3.19'.split(' '))
+    result = run_dojo('--debug=true --action=pull --image=alpine:3.21'.split(' '))
     dojo_combined_output_str =  "stdout:\n{0}\nstderror:\n{1}".format(result.stdout, result.stderr)
     assert "Dojo version" in result.stderr, dojo_combined_output_str
     assert "Pulling from library/alpine" in result.stdout, dojo_combined_output_str

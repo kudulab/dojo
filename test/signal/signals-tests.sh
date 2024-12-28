@@ -118,7 +118,7 @@ set -x; rm -f "${test_file}"; touch "${test_file}"; set +x;
 
 wait_for_the_docker_daemon_to_be_running
 this_test_exit_status=0
-run_test_process_and_send_signal "./bin/dojo --debug=true --test=true --image=alpine:3.19 -i=false sh -c \"echo 'will sleep' && sleep 1d\"" "will sleep"
+run_test_process_and_send_signal "./bin/dojo --debug=true --test=true --image=alpine:3.21 -i=false sh -c \"echo 'will sleep' && sleep 1d\"" "will sleep"
 
 ## Test checks
 log_test "----------------------------------------------------------"

@@ -13,6 +13,6 @@ services:
       ABC_DEF: "1234"
   abc:
     init: true
-    image: alpine:3.15
+    image: alpine:3.21
     entrypoint: ["/bin/sh", "-c"]
     command: ["some-non-existent-command"]
