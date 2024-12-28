@@ -707,24 +707,24 @@ func (dc DockerComposeDriver) getDCContainersNames(mergedConfig Config, projectN
 }
 
 type DC2PSOutput struct {
-	Command    string `json:"Command"`
-	CreatedAt  string `json:"CreatedAt"`
-	ExitCode   int    `json:"ExitCode"`
-	Health     string `json:"Health"`
-	ID         string `json:"ID"`
-	Image      string `json:"Image"`
-	Labels     string `json:"Labels"`
-	Name       string `json:"Name"`
-	Names      string `json:"Names"`
-	Networks   string `json:"Networks"`
-	Ports      string `json:"Ports"`
-	Project    string `json:"Project"`
-	Publishers string `json:"Publishers"`
-	RunningFor string `json:"RunningFor"`
-	Service    string `json:"Service"`
-	Size       string `json:"Size"`
-	State      string `json:"State"`
-	Status     string `json:"Status"`
+	Command    string   `json:"Command"`
+	CreatedAt  string   `json:"CreatedAt"`
+	ExitCode   int      `json:"ExitCode"`
+	Health     string   `json:"Health"`
+	ID         string   `json:"ID"`
+	Image      string   `json:"Image"`
+	Labels     string   `json:"Labels"`
+	Name       string   `json:"Name"`
+	Names      string   `json:"Names"`
+	Networks   string   `json:"Networks"`
+	Ports      string   `json:"Ports"`
+	Project    string   `json:"Project"`
+	Publishers []string `json:"Publishers"`
+	RunningFor string   `json:"RunningFor"`
+	Service    string   `json:"Service"`
+	Size       string   `json:"Size"`
+	State      string   `json:"State"`
+	Status     string   `json:"Status"`
 }
 
 // Parses the output of the `docker-compose ps --format json --all` command, into json.
@@ -734,6 +734,9 @@ type DC2PSOutput struct {
 // {"Command":"\"/bin/sh -c 'while t…\"","CreatedAt":"2024-02-03 21:03:46 +0000 UTC","ExitCode":0,"Health":"","ID":"2d5c5b0343d0","Image":"alpine:3.19","Labels":"com.docker.compose.depends_on=,com.docker.compose.image=sha256:05455a08881ea9cf0e752bc48e61bbd71a34c029bb13df01e40e3e70e0d007bd,com.docker.compose.version=2.24.5,com.docker.compose.service=abc,com.docker.compose.config-hash=270e27422cb1e6a4c1713ae22a3ffca0e8aa50ec0f06fe493fa4f83a17bd29e9,com.docker.compose.container-number=1,com.docker.compose.oneoff=False,com.docker.compose.project=testdojorunid,com.docker.compose.project.config_files=/dojo/work/test/test-files/itest-dc.yaml,/dojo/work/test/test-files/itest-dc.yaml.dojo,com.docker.compose.project.working_dir=/dojo/work/test/test-files","LocalVolumes":"0","Mounts":"/tmp/test-dojo…,/tmp/test-dojo…","Name":"testdojorunid-abc-1","Names":"testdojorunid-abc-1","Networks":"testdojorunid_default","Ports":"","Project":"testdojorunid","Publishers":null,"RunningFor":"3 seconds ago","Service":"abc","Size":"0B","State":"running","Status":"Up 2 seconds"}
 // {"Command":"\"/bin/sh -c 'while t…\"","CreatedAt":"2024-02-03 21:03:46 +0000 UTC","ExitCode":0,"Health":"","ID":"b2ed210567c3","Image":"alpine:3.19","Labels":"com.docker.compose.project=testdojorunid,com.docker.compose.project.config_files=/dojo/work/test/test-files/itest-dc.yaml,/dojo/work/test/test-files/itest-dc.yaml.dojo,com.docker.compose.project.working_dir=/dojo/work/test/test-files,com.docker.compose.depends_on=,com.docker.compose.container-number=1,com.docker.compose.image=sha256:05455a08881ea9cf0e752bc48e61bbd71a34c029bb13df01e40e3e70e0d007bd,com.docker.compose.oneoff=False,com.docker.compose.service=def,com.docker.compose.version=2.24.5,com.docker.compose.config-hash=270e27422cb1e6a4c1713ae22a3ffca0e8aa50ec0f06fe493fa4f83a17bd29e9","LocalVolumes":"0","Mounts":"/tmp/test-dojo…,/tmp/test-dojo…","Name":"testdojorunid-def-1","Names":"testdojorunid-def-1","Networks":"testdojorunid_default","Ports":"","Project":"testdojorunid","Publishers":null,"RunningFor":"3 seconds ago","Service":"def","Size":"0B","State":"running","Status":"Up 2 seconds"}
 // {"Command":"\"sh -c 'sleep 10'\"","CreatedAt":"2024-02-03 21:03:47 +0000 UTC","ExitCode":0,"Health":"","ID":"af4817fede41","Image":"alpine:3.15","Labels":"com.docker.compose.version=2.24.5,com.docker.compose.container-number=1,com.docker.compose.depends_on=abc:service_started:true,def:service_started:true,com.docker.compose.oneoff=True,com.docker.compose.project=testdojorunid,com.docker.compose.slug=742bcbb0e4bc05b21928a8d17be4ea9bb12a6775fd40692dd59c74a460279eb8,com.docker.compose.config-hash=462afacb4521d13580c2096c7b00b98970f07fe841e408c4c5a95a4a46839eaa,com.docker.compose.image=sha256:32b91e3161c8fc2e3baf2732a594305ca5093c82ff4e0c9f6ebbd2a879468e1d,com.docker.compose.project.config_files=/dojo/work/test/test-files/itest-dc.yaml,/dojo/work/test/test-files/itest-dc.yaml.dojo,com.docker.compose.project.working_dir=/dojo/work/test/test-files,com.docker.compose.service=default","LocalVolumes":"0","Mounts":"/home/dojo,/dojo/work,/tmp/test-dojo…,/tmp/test-dojo…,/tmp/.X11-unix,/tmp/dojo-ites…","Name":"testdojorunid-default-run-742bcbb0e4bc","Names":"testdojorunid-default-run-742bcbb0e4bc","Networks":"testdojorunid_default","Ports":"","Project":"testdojorunid","Publishers":null,"RunningFor":"2 seconds ago","Service":"default","Size":"0B","State":"running","Status":"Up 1 second"}
+//
+// when using docker-compose: 2.31m the field with Publishers is set to []:
+// {"Command":"\"/bin/sh -c 'while t…\"","CreatedAt":"2024-12-20 15:58:00 +1300 NZDT","ExitCode":143,"Health":"","ID":"f543828473a7","Image":"alpine:3.19","Labels":"com.docker.compose.image=sha256:7a85bf5dc56c949be827f84f9185161265c58f589bb8b2a6b6bb6d3076c1be21,desktop.docker.io/binds/0/Source=/tmp/dojo-environment-multiline-dojo-test-files-2024-12-2015-58-00-6660523964295751458,desktop.docker.io/binds/0/SourceKind=hostFile,desktop.docker.io/binds/0/Target=/etc/dojo.d/variables/00-multiline-vars.sh,desktop.docker.io/binds/1/Target=/etc/dojo.d/variables/01-bash-functions.sh,com.docker.compose.oneoff=False,com.docker.compose.project.config_files=/Users/ava.czechowska/code/dojo/test/test-files/itest-dc.yaml,/Users/ava.czechowska/code/dojo/test/test-files/itest-dc.yaml.dojo,com.docker.compose.service=abc,desktop.docker.io/binds/1/SourceKind=hostFile,com.docker.compose.container-number=1,com.docker.compose.project.working_dir=/Users/ava.czechowska/code/dojo/test/test-files,com.docker.compose.config-hash=4439e404114c9d0f183d756084f3e0e80c56b731e1f1e14e6db1844134294969,com.docker.compose.depends_on=,com.docker.compose.project=dojo-test-files-2024-12-2015-58-00-6660523964295751458,com.docker.compose.version=2.31.0,desktop.docker.io/binds/1/Source=/tmp/dojo-environment-bash-functions-dojo-test-files-2024-12-2015-58-00-6660523964295751458","LocalVolumes":"0","Mounts":"/host_mnt/priv…,/host_mnt/priv…","Name":"dojo-test-files-2024-12-2015-58-00-6660523964295751458-abc-1","Names":"dojo-test-files-2024-12-2015-58-00-6660523964295751458-abc-1","Networks":"dojo-test-files-2024-12-2015-58-00-6660523964295751458_default","Ports":"","Project":"dojo-test-files-2024-12-2015-58-00-6660523964295751458","Publishers":[],"RunningFor":"36 seconds ago","Service":"abc","Size":"0B","State":"exited","Status":"Exited (143) 10 seconds ago"}
 func ParseDCPSOutPut_DCVersion2(output string) ([]DC2PSOutput, string) {
 	var output_as_jsons []DC2PSOutput
 
@@ -746,7 +749,7 @@ func ParseDCPSOutPut_DCVersion2(output string) ([]DC2PSOutput, string) {
 		err := json.Unmarshal([]byte(line), &one_output_as_json)
 		if err != nil {
 			return []DC2PSOutput{},
-				fmt.Errorf("Error when decoding the JSON response from docker-compose ps command: %s", err).Error()
+				fmt.Errorf("Error when decoding the JSON response from docker-compose ps command: %s; line %s", err, line).Error()
 		}
 		if one_output_as_json.State == "" {
 			// This means that something went wrong, e.g. docker-compose ps output is now different
