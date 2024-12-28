@@ -47,7 +47,7 @@ The `src/install.sh` script:
 ## Development
 Build and test Dojo docker images:
 ```
-cd dojo_image_scripts
+cd image_scripts
 ./tasks build
 ./tasks test_scripts
 ./tasks e2e

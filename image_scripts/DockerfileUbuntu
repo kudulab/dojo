@@ -1,4 +1,4 @@
-FROM ubuntu:23.10
+FROM ubuntu:24.10
 
 # the Dojo scripts create a user with ID==1000,
 # previous ubuntu images (e.g. 20.04) seem to not have the ubuntu user,

@@ -1,4 +1,3 @@
-version: '2.2'
 services:
   default:
     # this option is needed to make default docker container preserve signals,
@@ -14,7 +13,7 @@ services:
       ABC_DEF: "1234"
   abc:
     init: true
-    image: alpine:3.19
+    image: alpine:3.21
     entrypoint: ["/bin/sh", "-c"]
     # short-running command
     # command: ["true"]

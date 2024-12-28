@@ -61,7 +61,7 @@ brew install kudulab/homebrew-dojo-osx/dojo
 ```
 * a manual install:
 ```sh
-version="0.13.0"
+version="0.13.1"
 # on Linux:
 wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_linux_amd64
 # or on Mac:
@@ -91,7 +91,7 @@ dojo "gradle test jar"
 The beginning of the output shows the docker command executed by Dojo:
 ```console
 /tmp/gocd-yaml-config-plugin$ dojo "gradle test jar"
-2020/12/09 07:40:28 [ 1]  INFO: (main.main) Dojo version 0.10.5
+2020/12/09 07:40:28 [ 1]  INFO: (main.main) Dojo version 0.13.1
 2020/12/09 07:40:28 [ 4]  INFO: (main.DockerDriver.HandleRun) docker command will be:
  docker run --rm -v /tmp/gocd-yaml-config-plugin:/dojo/work -v /home/tomzo:/dojo/identity:ro --env-file=/tmp/dojo-environment-dojo-gocd-yaml-config-plugin-2020-12-09_07-40-50-60121947 -v /tmp/.X11-unix:/tmp/.X11-unix -ti --name=dojo-gocd-yaml-config-plugin-2020-12-09_07-40-50-60121947 kudulab/openjdk-dojo:1.4.1 "gradle test jar"
 Unable to find image 'kudulab/openjdk-dojo:1.4.1' locally
@@ -192,13 +192,13 @@ Docker version 19.03.5, build 633a0ea838
 $ docker info | grep "Server Version"
  Server Version: 19.03.5
 
-$ docker run --rm alpine:3.15 whoami
-Unable to find image 'alpine:3.15' locally
+$ docker run --rm alpine:3.21 whoami
+Unable to find image 'alpine:3.21' locally
 # pulling image messages
 root
 dojo@ebc220b9655f(inception-dojo):/dojo/work$ docker images
 REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
-alpine              3.9                 78a2ce922f86        7 months ago        5.55MB
+alpine              3.21                 78a2ce922f86        7 months ago        5.55MB
 ```
 
 There is also an Alpine dind Docker image. Use it in the following way:
@@ -216,7 +216,7 @@ You can use Dojo with any Docker image, it does not have to be a Dojo Docker ima
 ```
 $ nano Dojofile
 $ cat Dojofile
-DOJO_DOCKER_IMAGE="alpine:3.16"
+DOJO_DOCKER_IMAGE="alpine:3.21"
 $ dojo
 # now we run interactively in the Dojo Docker container
 / # whoami
@@ -322,7 +322,7 @@ We have also established several **best practices** for dojo image development:
 Dojo provides [several scripts](image_scripts/src) to be used inside dojo images to meet most of above requirements. Scripts can be installed in a `Dockerfile` with:
 
 ```dockerfile
-ENV DOJO_VERSION=0.10.5
+ENV DOJO_VERSION=0.13.1
 RUN git clone --depth 1 -b ${DOJO_VERSION} https://github.com/kudulab/dojo.git /tmp/dojo_git &&\
   /tmp/dojo_git/image_scripts/src/install.sh && \
   rm -r /tmp/dojo_git
@@ -352,7 +352,7 @@ ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 RUN chmod +x /tini
 
 # Install common Dojo scripts
-ENV DOJO_VERSION=0.10.5
+ENV DOJO_VERSION=0.13.1
 RUN apt-get update && \
   DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
   sudo git ca-certificates && \
@@ -397,10 +397,10 @@ cd "${dojo_work}"
 For alpine images a typical dockerfile has following structure:
 
 ```dockerfile
-FROM alpine:3.15
+FROM alpine:3.21
 
 # Install common Dojo scripts
-ENV DOJO_VERSION=0.10.5
+ENV DOJO_VERSION=0.13.1
 RUN echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories && \
   apk add --no-cache tini bash shadow sudo git && \
   git clone --depth 1 -b ${DOJO_VERSION} https://github.com/kudulab/dojo.git /tmp/dojo_git &&\
@@ -663,7 +663,6 @@ DOJO_DOCKER_COMPOSE_FILE="docker-compose.yml"
 Next to the `Dojofile`, you must create a docker-compose.yml according the [official reference](https://docs.docker.com/compose/compose-file/).
 Example docker-compose file:
 ```yaml
-version: '2.2'
 services:
   default:
     links:
@@ -684,7 +683,7 @@ You can try creating above 2 files in any directory and run `dojo`. The output s
 
 ```console
 tomzo@073c1c477b1f:/tmp/compose-example$ dojo
-2019/04/28 18:38:17 [ 1]  INFO: (main.main) Dojo version 0.3.2
+2019/04/28 18:38:17 [ 1]  INFO: (main.main) Dojo version 0.13.1
 2019/04/28 18:38:18 [20]  INFO: (main.DockerComposeDriver.HandleRun) docker-compose run command will be:
  docker-compose -f docker-compose.yml -f docker-compose.yml.dojo -p dojo-compose-example-2019-04-28_18-38-17-33362956 run --rm default
 Creating network "dojo-compose-example-2019-04-28_18-38-17-33362956_default" with the default driver
@@ -750,7 +749,7 @@ Usage of dojo <flags> [--] <CMD>:
   -identity-dir-outer string
     	Directory on host, to be mounted into a docker container to /dojo/identity. Default: $HOME
   -image string
-    	Docker image name and tag, e.g. alpine:3.15
+    	Docker image name and tag, e.g. alpine:3.21
   -interactive string
     	Set to false if you want to force not interactive docker run
   -ll string
@@ -818,15 +817,15 @@ is printed, press Ctrl+C. You may also test pressing Ctrl+C more times.
 
 1. driver: docker, container's PID 1 process **not** preserving signals:
 ```
-dojo --image=alpine:3.15 -i=false sh -c "echo 'will sleep' && sleep 1d"
+dojo --image=alpine:3.21 -i=false sh -c "echo 'will sleep' && sleep 1d"
 ```
 2. driver: docker, container's PID 1 process preserving signals:
 ```
-dojo --docker-options="--init" --image=alpine:3.15 -i=false sh -c "echo 'will sleep' && sleep 1d"
+dojo --docker-options="--init" --image=alpine:3.21 -i=false sh -c "echo 'will sleep' && sleep 1d"
 ```
 3. driver: docker-compose:
 ```
-dojo --driver=docker-compose --dcf=./test/test-files/itest-dc.yaml -i=false --image=alpine:3.15 sh -c "echo 'will sleep' && sleep 1d"
+dojo --driver=docker-compose --dcf=./test/test-files/itest-dc.yaml -i=false --image=alpine:3.21 sh -c "echo 'will sleep' && sleep 1d"
 ```
 
 ### Preserving exported Bash functions [#17](https://github.com/kudulab/dojo/issues/17)
@@ -972,7 +971,7 @@ $ dojo -c Dojofile.build
 
 4. Run end to end tests:
 ```
-./tasks e2e ubuntu18
+./tasks e2e ubuntu
 ./tasks e2e alpine
 ```
 
@@ -996,7 +995,7 @@ $ dojo -c Dojofile.build
 
 ## License
 
-Copyright 2019-2022 Ava Czechowska, Tom Setkowski
+Copyright 2019-2025 Ava Czechowska, Tom Setkowski
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

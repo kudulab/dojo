@@ -1,3 +1,11 @@
+### 0.13.1 (2024-Dec-29)
+
+* docker-compose: support it when there is no version statement in the top of the yaml file; tested with docker-compose v2.24.5 and v2.31.0
+* docker-compose: fix json decoding on mac - the Publishers field was resulting in decoding errors
+* bump dojo image scripts base images
+  * alpine:3.21
+  * ubuntu:24.10
+
 ### 0.13.0 (2024-Feb-05)
 
 * Support multiple levels of log output produced by Dojo: `silent`, `error`, `warn`, `info`, `debug`
