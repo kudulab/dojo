@@ -135,6 +135,12 @@ const DojoVersion = \"${next_version}\"
           --tag $VERSION \
           --name $VERSION \
           --description "$(./tasks generate_release_notes ${VERSION})"
+
+        # the below command (upload) consistently returns this error
+        # 'error: could not find the release corresponding to tag 0.13.1'
+        # if it's run too fast after the above command (release)
+        sleep 5
+
         echo "Uploading assets (1/2)"
         $GHRELEASE_BIN upload \
           --user $GH_USER \
