@@ -60,7 +60,7 @@ func isDCVersionLaterThan2(dcVersion string) bool {
 func (dc DockerComposeDriver) parseDCFileVersion(contents string) (float64, error) {
 	firstLine := strings.Split(contents, "\n")[0]
 	if !strings.HasPrefix(firstLine, "version") {
-		return 0, fmt.Errorf("First line of docker-compose file did not start with: version")
+		return -1, nil
 	}
 	versionQuoted := strings.Split(firstLine, ":")[1]
 	versionQuoted = strings.Trim(versionQuoted, " ")
@@ -78,7 +78,7 @@ func (dc DockerComposeDriver) verifyDCFile(fileContents string, filePath string)
 	if err != nil {
 		return 0, err
 	}
-	if version < 2 || version >= 3 {
+	if version != -1 && (version < 2 || version >= 3) {
 		return 0, fmt.Errorf("docker-compose file: %s should contain version number >=2 and <3, current version: %v", filePath, version)
 	}
 	requiredStr := "default:"
@@ -129,12 +129,18 @@ func (dc DockerComposeDriver) generateDCFileContentsWithEnv(expContainers []stri
 }
 
 func (dc DockerComposeDriver) generateInitialDCFile(config Config, version float64) string {
-	contents := fmt.Sprintf(
+	if version == -1 {
+		// version was not set
+		return fmt.Sprintf(
+			`services:
+  default:
+    image: "%s"`, config.DockerImage)
+	}
+	return fmt.Sprintf(
 		`version: '%v'
 services:
   default:
-    image: %s`, version, config.DockerImage)
-	return contents
+    image: "%s"`, version, config.DockerImage)
 }
 
 func (dc DockerComposeDriver) ConstructDockerComposeCommandPart1(config Config, projectName string) string {

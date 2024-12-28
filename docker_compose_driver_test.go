@@ -17,7 +17,7 @@ func Test_parseDCFileVersion(t *testing.T) {
 	mytestsObj := []mytests{
 		mytests{"version: '4.55'", 4.55, ""},
 		mytests{"version: \"4.55\"", 4.55, ""},
-		mytests{"", 0, "First line of docker-compose file did not start with: version"},
+		mytests{"", -1, ""},
 	}
 	logger := NewLogger("debug")
 	dc := NewDockerComposeDriver(NewMockedShellServiceNotInteractive(logger), NewMockedFileService(logger), logger, "")
