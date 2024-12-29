@@ -78,6 +78,9 @@ jobs:
             wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_darwin_amd64
             chmod +x /tmp/dojo
             sudo mv /tmp/dojo /usr/local/bin/dojo
+      # https://support.circleci.com/hc/en-us/articles/21521502906267-Why-am-I-seeing-Bad-CPU-type-in-executable-errors-when-running-CircleCI-Builds-on-Apple-Silicon#:~:text=The%20%22Bad%20CPU%20type%20in,chips%2C%20resulting%20in%20these%20errors.
+      - run:
+          command: macos/install-rosetta
       - run:
           command: /bin/bash -c "./tasks build"
       - run:
@@ -138,6 +141,8 @@ jobs:
             sudo mv /tmp/dojo /usr/local/bin/dojo
       - attach_workspace:
           at: ~/repo
+      - run:
+          command: macos/install-rosetta
       - run:
           command: /bin/bash -c "./tasks e2e alpine"
       - run:
