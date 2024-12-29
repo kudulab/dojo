@@ -100,6 +100,7 @@ func main() {
 	// set the DOJO_LOG_LEVEL now,
 	// so that its value is preserved to docker containers
 	envService.AddVariable(fmt.Sprintf("DOJO_LOG_LEVEL=%s", mergedConfig.LogLevel))
+	logger.Log("debug", fmt.Sprintf("Local enviroment variables: %s", envService.GetVariables()))
 
 	shellService.SetEnvironment(envService.GetVariables())
 
