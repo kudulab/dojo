@@ -74,7 +74,7 @@ jobs:
       - run:
           name: Install dojo
           command: |
-            version="0.13.0"
+            version="0.13.3"
             wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_darwin_arm
             chmod +x /tmp/dojo
             sudo mv /tmp/dojo /usr/local/bin/dojo
@@ -132,7 +132,7 @@ jobs:
       - run:
           name: Install dojo
           command: |
-            version="0.13.0"
+            version="0.13.3"
             wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_darwin_arm64
             chmod +x /tmp/dojo
             sudo mv /tmp/dojo /usr/local/bin/dojo
