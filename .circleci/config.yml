@@ -1,9 +1,5 @@
 version: 2.1
 
-# to run intel/amd/x86_64 and not M1 compiled apps (namely: Dojo)
-orbs:
-  macos: circleci/macos@2.4.1
-
 workflows:
   # Environment variables required in CircleCI environment:
   #  - GITHUB_CREDENTIALS
@@ -79,18 +75,15 @@ jobs:
           name: Install dojo
           command: |
             version="0.13.0"
-            wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_darwin_amd64
+            wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_darwin_arm
             chmod +x /tmp/dojo
             sudo mv /tmp/dojo /usr/local/bin/dojo
-      # https://support.circleci.com/hc/en-us/articles/21521502906267-Why-am-I-seeing-Bad-CPU-type-in-executable-errors-when-running-CircleCI-Builds-on-Apple-Silicon#:~:text=The%20%22Bad%20CPU%20type%20in,chips%2C%20resulting%20in%20these%20errors.
-      - run:
-          command: macos/install-rosetta
       - run:
           command: /bin/bash -c "./tasks build"
       - run:
           command: /bin/bash -c "./tasks unit"
       - run:
-          command: /bin/bash -c "./tasks symlink darwin"
+          command: /bin/bash -c "./tasks symlink darwin_arm64"
       - persist_to_workspace:
           root: ~/repo
           paths:
@@ -140,13 +133,11 @@ jobs:
           name: Install dojo
           command: |
             version="0.13.0"
-            wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_darwin_amd64
+            wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_darwin_arm64
             chmod +x /tmp/dojo
             sudo mv /tmp/dojo /usr/local/bin/dojo
       - attach_workspace:
           at: ~/repo
-      - run:
-          command: macos/install-rosetta
       - run:
           command: /bin/bash -c "./tasks e2e alpine"
       - run:

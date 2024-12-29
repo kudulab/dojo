@@ -38,6 +38,7 @@ case "${command}" in
         rm -rf bin/dojo
         # disable the use of cgo with: CGO_ENABLED=0
         (set -x; GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -o bin/dojo_darwin_amd64 ./; )
+        (set -x; GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -o bin/dojo_darwin_arm64 ./; )
         (set -x; GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bin/dojo_linux_amd64 ./; )
         # to get a list supported golang platforms: go tool dist list
         ;;
@@ -48,12 +49,18 @@ case "${command}" in
         if [[ -n "$2" ]]; then
           os_suffix=$2
         else
-          echo "Please provide OS prefix: linux or darwin"
+          echo "Please provide OS prefix: linux or darwin or darwin_arm64"
           exit 5;
         fi
         # this binary is used in e2e tests
         rm -f bin/dojo
-        ln -s dojo_${os_suffix}_amd64 ./bin/dojo
+        if [[ "${os_suffix}" == "linux" ]]; then
+          ln -s dojo_${os_suffix}_amd64 ./bin/dojo
+        elif [[ "${os_suffix}" == "darwin" ]]; then
+          ln -s dojo_${os_suffix}_amd64 ./bin/dojo
+        elif [[ "${os_suffix}" == "darwin_arm64" ]]; then
+          ln -s dojo_darwin_arm64 ./bin/dojo
+        fi
         chmod +x ./bin/dojo
         ;;
     _unit)
