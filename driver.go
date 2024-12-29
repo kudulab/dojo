@@ -3,6 +3,7 @@ package main
 import "fmt"
 
 type DojoDriverInterface interface {
+	PrintVersion()
 	HandleRun(mergedConfig Config, runID string, envService EnvServiceInterface) int
 	CleanAfterRun(mergedConfig Config, runID string) int
 	HandlePull(mergedConfig Config) int

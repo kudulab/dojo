@@ -66,6 +66,17 @@ func (d DockerDriver) ConstructDockerRunCmd(config Config, envFilePath string, e
 	return cmd
 }
 
+func (d DockerDriver) PrintVersion() {
+	version_cmd := "docker --version"
+	stdout, stderr, exitStatus, _ := d.ShellService.RunGetOutput(version_cmd, true)
+	if exitStatus != 0 {
+		cmdInfo := cmdInfoToString(version_cmd, stdout, stderr, exitStatus)
+		d.Logger.Log("debug", cmdInfo)
+	} else {
+		d.Logger.Log("info", stdout)
+	}
+}
+
 func (d DockerDriver) HandleRun(mergedConfig Config, runID string, envService EnvServiceInterface) int {
 	warnGeneral(d.FileService, mergedConfig, envService, d.Logger)
 	envFile, envFileMultiLine, envFileBashFunctions := getEnvFilePaths(runID, mergedConfig.Test)

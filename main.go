@@ -119,6 +119,8 @@ func main() {
 
 	// main work goroutine
 	go func() {
+		// print the version of docker or docker-compose
+		driver.PrintVersion()
 		// run and stop the containers
 		exitstatus := driver.HandleRun(mergedConfig, runID, envService)
 		doneChannel <- exitstatus

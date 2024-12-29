@@ -400,6 +400,17 @@ func checkIfAnyContainerFailed(nonDefaultContainerInfos []*ContainerInfo, defaul
 	return anyContainerFailed
 }
 
+func (d DockerComposeDriver) PrintVersion() {
+	version_cmd := "docker-compose --version"
+	stdout, stderr, exitStatus, _ := d.ShellService.RunGetOutput(version_cmd, true)
+	if exitStatus != 0 {
+		cmdInfo := cmdInfoToString(version_cmd, stdout, stderr, exitStatus)
+		d.Logger.Log("debug", cmdInfo)
+	} else {
+		d.Logger.Log("info", stdout)
+	}
+}
+
 func (dc DockerComposeDriver) HandleRun(mergedConfig Config, runID string, envService EnvServiceInterface) int {
 	warnGeneral(dc.FileService, mergedConfig, envService, dc.Logger)
 	envFile, envFileMultiLine, envFileBashFunctions := getEnvFilePaths(runID, mergedConfig.Test)
