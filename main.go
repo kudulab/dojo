@@ -100,6 +100,7 @@ func main() {
 	// set the DOJO_LOG_LEVEL now,
 	// so that its value is preserved to docker containers
 	envService.AddVariable(fmt.Sprintf("DOJO_LOG_LEVEL=%s", mergedConfig.LogLevel))
+	logger.Log("debug", fmt.Sprintf("Local enviroment variables: %s", envService.GetVariables()))
 
 	shellService.SetEnvironment(envService.GetVariables())
 
@@ -119,6 +120,8 @@ func main() {
 
 	// main work goroutine
 	go func() {
+		// print the version of docker or docker-compose
+		driver.PrintVersion()
 		// run and stop the containers
 		exitstatus := driver.HandleRun(mergedConfig, runID, envService)
 		doneChannel <- exitstatus

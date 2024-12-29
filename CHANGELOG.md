@@ -1,3 +1,9 @@
+### 0.13.3 (2024-Dec-29)
+
+* use newer images for e2e tests
+* print docker and docker-compose version at the start of a dojo run
+* print debug output about local env vars
+
 ### 0.13.2 (2024-Dec-29)
 
 * fix the automated GitHub release
