@@ -1,5 +1,9 @@
 version: 2.1
 
+# to run intel/amd/x86_64 and not M1 compiled apps (namely: Dojo)
+orbs:
+  macos: circleci/macos@2.4.1
+
 workflows:
   # Environment variables required in CircleCI environment:
   #  - GITHUB_CREDENTIALS
