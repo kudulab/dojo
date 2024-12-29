@@ -15,6 +15,10 @@ workflows:
       - test_images:
           requires:
             - build_unit
+      - build_unit_mac
+      - e2e_alpine_mac:
+          requires:
+            - build_unit_mac
       - hold:
           type: approval
           requires:
@@ -22,6 +26,8 @@ workflows:
             - e2e_ubuntu
             - e2e_alpine
             - test_images
+            - build_unit_mac
+            - e2e_alpine_mac
           filters:
             branches:
               only: master
@@ -57,6 +63,27 @@ jobs:
           command: /bin/bash -c "./tasks unit"
       - run:
           command: /bin/bash -c "./tasks symlink linux"
+      - persist_to_workspace:
+          root: ~/repo
+          paths:
+            - bin/dojo*
+  build_unit_mac:
+    executor: mac
+    steps:
+      - setup
+      - run:
+          name: Install dojo
+          command: |
+            version="0.13.0"
+            wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_darwin_amd64
+            chmod +x /tmp/dojo
+            sudo mv /tmp/dojo /usr/bin/dojo
+      - run:
+          command: /bin/bash -c "./tasks build"
+      - run:
+          command: /bin/bash -c "./tasks unit"
+      - run:
+          command: /bin/bash -c "./tasks symlink darwin"
       - persist_to_workspace:
           root: ~/repo
           paths:
@@ -97,6 +124,24 @@ jobs:
           command: /bin/bash -c "./tasks e2e ubuntu"
       - run:
           command: /bin/bash -c "./tasks test_signals ubuntu"
+
+  e2e_alpine_mac:
+    executor: mac
+    steps:
+      - setup
+      - run:
+          name: Install dojo
+          command: |
+            version="0.13.0"
+            wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_darwin_amd64
+            chmod +x /tmp/dojo
+            sudo mv /tmp/dojo /usr/bin/dojo
+      - attach_workspace:
+          at: ~/repo
+      - run:
+          command: /bin/bash -c "./tasks e2e alpine"
+      - run:
+          command: /bin/bash -c "./tasks test_signals alpine"
 
   test_images:
     executor: platform
@@ -150,4 +195,7 @@ executors:
   platform:
     machine:
       image: ubuntu-2204:2024.01.1
+    working_directory: ~/repo
+  mac:
+    xcode: 16.2.0
     working_directory: ~/repo
