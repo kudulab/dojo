@@ -73,7 +73,7 @@ jobs:
       - setup
       - run:
           name: Install dojo
-          command: brew install dojo
+          command: brew update && brew install dojo
       - run:
           command: /bin/bash -c "./tasks build"
       - run:
@@ -127,7 +127,7 @@ jobs:
       - setup
       - run:
           name: Install dojo
-          command: brew install dojo
+          command: brew update && brew install dojo
       - attach_workspace:
           at: ~/repo
       - run:
