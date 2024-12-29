@@ -197,5 +197,6 @@ executors:
       image: ubuntu-2204:2024.01.1
     working_directory: ~/repo
   mac:
-    xcode: 16.2.0
+    macos:
+      xcode: 16.2.0
     working_directory: ~/repo
