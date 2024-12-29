@@ -73,7 +73,11 @@ jobs:
       - setup
       - run:
           name: Install dojo
-          command: brew update && brew install dojo
+          command: |
+            version="0.13.0"
+            wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_linux_amd64
+            chmod +x /tmp/dojo
+            sudo mv /tmp/dojo /usr/local/bin/dojo
       - run:
           command: /bin/bash -c "./tasks build"
       - run:
@@ -127,7 +131,11 @@ jobs:
       - setup
       - run:
           name: Install dojo
-          command: brew update && brew install dojo
+          command: |
+            version="0.13.0"
+            wget -O /tmp/dojo https://github.com/kudulab/dojo/releases/download/${version}/dojo_linux_amd64
+            chmod +x /tmp/dojo
+            sudo mv /tmp/dojo /usr/local/bin/dojo
       - attach_workspace:
           at: ~/repo
       - run:
